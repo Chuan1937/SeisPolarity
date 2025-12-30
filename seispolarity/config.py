@@ -26,6 +26,10 @@ class Settings:
     def cache_models(self) -> Path:
         return self.cache_root / "models"
 
+    @property
+    def cache_datasets(self) -> Path:
+        return self.cache_root / "datasets"
+
 
 settings = Settings()
 
@@ -36,6 +40,7 @@ def configure_cache(cache_root: str | Path) -> Settings:
     root.mkdir(parents=True, exist_ok=True)
     (root / "waveforms").mkdir(parents=True, exist_ok=True)
     (root / "models").mkdir(parents=True, exist_ok=True)
+    (root / "datasets").mkdir(parents=True, exist_ok=True)
 
     settings.cache_root = root
     return settings

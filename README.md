@@ -20,7 +20,27 @@ SeisPolarity 是一个极性拾取框架，目标是提供统一的数据接口�
 	```bash
 	pip install -e .
 	```
-2. 使用任意实现的模型做极性拾取：
+2. 下载示例数据（Hugging Face 托管）：
+	```python
+	from seispolarity.data import fetch_hf_file, fetch_hf_dataset
+
+	# 下载单个文件到缓存 (~/.seispolarity/datasets/chuanjun1978__Seismic-AI-Data/...)
+	path = fetch_hf_file(
+		 repo_id="chuanjun1978/Seismic-AI-Data",
+		 repo_path="SCEDC/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5",
+		 revision=None,      # 默认为 main
+		 token=None,         # 私有仓库时传入 token
+	)
+	print("local file:", path)
+
+	# 或一次性同步整个数据仓库（可用 allow_patterns 过滤子集）
+	ds_dir = fetch_hf_dataset(
+		 repo_id="chuanjun1978/Seismic-AI-Data",
+		 allow_patterns=["SCEDC/*.hdf5"],
+	)
+	print("dataset dir:", ds_dir)
+	```
+3. 使用任意实现的模型做极性拾取：
 	```python
 	import obspy
 	from seispolarity.annotations import PickList
