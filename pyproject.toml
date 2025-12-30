@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "seispolarity"
+version = "0.0.1"
+description = "Framework for seismic waveform polarity picking with unified APIs"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.10"
+authors = [{name = "Xingchen He"}]
+dependencies = [
+    "numpy>=1.24",
+    "pandas>=2.2",
+    "obspy>=1.4",
+    "torch>=2.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "ruff>=0.6",
+    "black>=24.10",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+target-version = ["py310"]
+line-length = 100
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+select = ["E", "F", "I"]
