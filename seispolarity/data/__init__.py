@@ -1,4 +1,5 @@
 from .base import WaveformBenchmarkDataset, MultiWaveformDataset
+from .scsn import SCSNDataset
 from .aq2009 import AQ2009Counts, AQ2009GM
 from .bohemia import BohemiaSaxony
 from .ceed import CEED
@@ -35,6 +36,7 @@ from .vcseis import VCSEIS
 __all__ = [
     "WaveformBenchmarkDataset",
     "MultiWaveformDataset",
+    "SCSNDataset",
     "AQ2009Counts",
     "AQ2009GM",
     "BohemiaSaxony",

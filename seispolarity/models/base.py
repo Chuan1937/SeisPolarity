@@ -17,7 +17,12 @@ class BasePolarityModel(ABC):
         self.name = name
         self.sample_rate = sample_rate
         self.n_components = n_components
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        if torch.cuda.is_available():
+            self.device = torch.device("cuda")
+        elif torch.backends.mps.is_available():
+            self.device = torch.device("mps")
+        else:
+            self.device = torch.device("cpu")
 
     @abstractmethod
     def forward_tensor(self, tensor: torch.Tensor, **kwargs) -> Any:
@@ -48,7 +53,8 @@ class BasePolarityModel(ABC):
 
     def to(self, device: str | torch.device) -> "BasePolarityModel":
         self.device = torch.device(device)
-        self._move(device=self.device)
+        if isinstance(self, torch.nn.Module):
+            torch.nn.Module.to(self, self.device)
         return self
 
     def _move(self, device: torch.device) -> None:
