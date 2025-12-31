@@ -1,71 +1,97 @@
 # SeisPolarity
 
-SeisPolarity 是一个极性拾取框架，目标是提供统一的数据接口、模型封装和评测工具，帮助快速试验和比较极性判读模型。
+SeisPolarity is a framework for seismic polarity picking, designed to provide unified data interfaces, model encapsulations, and evaluation tools to facilitate rapid experimentation and comparison of polarity determination models. It builds upon the robust data handling capabilities of SeisBench.
 
-## 设计思路
-- 采用模块化划分：`data` 负责波形读取，`models` 提供统一模型 API，`annotations`/`PickList` 统一拾取结果结构。
-- 核心保持轻量，模型可以自由扩展或替换，便于持续迭代。
-- 缓存与远端地址均可通过环境变量/配置切换，方便在本地或集群运行。
+## Features
 
-## 项目结构
-- `pyproject.toml`：依赖与打包配置。
-- `src/seispolarity/`：核心包代码。
-  - `config.py`：缓存与模型注册配置。
-  - `annotations.py`：`Pick`/`PickList`/`PolarityLabel` 基础类型。
-  - `data/`：波形读取（目前提供本地目录扫描）。
-- `models/`：模型基类与可扩展的模型注册机制。
+- **Unified Data Interface**: Seamless access to various seismic datasets (e.g., SCEDC, STEAD, INSTANCE) using a standardized API compatible with SeisBench.
+- **Modular Design**: Clear separation between data loading (`data`), model definitions (`models`), and annotation structures (`annotations`).
+- **Extensible**: Easy to add new models or datasets.
+- **Remote Data Support**: Built-in support for downloading datasets from Hugging Face.
+
+## Installation
+
+```bash
+git clone https://github.com/Chuan1937/SeisPolarity.git
+cd SeisPolarity
+pip install -e .
+```
+
+## Quick Start
+
+### Loading a Dataset
+
+SeisPolarity provides direct access to many standard datasets.
+
+```python
+import seispolarity.data as sbd
+
+# Load the SCEDC dataset
+# This will automatically download metadata and waveforms if not present
+dataset = sbd.SCEDC(sampling_rate=100)
+print(dataset)
+
+# Access waveforms and metadata
+waveforms, metadata = dataset.get_sample(0)
+print(f"Waveform shape: {waveforms.shape}")
+print(f"Metadata: {metadata}")
+```
+
+## Project Structure
+
+- `seispolarity/`: Core package source code.
+    - `data/`: Dataset implementations and base classes (ported from SeisBench).
+    - `models/`: Model base classes and wrappers.
+    - `annotations.py`: Data structures for picks and polarity labels.
+    - `config.py`: Configuration management.
+- `tests/`: Unit tests.
+
+---
+
+# SeisPolarity (中文说明)
+
+SeisPolarity 是一个地震极性拾取框架，旨在提供统一的数据接口、模型封装和评测工具，帮助快速试验和比较极性判读模型。本项目基于 SeisBench 的数据处理能力构建。
+
+## 特性
+
+- **统一数据接口**：使用与 SeisBench 兼容的标准 API 无缝访问各种地震数据集（如 SCEDC, STEAD, INSTANCE）。
+- **模块化设计**：数据加载 (`data`)、模型定义 (`models`) 和标注结构 (`annotations`) 清晰分离。
+- **可扩展性**：易于添加新模型或数据集。
+- **远程数据支持**：内置支持从 Hugging Face 下载数据集。
+
+## 安装
+
+```bash
+git clone https://github.com/Chuan1937/SeisPolarity.git
+cd SeisPolarity
+pip install -e .
+```
 
 ## 快速开始
-1. 安装依赖（建议虚拟环境）：
-	```bash
-	pip install -e .
-	```
-2. 下载示例数据（Hugging Face 托管）：
-	```python
-	from seispolarity.data import fetch_hf_file, fetch_hf_dataset
 
-	# 下载单个文件到缓存 (~/.seispolarity/datasets/chuanjun1978__Seismic-AI-Data/...)
-	path = fetch_hf_file(
-		 repo_id="chuanjun1978/Seismic-AI-Data",
-		 repo_path="SCEDC/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5",
-		 revision=None,      # 默认为 main
-		 token=None,         # 私有仓库时传入 token
-	)
-	print("local file:", path)
+### 加载数据集
 
-	# 或一次性同步整个数据仓库（可用 allow_patterns 过滤子集）
-	ds_dir = fetch_hf_dataset(
-		 repo_id="chuanjun1978/Seismic-AI-Data",
-		 allow_patterns=["SCEDC/*.hdf5"],
-	)
-	print("dataset dir:", ds_dir)
-	```
-3. 使用任意实现的模型做极性拾取：
-	```python
-	import obspy
-	from seispolarity.annotations import PickList
-	from seispolarity.models.base import BasePolarityModel
+SeisPolarity 提供了对许多标准数据集的直接访问。
 
-	# 加载本地 miniSEED/Stream
-	st = obspy.read("example.mseed")
+```python
+import seispolarity.data as sbd
 
-	   # 示例：自定义模型应继承 BasePolarityModel 并实现 forward_tensor/build_picks
-	   class DummyPolarityModel(BasePolarityModel):
-		   def forward_tensor(self, tensor, **kwargs):
-			   return tensor.mean(dim=-1)
+# 加载 SCEDC 数据集
+# 如果本地不存在，将自动下载元数据和波形
+dataset = sbd.SCEDC(sampling_rate=100)
+print(dataset)
 
-		   def build_picks(self, raw_output, **kwargs):
-			   return PickList()
+# 获取波形和元数据
+waveforms, metadata = dataset.get_sample(0)
+print(f"波形形状: {waveforms.shape}")
+print(f"元数据: {metadata}")
+```
 
-	   model = DummyPolarityModel(name="dummy")
-	   print(model.annotate(st).picks.to_dataframe())
-	```
+## 项目结构
 
-## 计划与 TODO
-- 数据模块：支持远端数据仓库、标准化台站元信息。
-- 模型模块：提供纯极性模型、训练脚本与基准；添加阈值/后处理策略。
-- 评测模块：极性精度指标、混淆矩阵与可视化。
-
-## 许可与注意
-- 本项目主体代码使用 BSD-3-Clause 许可发布。
-- 本项目主体代码使用 BSD-3-Clause 许可发布。
+- `seispolarity/`: 核心包源代码。
+    - `data/`: 数据集实现和基类（移植自 SeisBench）。
+    - `models/`: 模型基类和封装。
+    - `annotations.py`: 拾取和极性标签的数据结构。
+    - `config.py`: 配置管理。
+- `tests/`: 单元测试。
