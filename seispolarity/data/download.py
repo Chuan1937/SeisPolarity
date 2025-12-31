@@ -95,6 +95,7 @@ def fetch_hf_dataset(
     token: str | None = None,
     local_name: str | None = None,
     use_symlinks: bool = True,
+    repo_type: str = "dataset",
 ) -> Path:
     """Download a Hugging Face dataset repository snapshot into the datasets cache.
 
@@ -106,6 +107,7 @@ def fetch_hf_dataset(
     token: optional HF token for private repos.
     local_name: optional folder name under cache_datasets; defaults to repo_id with slashes replaced by "__".
     use_symlinks: whether to let huggingface_hub create symlinks to its cache (saves space). Set False to copy files.
+    repo_type: "dataset" (default), "model", or "space".
     """
 
     try:
@@ -124,6 +126,7 @@ def fetch_hf_dataset(
         local_dir=target_dir,
         local_dir_use_symlinks=use_symlinks,
         token=token,
+        repo_type=repo_type,
     )
 
     return target_dir
@@ -136,6 +139,7 @@ def fetch_hf_file(
     token: str | None = None,
     local_name: str | None = None,
     use_symlinks: bool = True,
+    repo_type: str = "dataset",
 ) -> Path:
     """Download a single file from a Hugging Face dataset repo into cache_datasets.
 
@@ -147,6 +151,7 @@ def fetch_hf_file(
     token: optional token for private repos.
     local_name: optional folder name under cache_datasets; default repo_id with slashes replaced.
     use_symlinks: whether to keep HF cache symlinks.
+    repo_type: "dataset" (default), "model", or "space".
     """
 
     try:
@@ -164,6 +169,8 @@ def fetch_hf_file(
         token=token,
         local_dir=target_dir,
         local_dir_use_symlinks=use_symlinks,
+        repo_type=repo_type,
     )
 
     return Path(file_path)
+
