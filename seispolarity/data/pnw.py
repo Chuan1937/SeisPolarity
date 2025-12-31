@@ -1,0 +1,80 @@
+from .base import WaveformBenchmarkDataset
+
+
+class PNW(WaveformBenchmarkDataset):
+    """
+    PNW ComCat dataset from Ni et al. (2023)
+    """
+
+    def __init__(self, **kwargs):
+        citation = (
+            "Ni, Y., Hutko, A., Skene, F., Denolle, M., Malone, "
+            "S., Bodin, P., Hartog, R., & Wright, A. (2023)."
+            "Curated Pacific Northwest AI-ready Seismic Dataset."
+            " Seismica, 2(1). https://doi.org/10.26443/seismica.v2i1.368"
+        )
+        license = "CC BY 4.0"
+
+        super().__init__(
+            citation=citation, license=license, repository_lookup=True, **kwargs
+        )
+
+
+class PNWExotic(WaveformBenchmarkDataset):
+    """
+    PNW Exotic dataset from Ni et al. (2023)
+    Ni 等人 (2023) 的 PNW Exotic 数据集
+    """
+
+    def __init__(self, **kwargs):
+        citation = (
+            "Ni, Y., Hutko, A., Skene, F., Denolle, M., Malone, "
+            "S., Bodin, P., Hartog, R., & Wright, A. (2023)."
+            "Curated Pacific Northwest AI-ready Seismic Dataset."
+            " Seismica, 2(1). https://doi.org/10.26443/seismica.v2i1.368"
+        )
+        license = "CC BY 4.0"
+
+        super().__init__(
+            citation=citation, license=license, repository_lookup=True, **kwargs
+        )
+
+
+class PNWAccelerometers(WaveformBenchmarkDataset):
+    """
+    PNW Accelerometers dataset from Ni et al. (2023)
+    Ni 等人 (2023) 的 PNW 加速度计数据集
+    """
+
+    def __init__(self, **kwargs):
+        citation = (
+            "Ni, Y., Hutko, A., Skene, F., Denolle, M., Malone, "
+            "S., Bodin, P., Hartog, R., & Wright, A. (2023)."
+            "Curated Pacific Northwest AI-ready Seismic Dataset."
+            " Seismica, 2(1). https://doi.org/10.26443/seismica.v2i1.368"
+        )
+        license = "CC BY 4.0"
+
+        super().__init__(
+            citation=citation, license=license, repository_lookup=True, **kwargs
+        )
+
+
+class PNWNoise(WaveformBenchmarkDataset):
+    """
+    PNW Noise dataset from Ni et al. (2023)
+    Ni 等人 (2023) 的 PNW 噪声数据集
+    """
+
+    def __init__(self, **kwargs):
+        citation = (
+            "Ni, Y., Hutko, A., Skene, F., Denolle, M., Malone, "
+            "S., Bodin, P., Hartog, R., & Wright, A. (2023)."
+            "Curated Pacific Northwest AI-ready Seismic Dataset."
+            " Seismica, 2(1). https://doi.org/10.26443/seismica.v2i1.368"
+        )
+        license = "CC BY 4.0"
+
+        super().__init__(
+            citation=citation, license=license, repository_lookup=True, **kwargs
+        )

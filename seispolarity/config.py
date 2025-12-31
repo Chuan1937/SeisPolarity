@@ -8,7 +8,7 @@ from typing import Callable
 _DEFAULT_CACHE = Path(os.getenv("SEISPOLARITY_CACHE_ROOT", Path.home() / ".seispolarity"))
 _DEFAULT_REMOTE = os.getenv(
     "SEISPOLARITY_REMOTE_ROOT",
-    "https://example.com/seispolarity/",  # placeholder for future model hosting
+    "https://huggingface.co/datasets/chuanjun1978/Seismic-AI-Data/resolve/main/",
 )
 
 
