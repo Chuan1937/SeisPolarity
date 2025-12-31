@@ -82,7 +82,12 @@ class GenericGenerator(Dataset):
         return state_dict
 
     def _populate_state_dict(self, idx):
-        return {"X": self.dataset.get_sample(idx)}
+        if hasattr(self.dataset, "get_sample"):
+            sample = self.dataset.get_sample(idx)
+        else:
+            # Fallback: assume __getitem__ returns (data, metadata)
+            sample = self.dataset[idx]
+        return {"X": sample}
 
     def _clean_state_dict(self, state_dict):
         cleaned_state_dict = {}
