@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -10,6 +11,19 @@ _DEFAULT_REMOTE = os.getenv(
     "SEISPOLARITY_REMOTE_ROOT",
     "https://huggingface.co/datasets/chuanjun1978/Seismic-AI-Data/resolve/main/",
 )
+
+# Load or create configuration dictionary
+_config_path = _DEFAULT_CACHE / "config.json"
+if not _DEFAULT_CACHE.is_dir():
+    _DEFAULT_CACHE.mkdir(parents=True, exist_ok=True)
+
+if not _config_path.is_file():
+    config = {"dimension_order": "NCW", "component_order": "ZNE"}
+    with open(_config_path, "w") as _fconfig:
+        json.dump(config, _fconfig, indent=4, sort_keys=True)
+else:
+    with open(_config_path, "r") as _fconfig:
+        config = json.load(_fconfig)
 
 
 @dataclass
@@ -43,6 +57,18 @@ def configure_cache(cache_root: str | Path) -> Settings:
     (root / "datasets").mkdir(parents=True, exist_ok=True)
 
     settings.cache_root = root
+
+    # Update config path if cache root changes
+    global config
+    _config_path = root / "config.json"
+    if not _config_path.is_file():
+        config = {"dimension_order": "NCW", "component_order": "ZNE"}
+        with open(_config_path, "w") as _fconfig:
+            json.dump(config, _fconfig, indent=4, sort_keys=True)
+    else:
+        with open(_config_path, "r") as _fconfig:
+            config = json.load(_fconfig)
+
     return settings
 
 
