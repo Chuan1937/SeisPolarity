@@ -17,6 +17,10 @@ dependencies = [
     "torch>=2.1",
     "requests>=2.32",
     "huggingface-hub>=0.24",
+    "h5py>=3.0",
+    "scipy>=1.10",
+    "matplotlib>=3.7",
+    "tqdm>=4.65",
 ]
 
 [project.optional-dependencies]
