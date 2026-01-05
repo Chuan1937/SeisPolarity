@@ -4,6 +4,6 @@
 __pycache__/
 *.ipynb_checkpoints
 .env
-*.ipynb
 .gitignore
 *.pytest_cache/
+/checkpoints_*/

@@ -61,9 +61,11 @@ class Trainer:
         dataset,
         config: TrainingConfig,
         extra_augmentations: Optional[List[Callable]] = None,
+        val_dataset=None,
     ):
         self.model = model
         self.dataset = dataset
+        self.val_dataset = val_dataset
         self.config = config
         self.device = default_device(config)
         self.extra_augmentations = extra_augmentations or []
@@ -71,10 +73,15 @@ class Trainer:
     def _build_loaders(self):
         cfg = self.config
 
-        # Split dataset
-        train_size = int(cfg.train_val_split * len(self.dataset))
-        val_size = len(self.dataset) - train_size
-        train_dataset, val_dataset = random_split(self.dataset, [train_size, val_size])
+        if self.val_dataset is not None:
+            # Use provided explicit split
+            train_dataset = self.dataset
+            val_dataset = self.val_dataset
+        else:
+            # Split dataset
+            train_size = int(cfg.train_val_split * len(self.dataset))
+            val_size = len(self.dataset) - train_size
+            train_dataset, val_dataset = random_split(self.dataset, [train_size, val_size])
 
         # Generators
         train_gen = GenericGenerator(train_dataset)
