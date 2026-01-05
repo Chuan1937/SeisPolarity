@@ -146,7 +146,7 @@ def fetch_hf_dataset(
         allow_patterns=allow_patterns,
         ignore_patterns=ignore_patterns,
         local_dir=target_dir,
-        local_dir_use_symlinks=use_symlinks,
+        # local_dir_use_symlinks=use_symlinks, # Deprecated
         token=token,
         repo_type=repo_type,
     )
@@ -202,7 +202,7 @@ def fetch_hf_file(
         revision=revision,
         token=token,
         local_dir=target_dir,
-        local_dir_use_symlinks=use_symlinks,
+        # local_dir_use_symlinks=use_symlinks, # Deprecated
         repo_type=repo_type,
     )
 

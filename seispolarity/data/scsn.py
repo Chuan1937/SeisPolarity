@@ -9,20 +9,70 @@ try:
 except ImportError:
     psutil = None
 
+from seispolarity.data.download import fetch_hf_file
+from seispolarity.config import settings
+
 logger = logging.getLogger(__name__)
 
 class SCSNDataset(Dataset):
     """
     Dataset for loading SCSN HDF5 data.
     Supports optional RAM preloading for performance.
+    Automatically downloads data from Hugging Face if h5_path is not provided.
     """
-    def __init__(self, h5_path, limit=None, preload=False):
-        self.h5_path = h5_path
+    def __init__(self, h5_path=None, limit=None, preload=False, split="train"):
+        """
+        :param h5_path: Path to HDF5 file. If None, downloads from HF based on split.
+        :param limit: Limit number of samples.
+        :param preload: Whether to preload data into RAM.
+        :param split: 'train' or 'test' (only used if h5_path is None).
+        """
+        if h5_path is None:
+            # Default HF paths
+            repo_id = "chuanjun1978/Seismic-AI-Data"
+            if split == "train":
+                filename = "scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
+            elif split == "test":
+                filename = "scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
+            else:
+                raise ValueError(f"Unknown split '{split}'. Use 'train' or 'test'.")
+            
+            repo_path = f"SCEDC/{filename}"
+            logger.info(f"No h5_path provided. Fetching {repo_path} from HF...")
+            h5_path = fetch_hf_file(repo_id=repo_id, repo_path=repo_path)
+            logger.info(f"Using dataset at: {h5_path}")
+
+        self.h5_path = str(h5_path)
+        self.limit = limit
+        self.preload = preload
+        self.data_cache = None
+        """
+        with h5py.File(self. Path to HDF5 file. If None, downloads from HF based on split.
+        :param limit: Limit number of samples.
+        :param preload: Whether to preload data into RAM.
+        :param split: 'train' or 'test' (only used if h5_path is None).
+        """
+        if h5_path is None:
+            # Default HF paths
+            repo_id = "chuanjun1978/Seismic-AI-Data"
+            if split == "train":
+                filename = "scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
+            elif split == "test":
+                filename = "scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
+            else:
+                raise ValueError(f"Unknown split '{split}'. Use 'train' or 'test'.")
+            
+            repo_path = f"SCEDC/{filename}"
+            logger.info(f"No h5_path provided. Fetching {repo_path} from HF...")
+            h5_path = fetch_hf_file(repo_id=repo_id, repo_path=repo_path)
+            logger.info(f"Using dataset at: {h5_path}")
+
+        self.h5_path = str(h5_path)
         self.limit = limit
         self.preload = preload
         self.data_cache = None
         
-        with h5py.File(h5_path, 'r') as f:
+        with h5py.File(self.h5_path, 'r') as f:
             self.length = len(f['X'])
             if limit:
                 self.length = min(self.length, limit)

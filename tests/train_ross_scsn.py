@@ -28,7 +28,8 @@ def main() -> int:
     # =========================================================================
     # 配置区域 (Configuration)
     # =========================================================================
-    # 数据路径
+    # 数据路径 (Set to None to auto-download from Hugging Face)
+    # 注意：mnt 后面是小写 c，且去掉了盘符后的冒号
     TRAIN_H5 = "/mnt/c/Users/yuan/seispolarity/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
     VAL_H5 = "/mnt/c/Users/yuan/seispolarity/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
     OUT_DIR = "./checkpoints_ross_scsn"
@@ -51,12 +52,15 @@ def main() -> int:
     # =========================================================================
 
     # 1. 准备数据集 (SCSNDataset 内部处理内存检查和预加载)
-    train_ds = SCSNDataset(TRAIN_H5, limit=LIMIT, preload=PRELOAD_RAM)
-    val_ds = SCSNDataset(VAL_H5, limit=LIMIT, preload=PRELOAD_RAM)
+    # Note: SCSNDataset loads raw 600-sample traces.
+    # The Trainer applies FixedWindow(p0=100, windowlen=400) augmentation,
+    # which crops the center 400 samples (100-500). No conflict exists.
+    train_ds = SCSNDataset(TRAIN_H5, limit=LIMIT, preload=PRELOAD_RAM, split="train")
+    val_ds = SCSNDataset(VAL_H5, limit=LIMIT, preload=PRELOAD_RAM, split="test")
 
     # 2. 配置 Trainer
     config = TrainingConfig(
-        h5_path=TRAIN_H5, # 仅作记录
+        h5_path=str(TRAIN_H5), # 仅作记录
         batch_size=BATCH_SIZE,
         epochs=EPOCHS,
         learning_rate=LR,
