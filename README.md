@@ -1,5 +1,8 @@
 # SeisPolarity
 
+A Toolbox for First-Motion Polarity Determination in Seismology.
+
+
 SeisPolarity is a framework for seismic polarity picking, designed to provide unified data interfaces, model encapsulations, and evaluation tools to facilitate rapid experimentation and comparison of polarity determination models. It builds upon robust data handling capabilities for seismic data.
 
 ## Features
