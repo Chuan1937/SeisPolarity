@@ -7,4 +7,4 @@ __pycache__/
 .gitignore
 *.pytest_cache/
 /checkpoints_*/
-Updated_model.ipynb
+Update_model.ipynb
