@@ -13,6 +13,7 @@ if "HF_ENDPOINT" in os.environ:
 import torch
 import numpy as np
 import warnings
+import httpx
 from typing import Union, List, Optional
 from huggingface_hub import hf_hub_download
 
@@ -98,15 +99,26 @@ class Predictor:
         
         # 2. Try GitHub Fallback
         print("Attempting download from GitHub (Backup)...")
-        # Construct GitHub Raw URL (Assuming file structure matches)
-        # User specified: pretrained_model/Ross/Ross_SCSN.pth
-        # We need to map the short filename 'Ross_SCSN.pth' to the repo path if they differ.
-        # But for 'ross', the config has filename="Ross_SCSN.pth".
-        # We'll hardcode the mapping logic or assume the user meant a specific location.
-        
-        github_url = f"https://github.com/Chuan1937/SeisPolarity/raw/main/pretrained_model/Ross/{filename}"
+        # Construct Raw GitHub URL
+        github_url = f"https://raw.githubusercontent.com/Chuan1937/SeisPolarity/main/pretrained_model/Ross/{filename}"
         
         try:
+            print(f"Downloading from {github_url}...")
+            with httpx.stream("GET", github_url, follow_redirects=True) as response:
+                response.raise_for_status()
+                with open(target_path, "wb") as f:
+                    for chunk in response.iter_bytes():
+                        f.write(chunk)
+            print(f"Model downloaded from GitHub: {target_path}")
+            return target_path
+        except Exception as e:
+            print(f"GitHub download failed: {e}")
+            
+            # Clean up partial file
+            if os.path.exists(target_path):
+                os.remove(target_path)
+                
+            raise RuntimeError(f"Could not download model from HF or GitHub. Please manually place '{filename}' in '{cache_dir}'.")
             torch.hub.download_url_to_file(github_url, target_path)
             if os.path.exists(target_path):
                 # Check if file is valid (sometimes raw links return 404 html text)
