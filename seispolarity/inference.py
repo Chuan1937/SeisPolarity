@@ -72,31 +72,59 @@ class Predictor:
         self.model.eval()
         
     def _ensure_model(self, cache_dir: str, filename: str) -> str:
-        """Download model if not exists."""
+        """Download model if not exists (Try HF first, then GitHub)."""
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
             
+        target_path = os.path.join(cache_dir, filename)
+        if os.path.exists(target_path):
+             print(f"Found existing local file: {target_path}")
+             return target_path
+
         print(f"Checking for model '{filename}' in {cache_dir}...")
+        
+        # 1. Try Hugging Face
         try:
-            # Check if file exists locally in cache_dir to avoid re-downloading logic if HF is unreachable
-            # But hf_hub_download handles caching well. However, we want to specify a local dir.
-            # local_dir will force it to be downloaded to that specific folder structure.
+            print("Attempting download from Hugging Face...")
             local_path = hf_hub_download(
                 repo_id=HF_REPO,
                 filename=filename,
                 local_dir=cache_dir,
-                # local_dir_use_symlinks=False 
             )
             print(f"Model loaded from {local_path}")
             return local_path
         except Exception as e:
-            print(f"Failed to download from Hugging Face: {e}")
-            # Fallback check if file exists despite error
-            potential_path = os.path.join(cache_dir, filename)
-            if os.path.exists(potential_path):
-                print(f"Found existing local file: {potential_path}, using specific file.")
-                return potential_path
-            raise e
+            print(f"Hugging Face download failed: {e}")
+        
+        # 2. Try GitHub Fallback
+        print("Attempting download from GitHub (Backup)...")
+        # Construct GitHub Raw URL (Assuming file structure matches)
+        # User specified: pretrained_model/Ross/Ross_SCSN.pth
+        # We need to map the short filename 'Ross_SCSN.pth' to the repo path if they differ.
+        # But for 'ross', the config has filename="Ross_SCSN.pth".
+        # We'll hardcode the mapping logic or assume the user meant a specific location.
+        
+        github_url = f"https://github.com/Chuan1937/SeisPolarity/raw/main/pretrained_model/Ross/{filename}"
+        
+        try:
+            torch.hub.download_url_to_file(github_url, target_path)
+            if os.path.exists(target_path):
+                # Check if file is valid (sometimes raw links return 404 html text)
+                if os.path.getsize(target_path) < 1000: # suspiciously small
+                    os.remove(target_path)
+                    raise RuntimeError("Downloaded file is too small (likely 404 page).")
+                print(f"Model successfully downloaded from GitHub to {target_path}")
+                return target_path
+            else:
+                 raise RuntimeError("Download completed but file not found.")
+        except Exception as e:
+            print(f"GitHub download also failed: {e}")
+            
+            # Final check just in case
+            if os.path.exists(target_path):
+                return target_path
+                
+            raise RuntimeError("Could not download model from either Hugging Face or GitHub.")
 
     def _load_weights(self, path: str):
         """Load weights safely handling different saving formats (state_dict vs full checkpoint)."""
