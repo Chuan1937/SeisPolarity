@@ -27,9 +27,6 @@ MODELS_CONFIG = {
         "filename": "Ross_SCSN.pth",         # Filename in HF repo
         "model_class": SCSN,                 # Python class
         "input_len": 400,                    # Expected input length
-        "center_crop": True,                 # Whether to crop center
-        "crop_len": 400,                     # Length after crop
-        "p_arrival_offset": 300,             # Assumed P-arrival in raw data (if cropping)
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"} # Example map
     }
@@ -46,7 +43,7 @@ class Predictor:
         >>> preds = model.predict(waveforms)
     """
     
-    def __init__(self, model_name: str = "ross", device: Optional[str] = None, cache_dir: str = "./checkpoints_download"):
+    def __init__(self, model_name: str = "ross", device: Optional[str] = None, cache_dir: str = "./checkpoints_download", model_path: Optional[str] = None):
         """
         Initialize the predictor.
         初始化预测器。
@@ -54,7 +51,8 @@ class Predictor:
         Args:
             model_name (str): Name of the model to use (default: "ross").
             device (str, optional): "cuda" or "cpu". If None, auto-detect.
-            cache_dir (str): Directory to store downloaded models.
+            cache_dir (str): Directory to store downloaded models (default: "./checkpoints_download").
+            model_path (str, optional): Manually specified path to the model file. If provided, skips download.
         """
         if model_name not in MODELS_CONFIG:
             raise ValueError(f"Unknown model '{model_name}'. Available: {list(MODELS_CONFIG.keys())}")
@@ -64,14 +62,50 @@ class Predictor:
         print(f"Using device: {self.device}")
         
         # 1. Download/Load Checkpoint
-        self.checkpoint_path = self._ensure_model(cache_dir, self.config["filename"])
+        self.checkpoint_path = self._resolve_model_path(cache_dir, self.config["filename"], model_path)
         
         # 2. Initialize Model
         self.model = self.config["model_class"](num_fm_classes=self.config["num_classes"])
         self._load_weights(self.checkpoint_path)
         self.model.to(self.device)
         self.model.eval()
+
+    def _resolve_model_path(self, cache_dir: str, filename: str, user_path: Optional[str]) -> str:
+        """
+        Resolve model path in the following order:
+        1. Pre-defined local paths (e.g. source repo structure)
+        2. User specified path (if provided)
+        3. Local cache directory
+        4. Auto-download (HF -> GitHub)
+        """
+        # A. Check pre-defined local paths (relative to this file or project root)
+        # Assuming inference.py is in seispolarity/inference.py
+        # Project root is likely two levels up
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         
+        candidates = [
+            # 1. Source repo structure: pretrained_model/Ross/Ross_SCSN.pth
+            os.path.join(project_root, "pretrained_model", "Ross", filename),
+            # 2. Source repo structure: pretrained_models/Ross/Ross_SCSN.pth (plural)
+            os.path.join(project_root, "pretrained_models", "Ross", filename),
+        ]
+        
+        for cand in candidates:
+            if os.path.exists(cand):
+                print(f"Found model in repo structure: {cand}")
+                return cand
+
+        # B. Check User Specified Path
+        if user_path:
+            if os.path.exists(user_path):
+                print(f"Using manually specified model: {user_path}")
+                return user_path
+            else:
+                print(f"Warning: Manual model path '{user_path}' not found.")
+
+        # C. Check Local Cache / Auto-Download
+        return self._ensure_model(cache_dir, filename)
+
     def _ensure_model(self, cache_dir: str, filename: str) -> str:
         """Download model if not exists (Try HF first, then GitHub)."""
         if not os.path.exists(cache_dir):
@@ -182,27 +216,12 @@ class Predictor:
         target_len = self.config["input_len"]
         
         # 1. Processing Loop (numpy vectorized)
-        # Handle cropping
-        if self.config["center_crop"] and L > target_len:
-            # Default logic: Assume P is at 300 (standard for some data), or just center.
-            # Our config says p_arrival_offset=300, crop_len=400. 
-            # So start = 300 - 400//2 = 100. End = 500.
-            # Check if data length supports this assumption
-            start_idx = self.config["p_arrival_offset"] - (target_len // 2)
-            if start_idx < 0: start_idx = 0
-            end_idx = start_idx + target_len
-            
-            if end_idx > L:
-                # Fallback to true center if length doesn't match standard
-                mid = L // 2
-                start_idx = mid - (target_len // 2)
-                end_idx = start_idx + target_len
-                
-            processed_data = waveforms[:, start_idx:end_idx]
-        elif L < target_len:
-            raise ValueError(f"Input length {L} is shorter than model requirement {target_len}.")
-        else:
-            processed_data = waveforms
+        # Verify length (Cropping must be done externally)
+        if L != target_len:
+            raise ValueError(f"Input length {L} does not match model requirement {target_len}.\n"
+                             f"Please crop or pad your data externally before passing to Predictor.")
+        
+        processed_data = waveforms
             
         # 2. Normalization (MaxAbs per sample)
         # (N, L)
