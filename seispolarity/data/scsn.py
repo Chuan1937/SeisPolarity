@@ -19,13 +19,15 @@ class SCSNDataset(Dataset):
     Dataset for loading SCSN HDF5 data.
     Supports optional RAM preloading for performance.
     Automatically downloads data from Hugging Face if h5_path is not provided.
+    Supports filtering by label (e.g. only 0 and 1).
     """
-    def __init__(self, h5_path=None, limit=None, preload=False, split="train"):
+    def __init__(self, h5_path=None, limit=None, preload=False, split="train", allowed_labels=None):
         """
         :param h5_path: Path to HDF5 file. If None, downloads from HF based on split.
         :param limit: Limit number of samples.
         :param preload: Whether to preload data into RAM.
         :param split: 'train' or 'test' (only used if h5_path is None).
+        :param allowed_labels: List of labels to keep (e.g. [0, 1]). If None, keep all.
         """
         if h5_path is None:
             # Default HF paths
@@ -71,11 +73,27 @@ class SCSNDataset(Dataset):
         self.limit = limit
         self.preload = preload
         self.data_cache = None
-        
+        self.allowed_labels = allowed_labels
+        self.indices = None # logical -> physical index map
+
         with h5py.File(self.h5_path, 'r') as f:
-            self.length = len(f['X'])
+            total_samples = len(f['X'])
+            if self.allowed_labels is not None:
+                logger.info(f"Filtering dataset for labels: {self.allowed_labels}...")
+                # Read all labels (should be fast for ~18MB)
+                Y = f['Y'][:]
+                mask = np.isin(Y, self.allowed_labels)
+                self.indices = np.where(mask)[0]
+                self.length = len(self.indices)
+                logger.info(f"Filtered {total_samples} -> {self.length} samples.")
+            else:
+                self.indices = np.arange(total_samples)
+                self.length = total_samples
+            
             if limit:
-                self.length = min(self.length, limit)
+                if self.length > limit:
+                    self.length = limit
+                    self.indices = self.indices[:limit]
         
         if self.preload:
             self._preload_data()
@@ -123,12 +141,83 @@ class SCSNDataset(Dataset):
                 total_chunks = (self.length + chunk_size - 1) // chunk_size
                 
                 desc = f"Loading {self.h5_path.split('/')[-1]}"
-                for i in tqdm(range(0, self.length, chunk_size), desc=desc, total=total_chunks, unit="chunk"):
-                    end = min(i + chunk_size, self.length)
+                
+                # If we have indices (filtering enabled), we can't use simple slicing for contiguous reads if indices are sparse.
+                # However, usually we preload everything relevant.
+                # If indices are not contiguous, h5py slicing with list is slow/not supported efficiently.
+                # Only use smart slicing if no filtering.
+                if self.allowed_labels is None and self.limit is None:
+                    # Optimized contiguous load
+                    for i in tqdm(range(0, self.length, chunk_size), desc=desc, total=total_chunks, unit="chunk"):
+                        end = min(i + chunk_size, self.length)
+                        self.data_cache['X'][i:end] = f['X'][i:end]
+                        for f_key, c_key in keys_map.items():
+                            self.data_cache[c_key][i:end] = f[f_key][i:end]
+                else:
+                    # Filtered load Optimization
+                    # Using f['X'][indices] is very slow in h5py.
+                    # It is much faster to load the full dataset (sequentially) into RAM and then filter it,
+                    # provided we have enough RAM (which we checked in _preload_data).
                     
-                    self.data_cache['X'][i:end] = f['X'][i:end]
-                    for f_key, c_key in keys_map.items():
-                        self.data_cache[c_key][i:end] = f[f_key][i:end]
+                    logger.info("Loading filtered data: Reading FULL dataset sequentially for speed, then filtering in RAM...")
+                    
+                    # 1. Load FULL X temporarily
+                    full_len = f['X'].shape[0]
+                    # Check if we have enough RAM for full copy + filtered copy? 
+                    # If dataset is 6GB, full copy is 6GB. Filtered is < 6GB. Total 12GB peak.
+                    # Assuming available RAM is sufficient (checked earlier with margin).
+                    
+                    # Read Full X in one go or large chunks
+                    # Actually, we can just read chunk by chunk of the FULL dataset, filter, and assign.
+                    # This avoids holding 2x data in memory.
+                    
+                    # Re-calculate chunks based on FULL length
+                    full_total_chunks = (full_len + chunk_size - 1) // chunk_size
+                    desc = f"Scanning {self.h5_path.split('/')[-1]} for filtering"
+                    
+                    # Indices mask for the whole file
+                    # We need a boolean mask for the full file to know which rows in a chunk to keep
+                    if self.allowed_labels is not None:
+                        # We already have self.indices which are the indices to keep.
+                        # Create a full boolean mask
+                        full_mask = np.zeros(full_len, dtype=bool)
+                        full_mask[self.indices] = True
+                    else:
+                        full_mask = np.ones(full_len, dtype=bool)
+                        if self.limit:
+                             full_mask[self.limit:] = False
+
+                    # Current pointer in the destination (self.data_cache)
+                    dest_ptr = 0
+                    
+                    for i in tqdm(range(0, full_len, chunk_size), desc=desc, total=full_total_chunks, unit="chunk"):
+                        file_end = min(i + chunk_size, full_len)
+                        
+                        # Get mask for this chunk
+                        chunk_mask = full_mask[i:file_end]
+                        if not np.any(chunk_mask):
+                            continue
+                            
+                        # Read chunk from file (FAST sequential read)
+                        chunk_X = f['X'][i:file_end]
+                        
+                        # Filter
+                        filtered_X = chunk_X[chunk_mask]
+                        n_keep = len(filtered_X)
+                        
+                        # Assign to cache
+                        self.data_cache['X'][dest_ptr : dest_ptr + n_keep] = filtered_X
+                        
+                        # Handle other keys
+                        for f_key, c_key in keys_map.items():
+                            chunk_data = f[f_key][i:file_end]
+                            self.data_cache[c_key][dest_ptr : dest_ptr + n_keep] = chunk_data[chunk_mask]
+                            
+                        dest_ptr += n_keep
+                    
+                    # Verify
+                    if dest_ptr != self.length:
+                        logger.warning(f"Filter mismatch: expected {self.length} samples, loaded {dest_ptr}.")
 
             logger.info("Preloading complete.")
         except Exception as e:
@@ -141,6 +230,8 @@ class SCSNDataset(Dataset):
     
     def get_sample(self, idx):
         if self.preload and self.data_cache is not None:
+             # preload data cache is already filtered and dense (0...length-1)
+             # So we use direct idx
             waveform = self.data_cache['X'][idx]
             metadata = {}
             if 'Y' in self.data_cache:
@@ -150,16 +241,18 @@ class SCSNDataset(Dataset):
             if 'evid' in self.data_cache:
                 metadata['evid'] = self.data_cache['evid'][idx]
         else:
+             # Map logical index to physical index
+            physical_idx = self.indices[idx]
             with h5py.File(self.h5_path, 'r') as f:
-                waveform = f['X'][idx]
+                waveform = f['X'][physical_idx]
                 # Metadata
                 metadata = {}
                 if 'Y' in f:
-                    metadata['label'] = f['Y'][idx]
+                    metadata['label'] = f['Y'][physical_idx]
                 if 'snr' in f:
-                    metadata['snr'] = f['snr'][idx]
+                    metadata['snr'] = f['snr'][physical_idx]
                 if 'evids' in f:
-                    metadata['evid'] = f['evids'][idx]
+                    metadata['evid'] = f['evids'][physical_idx]
             
         # Waveform shape is (600,) -> (1, 600) for consistency with SeisBench (C, N)
         waveform = waveform.reshape(1, -1).astype(np.float32)

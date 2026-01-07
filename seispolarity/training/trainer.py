@@ -25,6 +25,7 @@ class TrainingConfig:
     limit: Optional[int] = None
     p0: int = 100
     windowlen: int = 400
+    picker_p: Optional[int] = None  # P拾取点位置，用于约束或参考
     label_key: str = "label"
     device: Optional[str] = None
     checkpoint_dir: str = "."

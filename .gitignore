@@ -7,3 +7,5 @@ __pycache__/
 .gitignore
 *.pytest_cache/
 /checkpoints_*/
+# Large data files
+data/Txed_Fune_Tune/*.npy
