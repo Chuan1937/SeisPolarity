@@ -1,7 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from typing import Callable, List, Optional
+import time
+import json
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -30,6 +33,7 @@ class TrainingConfig:
     device: Optional[str] = None
     checkpoint_dir: str = "."
     save_best_only: bool = True
+    patience: int = -1 # Early stopping patience. -1 means disabled.
 
 
 def default_device(config: TrainingConfig) -> torch.device:
@@ -70,6 +74,33 @@ class Trainer:
         self.config = config
         self.device = default_device(config)
         self.extra_augmentations = extra_augmentations or []
+        
+        # Initialize Log File
+        self.log_path = Path(config.checkpoint_dir) / "training_log.txt"
+        self._init_log_file()
+
+    def _init_log_file(self):
+        """Initialize log file with configuration parameters."""
+        Path(self.config.checkpoint_dir).mkdir(parents=True, exist_ok=True)
+        with open(self.log_path, "w") as f:
+            f.write("="*50 + "\n")
+            f.write(f"Training Log - {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write("="*50 + "\n\n")
+            f.write("Configuration:\n")
+            # Convert config to dict, handle non-serializable types if any
+            cfg_dict = asdict(self.config)
+            for k, v in cfg_dict.items():
+                f.write(f"{k}: {v}\n")
+            f.write("\n" + "="*50 + "\n")
+            f.write(f"{'Epoch':<6} | {'Train Loss':<12} | {'Train Acc':<10} | {'Val Loss':<12} | {'Val Acc':<10} | {'Time':<20}\n")
+            f.write("-" * 80 + "\n")
+
+    def _log_epoch(self, epoch, train_loss, train_acc, val_loss, val_acc):
+        """Log epoch stats to file."""
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        log_str = f"{epoch:<6} | {train_loss:<12.4f} | {train_acc:<10.2f} | {val_loss:<12.4f} | {val_acc:<10.2f} | {timestamp:<20}\n"
+        with open(self.log_path, "a") as f:
+            f.write(log_str)
 
     def _build_loaders(self):
         cfg = self.config
@@ -125,6 +156,8 @@ class Trainer:
         optimizer = optim.Adam(self.model.parameters(), lr=cfg.learning_rate)
 
         best_val_acc = -1.0
+        patience_counter = 0 # Counter for early stopping
+
         for epoch in range(cfg.epochs):
             # Train
             self.model.train()
@@ -173,14 +206,32 @@ class Trainer:
                 f"Epoch {epoch+1}: Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, "
                 f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%"
             )
+            
+            # Write to log file
+            self._log_epoch(epoch+1, train_loss, train_acc, val_loss, val_acc)
 
-            # Checkpoint
+            # Checkpoint & Early Stopping
             if cfg.save_best_only:
                 if val_acc > best_val_acc:
                     best_val_acc = val_acc
                     self._save_checkpoint(epoch + 1, best=True)
+                    patience_counter = 0 # Reset counter if improved
+                else:
+                    patience_counter += 1
             else:
                 self._save_checkpoint(epoch + 1, best=False)
+                # Note: if not save_best_only, logic for "patience" is ambiguous.
+                # Assuming patience is based on valid accuracy improvement regardless of saving strategy.
+                if val_acc > best_val_acc:
+                    best_val_acc = val_acc
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+            
+            # Check Early Stopping
+            if cfg.patience > 0 and patience_counter >= cfg.patience:
+                print(f"Early stop triggered! No improvement for {cfg.patience} epochs.")
+                break
 
         return best_val_acc
 

@@ -25,45 +25,72 @@ from seispolarity.training import Trainer, TrainingConfig
 
 
 def main() -> int:
+    """
+    Main execution entry point.
+    主执行入口函数。
+    """
     # =========================================================================
-    # 配置区域 (Configuration)
+    # 1. Configuration (配置参数)
     # =========================================================================
-    # 数据路径 (Set to None to auto-download from Hugging Face)
+    
+    # --- Paths (路径设置) ---
+    # Path to HDF5 files. Set to None to auto-download from Hugging Face.
+    # 设置为 None 可从 Hugging Face 自动下载默认数据。
     TRAIN_H5 = r"/mnt/c/Users/yuan/seispolarity/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
-    TEST_H5 = r"/mnt/c/Users/yuan/seispolarity/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5" # 原 VAL_H5 改为 TEST_H5，因为这是测试集
-    OUT_DIR = "./checkpoints_ross_scsn"
+    TEST_H5  = r"/mnt/c/Users/yuan/seispolarity/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
+    OUT_DIR  = "./checkpoints_ross_scsn"
+
+    # --- Performance (性能优化) ---
+    PRELOAD_RAM = True  # Load all data into RAM for speed / 是否全量加载到内存
+    NUM_WORKERS = 4     # DataLoader worker processes / 数据加载进程数
+
+    # --- Hyperparameters (超参数) ---
+    EPOCHS          = 50
+    BATCH_SIZE      = 3000
+    LR              = 1e-3
+    PATIENCE        = 5
+    TRAIN_VAL_SPLIT = 0.9   # 90% Training / 10% Validation
+    LIMIT           = None  # Limit samples for debugging / 限制样本数(调试用)
+
+    # --- Data Processing (数据处理) ---
+    # Ross (2018) Settings:
+    # Input window: 400 samples (centered at P-arrival)
+    # 输入窗口: 400 采样点 (以 P 波到达为中心)
+    SCSN_P_PICK_INDEX = 300  # P-wave index in raw data / 原始数据中 P 波位置
+    WINDOWLEN         = 400  # Model input length / 模型输入长度
+    P0                = 100  # Start crop index / 裁剪起始点 (300 - 400/2 = 100)
     
-    # 性能优化
-    PRELOAD_RAM = True  # 是否将数据一次性加载到内存 (推荐 True，除非内存不足)
-    NUM_WORKERS = 4     # 数据加载进程数
-    
-    # 训练超参数
-    EPOCHS = 8
-    PATIENCE = 5
-    BATCH_SIZE = 3000
-    LR = 1e-3
-    LIMIT = None        # 测试用，例如 1000
-    TRAIN_VAL_SPLIT = 0.9 # 90% 训练, 10% 验证 (从训练集中划分)
-    
-    # 模型与数据处理
-    SCSN_P_PICK_INDEX = 300
-    P0 = 100            # Ross paper: center ~300, +/-200 => start at 100 for length 400
-    WINDOWLEN = 400
-    DEVICE = None       # None (auto), "cuda", "cpu"
+    DEVICE = None  # None(Auto), "cuda", "cpu"
+
     # =========================================================================
-
-    # 1. 准备数据集 (SCSNDataset 内部处理内存检查和预加载)
-    # Note: SCSNDataset loads raw 600-sample traces.
-    # The Trainer applies FixedWindow(p0=100, windowlen=400) augmentation,
-    # which crops the center 400 samples (100-500). No conflict exists.
+    # 2. Dataset Preparation (数据集准备)
+    # =========================================================================
+    print(f"{'='*40}\nInitializing Datasets / 初始化数据集\n{'='*40}")
     
-    # 加载训练集文件 (将被 Trainer 划分为 Train/Val)
-    train_full_ds = SCSNDataset(TRAIN_H5, limit=LIMIT, preload=PRELOAD_RAM, split="train")
+    # Load Training Data (Will be split into Train/Val later)
+    # 加载训练数据 (用于训练和验证)
+    train_full_ds = SCSNDataset(
+        TRAIN_H5, 
+        limit=LIMIT, 
+        preload=PRELOAD_RAM, 
+        split="train"
+    )
     
-    # 加载测试集文件 (仅用于最终测试，不参与训练过程中的验证)
-    test_ds = SCSNDataset(TEST_H5, limit=LIMIT, preload=PRELOAD_RAM, split="test")
+    # Load Test Data (Held-out set)
+    # 加载测试数据 (仅用于最终测试，不参与训练)
+    test_ds = SCSNDataset(
+        TEST_H5, 
+        limit=LIMIT, 
+        preload=PRELOAD_RAM, 
+        split="test"
+    )
 
-    # 2. 配置 Trainer
+    # =========================================================================
+    # 3. Setup Trainer (配置训练器)
+    # =========================================================================
+    
+    # Create configuration object
+    # 创建训练配置对象
     config = TrainingConfig(
         h5_path=str(TRAIN_H5), 
         batch_size=BATCH_SIZE,
@@ -73,20 +100,24 @@ def main() -> int:
         limit=LIMIT,
         p0=P0,
         windowlen=WINDOWLEN,
-        picker_p=SCSN_P_PICK_INDEX,
+        picker_p=SCSN_P_PICK_INDEX,  # Pass P-pick index for reference / 传入P波拾取点
         device=DEVICE,
         checkpoint_dir=OUT_DIR,
         label_key="label",
-        train_val_split=TRAIN_VAL_SPLIT # 设置划分比例
+        train_val_split=TRAIN_VAL_SPLIT,
+        patience=PATIENCE
     )
     
     Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
 
-    # 3. 初始化模型
+    # Initialize Model (Ross 2018 CNN)
+    # 初始化模型
     model = SCSN(num_fm_classes=3)
     
-    # 4. 启动训练
-    # 注意：val_dataset=None，让 Trainer 自动从 train_full_ds 中划分验证集
+    # Initialize Trainer
+    # 初始化训练管理器
+    # val_dataset=None triggers auto-splitting based on train_val_split
+    # val_dataset=None 会触发基于 train_val_split 的自动划分
     trainer = Trainer(
         model=model,
         dataset=train_full_ds,
@@ -94,13 +125,19 @@ def main() -> int:
         config=config
     )
     
-    print("Starting training with unified Trainer API...")
-    print(f"Splitting training data: {TRAIN_VAL_SPLIT*100}% Train, {(1-TRAIN_VAL_SPLIT)*100:.1f}% Validation")
-    best_acc = trainer.train()
-    print(f"Training finished. Best Validation Accuracy: {best_acc:.2f}%")
+    # =========================================================================
+    # 4. Execution (开始训练)
+    # =========================================================================
+    print(f"\n{'='*40}\nStarting Training / 开始训练\n{'='*40}")
+    print(f"Model: Ross (SCSN) CNN")
+    print(f"Split: {TRAIN_VAL_SPLIT*100:.0f}% Train / {(1-TRAIN_VAL_SPLIT)*100:.0f}% Val")
+    print(f"Device: {config.device}")
     
-    # TODO: 可以在这里添加使用 test_ds 进行最终测试的代码
-    print(f"Test dataset loaded with {len(test_ds)} samples. (Evaluation not implemented in this script)")
+    best_acc = trainer.train()
+    
+    print(f"\n{'='*40}\nTraining Finished / 训练完成\n{'='*40}")
+    print(f"Best Validation Accuracy: {best_acc:.2f}%")
+    print(f"Test Set Size: {len(test_ds)} (Evaluation pending)")
     
     return 0
 
