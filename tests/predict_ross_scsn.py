@@ -15,64 +15,47 @@ sys.path.append(str(Path(__file__).resolve().parent.parent)) # Add project root 
 import numpy as np
 from seispolarity.inference import Predictor
 from seispolarity.data.scsn import SCSNDataset
-from seispolarity.generate import FixedWindow, Normalize
 
 # Path to test data (Adjust if needed)
 # 测试数据路径 (如有需请修改)
-TEST_FILE = "/mnt/c/Users/yuan/seispolarity/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
+TEST_FILE = "/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
 WINDOW_P0 = 100
 WINDOW_LEN = 400
-MAX_SAMPLES = 100
-
-def load_waveforms(limit=MAX_SAMPLES):
-    """Load and preprocess waveforms using existing dataset + augmentation utilities."""
-    dataset = SCSNDataset(h5_path=TEST_FILE, limit=limit, preload=False)
-    window = FixedWindow(p0=WINDOW_P0, windowlen=WINDOW_LEN)
-    normalizer = Normalize(amp_norm_axis=-1, amp_norm_type="peak")
-
-    waveforms = []
-    labels = []
-
-    for idx in range(len(dataset)):
-        waveform, metadata = dataset[idx]
-        # Apply shared FixedWindow + Normalize pipeline (same as training)
-        state = {"X": (waveform, metadata)}
-        window(state)
-        normalizer(state)
-        processed_waveform, processed_metadata = state["X"]
-
-        waveforms.append(processed_waveform.squeeze())  # (1, 400) -> (400,)
-        labels.append(processed_metadata.get("label", -1) if processed_metadata else -1)
-
-    return np.stack(waveforms), np.array(labels)
+MAX_SAMPLES = None
 
 def main():
     print("Initializing Predictor...")
     # 1. Initialize Predictor
-    LOCAL_MODEL_PATH = None  # e.g. "./checkpoints_ross_scsn/scsn_best.pth"
+    LOCAL_MODEL_PATH = r"/home/yuan/code/SeisPolarity/pretrained_model/Ross/Ross_SCSN.pth"  # e.g. "./checkpoints_ross_scsn/scsn_best.pth"
     predictor = Predictor(model_name="ross", model_path=LOCAL_MODEL_PATH)
 
-    print(f"Loading data from {TEST_FILE} via SCSNDataset + FixedWindow...")
+    print(f"Loading data from {TEST_FILE} via SCSNDataset.load_all_data (Parallel)...")
     try:
-        waveforms, labels = load_waveforms(limit=MAX_SAMPLES)
+        # Use parallel loading via SCSNDataset instance method
+        dataset = SCSNDataset(h5_path=TEST_FILE, limit=MAX_SAMPLES, preload=True)
+        waveforms, labels = dataset.load_all_data(
+            window_p0=WINDOW_P0,
+            window_len=WINDOW_LEN,
+            num_workers=16,
+            batch_size=10000
+        )
         print(f"Loaded {len(waveforms)} waveforms. Shape: {waveforms.shape}")
+    except FileNotFoundError:
+        print(f"Error: Test file not found at {TEST_FILE}")
+        print("Creating dummy random data for demonstration...")
+        waveforms = np.random.randn(100, WINDOW_LEN).astype(np.float32)
+        labels = None
     except Exception as e:
         print(f"Error loading data: {e}")
         return
-
-    # 3. Predict
-        print(f"Error: Test file not found at {TEST_FILE}")
-        print("Creating dummy random data for demonstration...")
-        waveforms = np.random.randn(100, 600).astype(np.float32)
-        labels = None
 
     # 3. Predict
     # 3. 进行预测
     # predictor.predict handles cropping (600->400) and normalization automatically
     # predictor.predict 会自动处理裁剪(600->400)和归一化
     print("Running prediction...")
-    predictions = predictor.predict(waveforms)
-    probabilities = predictor.predict(waveforms, return_probs=True)
+    probabilities = predictor.predict(waveforms, return_probs=True, batch_size=1024)
+    predictions = np.argmax(probabilities, axis=1)
 
     # 4. Show results
     # 4. 显示结果

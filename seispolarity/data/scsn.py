@@ -3,6 +3,7 @@ import numpy as np
 from torch.utils.data import Dataset
 import logging
 from tqdm import tqdm
+from typing import Tuple
 
 try:
     import psutil
@@ -11,6 +12,7 @@ except ImportError:
 
 from seispolarity.data.download import fetch_hf_file
 from seispolarity.config import settings
+from torch.utils.data import DataLoader
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,76 @@ class SCSNDataset(Dataset):
     Automatically downloads data from Hugging Face if h5_path is not provided.
     Supports filtering by label (e.g. only 0 and 1).
     """
+    def load_all_data(self, window_p0: int = 100, window_len: int = 400, num_workers: int = 4, batch_size: int = 10000) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Load and preprocess all waveforms efficiently into memory.
+        Uses multiprocessing or direct memory access depending on preload state.
+        
+        Args:
+            window_p0 (int): P-pick center index for windowing.
+            window_len (int): Output window length.
+            num_workers (int): Number of workers for DataLoader (if not preloaded).
+            batch_size (int): Batch size for loading.
+            
+        Returns:
+            (np.ndarray, np.ndarray): Waveforms (N, L), Labels (N,)
+        """
+        from seispolarity.generate import FixedWindow, Normalize
+
+        # If data fits in RAM (preload=True), prefer single-process loading (workers=0)
+        # to avoid multiprocessing serialization overhead.
+        effective_workers = 0 if self.preload else max(1, num_workers)
+        prefetch_factor = None if effective_workers == 0 else 2
+
+        logger.info(
+            "Loading strategy: preload=%s workers=%s batch_size=%s",
+            self.preload,
+            effective_workers,
+            batch_size,
+        )
+        
+        window = FixedWindow(p0=window_p0, windowlen=window_len)
+        normalizer = Normalize(amp_norm_axis=-1, amp_norm_type="peak")
+        
+        def collate_fn(batch):
+            processed_waveforms = []
+            labels = []
+            
+            for waveform, metadata in batch:
+                state = {"X": (waveform, metadata)}
+                window(state)
+                normalizer(state)
+                
+                w, m = state["X"]
+                processed_waveforms.append(w.squeeze()) # (1, L) -> (L,)
+                labels.append(m.get("label", -1) if m else -1)
+                
+            return np.stack(processed_waveforms), np.array(labels)
+            
+        loader_kwargs = {
+            "dataset": self,
+            "batch_size": batch_size,
+            "shuffle": False,
+            "num_workers": effective_workers,
+            "collate_fn": collate_fn,
+        }
+        if prefetch_factor is not None:
+            loader_kwargs["prefetch_factor"] = prefetch_factor
+
+        loader = DataLoader(**loader_kwargs)
+
+        all_waveforms = []
+        all_labels = []
+        
+        for waveforms, labels in tqdm(loader, desc="Loading Data", unit="chunk"):
+            all_waveforms.append(waveforms)
+            all_labels.append(labels)
+            
+        if not all_waveforms:
+            return np.array([]), np.array([])
+            
+        return np.concatenate(all_waveforms), np.concatenate(all_labels)
+
     def __init__(self, h5_path=None, limit=None, preload=False, split="train", allowed_labels=None):
         """
         :param h5_path: Path to HDF5 file. If None, downloads from HF based on split.
