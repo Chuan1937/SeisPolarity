@@ -16,6 +16,7 @@ import warnings
 import httpx
 from typing import Union, List, Optional
 from huggingface_hub import hf_hub_download
+from tqdm import tqdm
 
 # Import models
 from seispolarity.models import SCSN
@@ -31,6 +32,66 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"} # Example map
     }
 }
+
+from torch.utils.data import DataLoader
+from seispolarity.data.scsn import SCSNDataset
+from seispolarity.generate import FixedWindow, Normalize
+
+def load_scsn_waveforms(h5_path, limit=None, window_p0=100, window_len=400, num_workers=4, batch_size=10000):
+    """
+    Load and preprocess SCSN waveforms using multiprocessing.
+    
+    Args:
+        h5_path (str): Path to SCSN HDF5 file.
+        limit (int, optional): Max samples.
+        window_p0 (int): P-pick center index for windowing.
+        window_len (int): Output window length.
+        num_workers (int): Number of workers for DataLoader.
+        batch_size (int): Batch size for loading.
+        
+    Returns:
+        (np.ndarray, np.ndarray): Waveforms (N, L), Labels (N,)
+    """
+    dataset = SCSNDataset(h5_path=h5_path, limit=limit, preload=False)
+    
+    window = FixedWindow(p0=window_p0, windowlen=window_len)
+    normalizer = Normalize(amp_norm_axis=-1, amp_norm_type="peak")
+    
+    def collate_fn(batch):
+        processed_waveforms = []
+        labels = []
+        
+        for waveform, metadata in batch:
+            state = {"X": (waveform, metadata)}
+            window(state)
+            normalizer(state)
+            
+            w, m = state["X"]
+            processed_waveforms.append(w.squeeze()) # (1, L) -> (L,)
+            labels.append(m.get("label", -1) if m else -1)
+            
+        return np.stack(processed_waveforms), np.array(labels)
+        
+    loader = DataLoader(
+        dataset, 
+        batch_size=batch_size, 
+        shuffle=False, 
+        num_workers=num_workers,
+        collate_fn=collate_fn,
+        prefetch_factor=2
+    )
+
+    all_waveforms = []
+    all_labels = []
+    
+    for waveforms, labels in tqdm(loader, desc="Loading Data"):
+        all_waveforms.append(waveforms)
+        all_labels.append(labels)
+        
+    if not all_waveforms:
+        return np.array([]), np.array([])
+        
+    return np.concatenate(all_waveforms), np.concatenate(all_labels)
 
 class Predictor:
     """
@@ -234,27 +295,42 @@ class Predictor:
         tensor = torch.from_numpy(processed_data).float()
         tensor = tensor.unsqueeze(1) # Add channel dim -> (N, 1, L)
         
-        return tensor.to(self.device)
+        return tensor
 
-    def predict(self, waveforms: Union[np.ndarray, List[np.ndarray]], return_probs: bool = False):
+    def predict(self, waveforms: Union[np.ndarray, List[np.ndarray]], return_probs: bool = False, batch_size: int = 2048):
         """
         Run inference.
         
         Args:
             waveforms: Input data.
             return_probs: If True, return probabilities instead of class indices.
+            batch_size: Batch size for inference to avoid OOM.
             
         Returns:
             np.ndarray: Predicted classes (or probabilities).
         """
-        x = self.preprocess(waveforms)
+        if isinstance(waveforms, torch.Tensor):
+             waveforms = waveforms.cpu().numpy()
+
+        input_tensor = self.preprocess(waveforms)
+        
+        n_samples = input_tensor.shape[0]
+        # Pre-allocate output to save memory (if needed) or just list append
+        # For probs: (N, C), for classes: (N,)
+        
+        results = []
         
         with torch.no_grad():
-            logits = self.model(x)
-            probs = torch.softmax(logits, dim=1)
+            for i in tqdm(range(0, n_samples, batch_size), desc="Predicting", disable=n_samples <= batch_size):
+                batch = input_tensor[i : i + batch_size].to(self.device)
+                logits = self.model(batch)
+                
+                probs = torch.softmax(logits, dim=1)
+                
+                if return_probs:
+                    results.append(probs.cpu().numpy())
+                else:
+                    classes = torch.argmax(probs, dim=1)
+                    results.append(classes.cpu().numpy())
             
-        if return_probs:
-            return probs.cpu().numpy()
-        else:
-            classes = torch.argmax(probs, dim=1)
-            return classes.cpu().numpy()
+        return np.concatenate(results, axis=0)

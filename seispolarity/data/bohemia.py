@@ -24,7 +24,7 @@ from obspy.geodetics import gps2dist_azimuth
 from obspy.io.nordic.core import read_nordic
 
 import seispolarity
-from .base import BenchmarkDataset, EventParameters, TraceParameters, logger
+from .base import logger
 from seispolarity.util import download_http
 from seispolarity.util.trace_ops import (
     rotate_stream_to_zne,
@@ -68,7 +68,7 @@ STATION_NETWORK_CACHE: dict[str, str] = {}
 ASCII_SET = string.ascii_lowercase + string.digits
 
 
-class BohemiaSaxony(BenchmarkDataset):
+class BohemiaSaxony:
     """
     Regional benchmark dataset of waveform data and metadata
     for the North-West Bohemia and Saxony region in Germany/Czech Republic.
