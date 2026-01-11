@@ -36,13 +36,17 @@ def main() -> int:
     # --- Paths (路径设置) ---
     # Path to HDF5 files. Set to None to auto-download from Hugging Face.
     # 设置为 None 可从 Hugging Face 自动下载默认数据。
-    TRAIN_H5 = r"/mnt/c/Users/yuan/seispolarity/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
-    TEST_H5  = r"/mnt/c/Users/yuan/seispolarity/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
+    TRAIN_H5 = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
+    TEST_H5  = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
     OUT_DIR  = "./checkpoints_ross_scsn"
 
     # --- Performance (性能优化) ---
-    PRELOAD_RAM = True  # Load all data into RAM for speed / 是否全量加载到内存
-    NUM_WORKERS = 4     # DataLoader worker processes / 数据加载进程数
+    PRELOAD_RAM = False  # Load all data into RAM for speed / 是否全量加载到内存
+    
+    # Auto-configure workers:
+    # If Preload=True, usage of multiple workers adds overhead (forking RAM), so use 0.
+    # If Preload=False (Disk), use multiple workers to hide IO latency.
+    NUM_WORKERS = 8 if not PRELOAD_RAM else 0
 
     # --- Hyperparameters (超参数) ---
     EPOCHS          = 50
@@ -50,7 +54,6 @@ def main() -> int:
     LR              = 1e-3
     PATIENCE        = 5
     TRAIN_VAL_SPLIT = 0.9   # 90% Training / 10% Validation
-    LIMIT           = None  # Limit samples for debugging / 限制样本数(调试用)
 
     # --- Data Processing (数据处理) ---
     # Ross (2018) Settings:
@@ -71,7 +74,6 @@ def main() -> int:
     # 加载训练数据 (用于训练和验证)
     train_full_ds = SCSNDataset(
         TRAIN_H5, 
-        limit=LIMIT, 
         preload=PRELOAD_RAM, 
         split="train"
     )
@@ -80,7 +82,6 @@ def main() -> int:
     # 加载测试数据 (仅用于最终测试，不参与训练)
     test_ds = SCSNDataset(
         TEST_H5, 
-        limit=LIMIT, 
         preload=PRELOAD_RAM, 
         split="test"
     )
@@ -97,7 +98,6 @@ def main() -> int:
         epochs=EPOCHS,
         learning_rate=LR,
         num_workers=NUM_WORKERS,
-        limit=LIMIT,
         p0=P0,
         windowlen=WINDOWLEN,
         picker_p=SCSN_P_PICK_INDEX,  # Pass P-pick index for reference / 传入P波拾取点
