@@ -4,12 +4,6 @@ seispolarity 模型的统一推断接口。
 """
 
 import os
-
-# Force usage of official Hugging Face endpoint by removing mirror settings
-# 强制使用官方 Hugging Face 端点，移除镜像设置
-if "HF_ENDPOINT" in os.environ:
-    del os.environ["HF_ENDPOINT"]
-
 import torch
 import numpy as np
 import warnings
@@ -32,66 +26,6 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"} # Example map
     }
 }
-
-from torch.utils.data import DataLoader
-from seispolarity.data.scsn import SCSNDataset
-from seispolarity.generate import FixedWindow, Normalize
-
-def load_scsn_waveforms(h5_path, limit=None, window_p0=100, window_len=400, num_workers=4, batch_size=10000):
-    """
-    Load and preprocess SCSN waveforms using multiprocessing.
-    
-    Args:
-        h5_path (str): Path to SCSN HDF5 file.
-        limit (int, optional): Max samples.
-        window_p0 (int): P-pick center index for windowing.
-        window_len (int): Output window length.
-        num_workers (int): Number of workers for DataLoader.
-        batch_size (int): Batch size for loading.
-        
-    Returns:
-        (np.ndarray, np.ndarray): Waveforms (N, L), Labels (N,)
-    """
-    dataset = SCSNDataset(h5_path=h5_path, limit=limit, preload=False)
-    
-    window = FixedWindow(p0=window_p0, windowlen=window_len)
-    normalizer = Normalize(amp_norm_axis=-1, amp_norm_type="peak")
-    
-    def collate_fn(batch):
-        processed_waveforms = []
-        labels = []
-        
-        for waveform, metadata in batch:
-            state = {"X": (waveform, metadata)}
-            window(state)
-            normalizer(state)
-            
-            w, m = state["X"]
-            processed_waveforms.append(w.squeeze()) # (1, L) -> (L,)
-            labels.append(m.get("label", -1) if m else -1)
-            
-        return np.stack(processed_waveforms), np.array(labels)
-        
-    loader = DataLoader(
-        dataset, 
-        batch_size=batch_size, 
-        shuffle=False, 
-        num_workers=num_workers,
-        collate_fn=collate_fn,
-        prefetch_factor=2
-    )
-
-    all_waveforms = []
-    all_labels = []
-    
-    for waveforms, labels in tqdm(loader, desc="Loading Data"):
-        all_waveforms.append(waveforms)
-        all_labels.append(labels)
-        
-    if not all_waveforms:
-        return np.array([]), np.array([])
-        
-    return np.concatenate(all_waveforms), np.concatenate(all_labels)
 
 class Predictor:
     """
@@ -260,42 +194,43 @@ class Predictor:
 
     def preprocess(self, waveforms: Union[np.ndarray, List[np.ndarray]]) -> torch.Tensor:
         """
-        Preprocess waveforms: Crop, Normalize, Tensorize.
-        预处理波形: 裁剪, 归一化, 转Tensor.
-        
-        Args:
-            waveforms: Numpy array (N, L) or List of arrays.
+        Preprocess waveforms: List/Array -> Normalized Tensor (N, 1, L).
         """
-        # Convert to numpy if needed
+        # 1. Convert to Numpy
         if isinstance(waveforms, list):
             waveforms = np.array(waveforms)
             
-        if waveforms.ndim == 1:
-            waveforms = waveforms[np.newaxis, :] # (1, L)
+        if isinstance(waveforms, torch.Tensor):
+            waveforms = waveforms.cpu().numpy()
+
+        if not isinstance(waveforms, np.ndarray):
+            # Try last resort conversion
+            try:
+                waveforms = np.array(waveforms)
+            except:
+                raise TypeError(f"Expected list or numpy array, got {type(waveforms)}")
             
-        N, L = waveforms.shape
-        target_len = self.config["input_len"]
+        # Ensure float32
+        data = waveforms.astype(np.float32)
         
-        # 1. Processing Loop (numpy vectorized)
-        # Verify length (Cropping must be done externally)
-        if L != target_len:
-            raise ValueError(f"Input length {L} does not match model requirement {target_len}.\n"
-                             f"Please crop or pad your data externally before passing to Predictor.")
-        
-        processed_data = waveforms
-            
         # 2. Normalization (MaxAbs per sample)
-        # (N, L)
-        max_vals = np.abs(processed_data).max(axis=1, keepdims=True)
-        max_vals[max_vals == 0] = 1.0 # Avoid div by zero
-        processed_data = processed_data / max_vals
+        # Avoid division by zero
+        if data.size > 0:
+            max_vals = np.abs(data).max(axis=-1, keepdims=True)
+            max_vals[max_vals == 0] = 1.0
+            data = data / max_vals
         
         # 3. To Tensor
-        # Model expects (N, 1, L) for Conv1d
-        tensor = torch.from_numpy(processed_data).float()
-        tensor = tensor.unsqueeze(1) # Add channel dim -> (N, 1, L)
+        tensor = torch.from_numpy(data)
         
-        return tensor
+        # 4. Shape Check
+        # Expected: (N, L) -> (N, 1, L)
+        if tensor.ndim == 2:
+            tensor = tensor.unsqueeze(1)
+        elif tensor.ndim == 1:
+            tensor = tensor.unsqueeze(0).unsqueeze(0)
+            
+        return tensor.float()
 
     def predict(self, waveforms: Union[np.ndarray, List[np.ndarray]], return_probs: bool = False, batch_size: int = 2048):
         """
@@ -334,3 +269,65 @@ class Predictor:
                     results.append(classes.cpu().numpy())
             
         return np.concatenate(results, axis=0)
+
+    def predict_from_loader(self, loader: torch.utils.data.DataLoader, return_probs: bool = False):
+        """
+        Run inference on a DataLoader.
+        
+        Args:
+            loader: PyTorch DataLoader yielding (waveforms, labels) or waveforms.
+            return_probs: If True, return probabilities.
+            
+        Returns:
+            (predictions, labels): 
+                - predictions: (N,) indices or (N, C) probabilities.
+                - labels: (N,) ground truth labels if available, else None.
+        """
+        self.model.eval()
+        results = []
+        labels_list = []
+        
+        device = self.device
+        
+        # Iterate through loader
+        with torch.no_grad():
+            for batch in tqdm(loader, desc="Predicting", unit="batch"):
+                # 1. Unpack Batch
+                # Support (X, Y) or X
+                if isinstance(batch, (list, tuple)):
+                    imgs = batch[0]
+                    if len(batch) > 1:
+                        labels_list.append(batch[1])
+                else:
+                    imgs = batch
+                
+                # 2. Prepare Input
+                # Determine standard tensor shape: (B, 1, L)
+                if isinstance(imgs, np.ndarray):
+                    x = torch.from_numpy(imgs)
+                else:
+                    x = imgs
+                
+                x = x.float().to(device)
+                
+                # Fix dimensions: (B, L) -> (B, 1, L)
+                if x.ndim == 2:
+                    x = x.unsqueeze(1)
+                
+                # 3. Model Inference
+                logits = self.model(x)
+                probs = torch.softmax(logits, dim=1)
+                
+                # 4. Store Results
+                if return_probs:
+                    results.append(probs.cpu().numpy())
+                else:
+                    preds = torch.argmax(probs, dim=1)
+                    results.append(preds.cpu().numpy())
+        
+        # Concatenate
+        final_preds = np.concatenate(results, axis=0) if results else np.array([])
+        final_labels = np.concatenate(labels_list, axis=0) if labels_list else None
+        
+        return final_preds, final_labels
+
