@@ -34,6 +34,7 @@ class TrainingConfig:
     checkpoint_dir: str = "."
     save_best_only: bool = True
     patience: int = -1 # Early stopping patience. -1 means disabled.
+    resume_checkpoint: Optional[str] = None
 
 
 def default_device(config: TrainingConfig) -> torch.device:
@@ -152,6 +153,14 @@ class Trainer:
         train_loader, val_loader = self._build_loaders()
 
         self.model.to(device)
+
+        if cfg.resume_checkpoint:
+            if Path(cfg.resume_checkpoint).exists():
+                print(f"Resuming training from checkpoint: {cfg.resume_checkpoint}")
+                self.model.load_state_dict(torch.load(cfg.resume_checkpoint, map_location=device))
+            else:
+                print(f"Checkpoint {cfg.resume_checkpoint} not found. Starting from scratch.")
+
         criterion = nn.CrossEntropyLoss()
         optimizer = optim.Adam(self.model.parameters(), lr=cfg.learning_rate)
 
