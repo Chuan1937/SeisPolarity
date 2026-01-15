@@ -9,3 +9,4 @@ __pycache__/
 /checkpoints_*/
 Update_model.ipynb
 datasets/
+pretrained_model/
