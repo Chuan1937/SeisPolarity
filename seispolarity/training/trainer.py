@@ -56,7 +56,7 @@ class MetadataToLabel:
 
     def __call__(self, state_dict):
         _, metadata = state_dict["X"]
-        label = metadata[self.metadata_key]
+        label = np.array(metadata[self.metadata_key])
         state_dict[self.key] = (label, None)
 
 

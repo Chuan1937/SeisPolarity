@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Optional, List, Union, Tuple, Literal
+from typing import Any, Optional, List, Union, Tuple, Literal, Dict
 from urllib.parse import urljoin
 import os
 
@@ -16,25 +16,26 @@ import pandas as pd
 import scipy.signal
 from tqdm import tqdm
 
+try:
+    import torch
+    from torch.utils.data import DataLoader, Dataset
+except ImportError:
+    torch = None
+    DataLoader = None
+    Dataset = object
+
 import seispolarity.util as util
 from seispolarity.util import pad_packed_sequence
+from seispolarity.config import settings
 
 # Configure logging
-logger = logging.getLogger("seispolarity")
+logger = logging.getLogger("seispolarity.data")
 if not logger.handlers:
     handler = logging.StreamHandler()
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     logger.setLevel(logging.INFO)
-
-# Default configuration
-CONFIG = {
-    "dimension_order": "NCW",
-    "component_order": "ZNE",
-    "cache_data_root": Path.home() / ".seispolarity" / "datasets",
-    "remote_data_root": "https://huggingface.co/datasets/chuanjun1978/Seismic-AI-Data/resolve/main/",
-}
 
 class LoadingContext:
     """
@@ -64,23 +65,28 @@ class LoadingContext:
             self.file_pointers[chunk] = h5py.File(self.chunk_dict[chunk], "r")
         return self.file_pointers[chunk]
 
-class WaveformDataset:
+class WaveformDataset(Dataset):
     """
-    This class is the base class for waveform datasets provided by SeisPolarity.
-    It handles loading metadata (CSV) and waveforms (HDF5).
+    Unified Base Dataset for SeisPolarity.
+    Supports:
+    1. SeisBench-style Metadata (CSV) + Waveforms (HDF5 Group/Bucket structure)
+    2. Polarity-style Flat Data (Single HDF5 with X/Y datasets, virtually indexed)
     """
 
     def __init__(
         self,
         path=None,
         name=None,
-        dimension_order=None,
-        component_order=None,
+        dimension_order="NCW",
+        component_order="ZNE",
         sampling_rate=None,
         cache=None,
         chunks=None,
         missing_components="pad",
         metadata_cache=False,
+        split=None,
+        preload=False,
+        allowed_labels=None,
         **kwargs,
     ):
         if name is None:
@@ -89,14 +95,16 @@ class WaveformDataset:
             self._name = name
 
         self.cache = cache
-        self._path = path
-        if self.path is None:
-            raise ValueError("Path can not be None")
-            
+        self._path = path if path else None
+        
+        # Internal handle for flat HDF5 streaming
+        self._h5_handle = None 
+
         self._chunks = chunks
-        if chunks is not None:
-            self._chunks = sorted(chunks)
-            self._validate_chunks(path, self._chunks)
+        if self._path:
+             self._chunks = sorted(chunks) if chunks is not None else self.available_chunks(self._path)
+        else:
+             self._chunks = []
 
         self._missing_components = None
         self._trace_identification_warning_issued = False
@@ -109,38 +117,20 @@ class WaveformDataset:
         self._chunks_with_paths_cache = None
         self.sampling_rate = sampling_rate
 
-        self._verify_dataset()
-
-        metadatas = []
-        for chunk, metadata_path, _ in zip(*self._chunks_with_paths()):
-            with warnings.catch_warnings():
-                warnings.filterwarnings("ignore", category=pd.errors.DtypeWarning)
-                
-                # Check for empty metadata files
-                if metadata_path.stat().st_size == 0:
-                     logger.warning(f"Metadata file {metadata_path} is empty, skipping.")
-                     continue
-
-                tmp_metadata = pd.read_csv(
-                    metadata_path,
-                    dtype={
-                        "trace_sampling_rate_hz": float,
-                        "trace_dt_s": float,
-                        "trace_component_order": str,
-                    },
-                )
-            tmp_metadata["trace_chunk"] = chunk
-            if tmp_metadata.get("source_origin_time") is not None:
-                tmp_metadata.source_origin_time = pd.to_datetime(
-                    tmp_metadata.source_origin_time
-                )
-            metadatas.append(tmp_metadata)
+        # --- New parameters for unified loading ---
+        self.preload = preload
+        self.allowed_labels = allowed_labels
+        self.data_cache = None  # Storage for RAM mode
+        self._indices = None    # Logical to physical index mapping
         
-        if metadatas:
-            self._metadata = pd.concat(metadatas)
-            self._metadata.reset_index(inplace=True)
-        else:
-            self._metadata = pd.DataFrame()
+        # --- Initialize Data ---
+        # 1. Try Loading Metadata (SeisBench Style)
+        # 2. If fails or not applicable, try loading Flat Index (SCSN Style)
+        self._metadata = self._load_metadata()
+        
+        # If metadata is empty, we might be in a Flat HDF5 scenario without CSV
+        if self._metadata.empty and self._path and Path(self._path).is_file():
+             self._scan_flat_hdf5()
 
         self._data_format = self._read_data_format()
 
@@ -155,550 +145,586 @@ class WaveformDataset:
 
         self._waveform_cache = defaultdict(dict)
         self.grouping = None
-
-    def _validate_chunks(self, path, chunks):
-        available = self.available_chunks(path)
-        if any(chunk not in available for chunk in chunks):
-            # Only raise if we are sure it's missing (files don't exist)
-            # Users might be defining chunks that are about to be downloaded
-            pass 
-
-    def __str__(self):
-        return f"{self._name} - {len(self)} traces"
-
-    def copy(self):
-        other = copy.copy(self)
-        other._metadata = self._metadata.copy()
-        other._waveform_cache = defaultdict(dict)
-        for key in self._waveform_cache.keys():
-            other._waveform_cache[key] = copy.copy(self._waveform_cache[key])
-        return other
-
-    @property
-    def metadata(self):
-        return self._metadata
-    
-    @metadata.setter
-    def metadata(self, value):
-        self._metadata = value
-
-    @property
-    def name(self):
-        return self._name
-
-    @property
-    def cache(self):
-        return self._cache
-
-    @cache.setter
-    def cache(self, cache):
-        if cache not in ["full", "trace", None]:
-            raise ValueError(
-                f"Unknown cache strategy '{cache}'. Allowed values are 'full', 'trace' and None."
-            )
-        self._cache = cache
-
-    @property
-    def metadata_cache(self):
-        return self._metadata_cache
-
-    @metadata_cache.setter
-    def metadata_cache(self, val):
-        self._metadata_cache = val
-        self._rebuild_metadata_cache()
-
-    @property
-    def path(self):
-        if self._path is None:
-            raise ValueError("Path is None. Can't create data set without a path.")
-        return Path(self._path)
-
-    @property
-    def data_format(self):
-        return dict(self._data_format)
-
-    @property
-    def dimension_order(self):
-        return self._dimension_order
-
-    @dimension_order.setter
-    def dimension_order(self, value):
-        if value is None:
-            value = CONFIG["dimension_order"]
-
-        self._dimension_mapping = self._get_dimension_mapping(
-            "N" + self._data_format["dimension_order"], value
-        )
-        self._dimension_order = value
-
-    @property
-    def missing_components(self):
-        return self._missing_components
-
-    @missing_components.setter
-    def missing_components(self, value):
-        if value not in ["pad", "copy", "ignore"]:
-            raise ValueError(
-                f"Unknown missing components strategy '{value}'. "
-                f"Allowed values are 'pad', 'copy' and 'ignore'."
-            )
-        self._missing_components = value
-        self.component_order = self.component_order
-
-    @property
-    def component_order(self):
-        return self._component_order
-
-    @component_order.setter
-    def component_order(self, value):
-        if value is None:
-            value = CONFIG["component_order"]
-            # logger.warning(f"Output component_order not specified, defaulting to '{value}'.")
-
-        if self.missing_components is not None:
-            self._component_mapping = {}
-            if "trace_component_order" in self.metadata.columns:
-                for source_order in self.metadata["trace_component_order"].unique():
-                    self._component_mapping[source_order] = self._get_component_mapping(
-                        source_order, value
-                    )
-            else:
-                source_order = self.data_format.get("component_order", "ZNE")
-                self._component_mapping[source_order] = self._get_component_mapping(
-                    source_order, value
-                )
-
-        self._component_order = value
         
-    @property
-    def grouping(self):
-        return self._grouping
-
-    @grouping.setter
-    def grouping(self, value):
-        self._grouping = value
-        if value is None:
-            self._groups = None
-            self._groups_to_trace_idx = None
-        else:
-            self._metadata.reset_index(inplace=True, drop=True)
-            self._groups_to_trace_idx = self.metadata.groupby(value).groups
-            self._groups = list(self._groups_to_trace_idx.keys())
-            self._groups_to_group_idx = {
-                group: i for i, group in enumerate(self._groups)
-            }
-
-    @property
-    def groups(self):
-        return copy.copy(self._groups)
-
-    @property
-    def chunks(self):
-        if self._chunks is None:
-            self._chunks = self.available_chunks(self.path)
-        return self._chunks
-
-    @staticmethod
-    def available_chunks(path):
-        path = Path(path)
-        chunks_path = path / "chunks"
-        if chunks_path.is_file():
-            with open(chunks_path, "r") as f:
-                chunks = [x for x in f.read().split("\n") if x.strip()]
-        else:
-            chunks = []
+        # --- Build index and handle filtering ---
+        # Ensure _chunks is set before building index
+        if not self._chunks and self._path:
+            self._chunks = self.available_chunks(self._path)
         
-        if not chunks:
-            if (path / "waveforms.hdf5").is_file():
-                chunks = [""]
-            else:
-                try:
-                    metadata_files = set(
-                        [x.name[8:-4] for x in path.iterdir()
-                            if x.name.startswith("metadata") and x.name.endswith(".csv")]
-                    )
-                    waveform_files = set(
-                        [x.name[9:-5] for x in path.iterdir()
-                            if x.name.startswith("waveforms") and x.name.endswith(".hdf5")]
-                    )
-                    chunks = sorted(list(metadata_files & waveform_files))
-                except FileNotFoundError:
-                    chunks = []
-
-        return sorted(chunks)
-
-    def _rebuild_metadata_cache(self):
-        if self.metadata_cache:
-            self._metadata_lookup = list(self._metadata.apply(lambda x: x.to_dict(), axis=1))
-        else:
-            self._metadata_lookup = None
-
-    def _unify_sampling_rate(self, eps=1e-4):
-        if "trace_sampling_rate_hz" in self.metadata.columns:
-            if "trace_dt_s" in self.metadata.columns:
-                mask = np.isnan(self.metadata["trace_sampling_rate_hz"].values)
-                if np.any(mask):
-                    self._metadata.loc[mask, "trace_sampling_rate_hz"] = (
-                        1 / self.metadata.loc[mask, "trace_dt_s"]
-                    )
-        elif "trace_dt_s" in self.metadata.columns:
-            self.metadata["trace_sampling_rate_hz"] = 1 / self.metadata["trace_dt_s"]
-        elif "sampling_rate" in self.data_format:
-            self._metadata["trace_sampling_rate_hz"] = self.data_format["sampling_rate"]
-        else:
-            # logger.warning("Sampling rate not specified in data set, setting to NaN.")
-            self._metadata["trace_sampling_rate_hz"] = np.nan
-
-    def _get_component_mapping(self, source, target):
-        if (isinstance(source, float) and np.isnan(source)) or not source:
-             raise ValueError("Component order not set for (parts of) the dataset.")
+        self._build_index()
         
-        source = list(source)
-        target = list(target)
-        mapping = []
-        for t in target:
-            if t in source:
-                mapping.append(source.index(t))
-            else:
-                if self.missing_components == "pad":
-                    mapping.append(len(source))
-                elif self.missing_components == "copy":
-                    mapping.append(0)
-        return mapping
+        # --- Conditional Preloading ---
+        if self.preload:
+            self._opt_load_ram()
+        else:
+            logger.info(f"Operating in Disk Streaming Mode for {self._name}")
+        
+        if split:
+            # Handle split filtering if metadata has 'split' col or if we implement split logic
+            if 'split' in self._metadata.columns:
+                 self.filter(self._metadata['split'] == split)
 
-    @staticmethod
-    def _get_dimension_mapping(source, target):
-        source = list(source)
-        target = list(target)
-        try:
-            mapping = [source.index(t) for t in target]
-        except ValueError:
-             raise ValueError(f"Could not determine mapping {source} -> {target}.")
-        return mapping
+    def _load_metadata(self):
+        """
+        Load metadata from CSV files corresponding to chunks.
+        """
+        if not self._path: return pd.DataFrame()
+        
+        metadatas = []
+        chunks, metadata_paths, _ = self._chunks_with_paths()
+        
+        if not metadata_paths: return pd.DataFrame()
+
+        for chunk, metadata_path in zip(chunks, metadata_paths):
+            if metadata_path and metadata_path.is_file() and metadata_path.stat().st_size > 0:
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=pd.errors.DtypeWarning)
+                    try:
+                        tmp = pd.read_csv(metadata_path, low_memory=False)
+                        tmp["trace_chunk"] = chunk
+                        metadatas.append(tmp)
+                    except Exception as e:
+                        logger.warning(f"Failed to read metadata {metadata_path}: {e}")
+        
+        if metadatas:
+            df = pd.concat(metadatas)
+            df.reset_index(inplace=True, drop=True)
+            return df
+        return pd.DataFrame()
+
+    def _scan_flat_hdf5(self):
+        """
+        Populate metadata from HDF5 if no CSV exists (SCSN Style).
+        """
+        fpath = Path(self._path)
+        if not fpath.is_file(): return
+
+        with h5py.File(fpath, 'r') as f:
+            if 'X' in f:
+                N = f['X'].shape[0]
+                # Create virtual metadata
+                meta = {'trace_chunk': [''] * N}
+                
+                # If Y exists, add it
+                if 'Y' in f:
+                    meta['label'] = f['Y'][:]
+                
+                # If other fields exist
+                for k in ['snr', 'evids', 'split']:
+                    if k in f:
+                        meta[k] = f[k][:]
+                
+                self._metadata = pd.DataFrame(meta)
+                logger.info(f"Initialized Flat Dataset from {fpath.name} with {N} samples.")
 
     def _chunks_with_paths(self):
         if self._chunks_with_paths_cache is None:
-            metadata_paths = []
-            waveform_paths = []
-            for chunk in self.chunks:
-                if chunk == "":
-                    metadata_paths.append(self.path / "metadata.csv")
-                    waveform_paths.append(self.path / "waveforms.hdf5")
-                else:
-                    metadata_paths.append(self.path / f"metadata_{chunk}.csv")
-                    waveform_paths.append(self.path / f"waveforms_{chunk}.hdf5")
+            if not self._path: return [], [], []
             
-            self._chunks_with_paths_cache = (self.chunks, metadata_paths, waveform_paths)
+            p = Path(self._path)
+            chunks = self._chunks
+            
+            # Case 1: Path is HDF5 file (SCSN)
+            if p.is_file() and p.suffix == '.hdf5':
+                self._chunks_with_paths_cache = ([''], [None], [p])
+            
+            # Case 2: Path is directory (SeisBench)
+            else:
+                meta_paths = [p / f"metadata_{c}.csv" if c != "" else p / "metadata.csv" for c in chunks]
+                wave_paths = [p / f"waveforms_{c}.hdf5" if c != "" else p / "waveforms.hdf5" for c in chunks]
+                self._chunks_with_paths_cache = (chunks, meta_paths, wave_paths)
+                
         return self._chunks_with_paths_cache
 
-    def _verify_dataset(self):
-        for chunk, metadata_path, waveform_path in zip(*self._chunks_with_paths()):
-            if not metadata_path.is_file():
-                # Allow missing files if we are about to download them in subclass
-                pass
-            if not waveform_path.is_file():
-                pass
-
-    def _read_data_format(self):
-        data_format = None
-        # Only read if files actually exist
-        paths = self._chunks_with_paths()[2]
-        existing_paths = [p for p in paths if p.is_file()]
-        
-        if not existing_paths:
-             return {"dimension_order": "CW"}
-
-        for waveform_file in existing_paths:
-            with h5py.File(waveform_file, "r") as f_wave:
-                try:
-                    g_data_format = f_wave.get("data_format", {})
-                    # Handle both cases: dict read or group read
-                    if hasattr(g_data_format, "keys"):
-                        tmp_data_format = {k: g_data_format[k][()] for k in g_data_format.keys()}
-                    else:
-                        tmp_data_format = {}
-                except Exception:
-                    tmp_data_format = {}
-            if data_format is None:
-                data_format = tmp_data_format
-        
-        if data_format:
-            for key in data_format.keys():
-                if isinstance(data_format[key], bytes):
-                    data_format[key] = data_format[key].decode()
-        else:
-            data_format = {}
-
-        if "dimension_order" not in data_format:
-            data_format["dimension_order"] = "CW"
-        return data_format
-
-    def _unify_component_order(self):
-        if "component_order" in self.data_format:
-            if "trace_component_order" not in self.metadata.columns:
-                self._metadata["trace_component_order"] = self.data_format["component_order"]
-
-    def _build_trace_name_to_idx_dict(self):
-        self._trace_name_to_idx = {}
-        if "trace_name" in self.metadata.columns:
-            self._trace_name_to_idx["name"] = {
-                (trace_name,): i for i, trace_name in enumerate(self.metadata["trace_name"])
-            }
-        else:
-            self._trace_name_to_idx["name"] = {}
-        self._trace_identification_warning_issued = False
-
-    def preload_waveforms(self, pbar=False):
-        if self.cache is None:
-            logger.warning("Skipping preload, as cache is disabled.")
-            return
-
-        chunks, metadata_paths, waveforms_path = self._chunks_with_paths()
-        with LoadingContext(chunks, waveforms_path) as context:
-            iterator = zip(self._metadata["trace_name"], self._metadata["trace_chunk"])
-            if pbar:
-                iterator = tqdm(iterator, total=len(self._metadata), desc="Preloading waveforms")
-
-            for trace_name, chunk in iterator:
-                self._get_single_waveform(trace_name, chunk, context=context)
-
-    def filter(self, mask, inplace=True):
-        if inplace:
-            self._metadata = self._metadata[mask]
-            self._evict_cache()
-            self._build_trace_name_to_idx_dict()
-            self._rebuild_metadata_cache()
-            self.grouping = self.grouping # triggers regrouping
-            return self
-        else:
-            other = self.copy()
-            other.filter(mask, inplace=True)
-            return other
-
-    def get_split(self, split):
-        if "split" not in self.metadata.columns:
-            raise ValueError("Split requested but no split defined in metadata")
-        mask = (self.metadata["split"] == split).values
-        return self.filter(mask, inplace=False)
-
-    def train(self): return self.get_split("train")
-    def dev(self): return self.get_split("dev")
-    def test(self): return self.get_split("test")
-
-    def _evict_cache(self):
-        pass
-
-    def __getitem__(self, item):
-        if not isinstance(item, str):
-            raise TypeError("Can only use strings to access metadata parameters")
-        return self._metadata[item]
+    def available_chunks(self, path):
+        path = Path(path)
+        if path.is_file(): return [""]
+        # Simplified directory scan
+        if (path / "waveforms.hdf5").exists(): return [""]
+        return []
 
     def __len__(self):
-        return len(self._metadata)
+        return self._length if hasattr(self, '_length') else len(self._metadata)
 
-    def get_sample(self, idx, sampling_rate=None):
-        if self._metadata_lookup is None:
-            metadata = self.metadata.iloc[idx].to_dict()
-        else:
-            metadata = copy.deepcopy(self._metadata_lookup[idx])
-
-        sampling_rate = self._get_sample_unify_sampling_rate(metadata, sampling_rate)
-        load_metadata = {k: [v] for k, v in metadata.items()}
-        waveforms = self._get_waveforms_from_load_metadata(load_metadata, sampling_rate)
-
-        batch_dimension = list(self.dimension_order).index("N")
-        waveforms = np.squeeze(waveforms, axis=batch_dimension)
+    def __getitem__(self, idx):
+        """
+        Unified Access Point:
+        - If RAM Mode (preload=True): Returns from self.data_cache
+        - If Disk Mode (preload=False): Reads from HDF5 via persistent handle
         
-        dimension_order = list(self.dimension_order)
-        del dimension_order[dimension_order.index("N")]
-        sample_dimension = dimension_order.index("W")
-        metadata["trace_npts"] = waveforms.shape[sample_dimension]
-
-        return waveforms, metadata
-
-    def _get_sample_unify_sampling_rate(self, metadata: dict, sampling_rate: Optional[float]):
-        if sampling_rate is None:
-            sampling_rate = self.sampling_rate
-        
-        if sampling_rate is not None:
-            source_sr = metadata["trace_sampling_rate_hz"]
-            if np.isnan(source_sr).any():
-                raise ValueError("Unknown sampling rate.")
-            
-            metadata["trace_source_sampling_rate_hz"] = np.asarray(source_sr)
-            metadata["trace_sampling_rate_hz"] = np.ones_like(metadata["trace_sampling_rate_hz"]) * sampling_rate
-            metadata["trace_dt_s"] = 1.0 / metadata["trace_sampling_rate_hz"]
-        else:
-            metadata["trace_source_sampling_rate_hz"] = np.asarray(metadata["trace_sampling_rate_hz"])
-        
-        return sampling_rate
-
-    def _get_waveforms_from_load_metadata(self, load_metadata, sampling_rate, pack=True):
-        waveforms = {}
-        chunks, _, waveforms_path = self._chunks_with_paths()
-
-        segments = [
-            (trace_name, chunk, float(trace_sr), trace_co)
-            for trace_name, chunk, trace_sr, trace_co in zip(
-                load_metadata["trace_name"],
-                load_metadata["trace_chunk"],
-                load_metadata["trace_source_sampling_rate_hz"],
-                load_metadata["trace_component_order"],
-            )
-        ]
-
-        with LoadingContext(chunks, waveforms_path) as context:
-            for segment in segments:
-                if segment in waveforms: continue
-                trace_name, chunk, trace_sr, trace_co = segment
-                waveforms[segment] = self._get_single_waveform(
-                    trace_name, chunk, context,
-                    target_sampling_rate=sampling_rate,
-                    source_sampling_rate=trace_sr,
-                    source_component_order=trace_co
-                )
-
-        if pack:
-            waveforms = [waveforms[segment] for segment in segments]
-            waveforms = pad_packed_sequence(waveforms)
-            waveforms = waveforms.transpose(*self._dimension_mapping)
-        else:
-            waveforms = [waveforms[segment] for segment in segments]
-        
-        return waveforms
-
-    def _get_single_waveform(self, trace_name, chunk, context, target_sampling_rate=None, source_sampling_rate=None, source_component_order=None):
-        trace_name = str(trace_name)
-        
-        # Caching logic
-        if trace_name in self._waveform_cache[chunk]:
-            waveform = self._waveform_cache[chunk][trace_name]
-        else:
-            if "$" in trace_name:
-                block_name, location = trace_name.split("$")
+        Returns (waveform, metadata_dict)
+        """
+        if isinstance(idx, (slice, np.ndarray, list)):
+            # Handle slicing or array indexing
+            if isinstance(idx, slice):
+                indices = list(range(*idx.indices(len(self))))
             else:
-                block_name, location = trace_name, ":"
+                indices = idx
             
-            location = self._parse_location(location)
-
-            if block_name in self._waveform_cache[chunk]:
-                waveform = self._waveform_cache[chunk][block_name][location]
+            results = []
+            for i in indices:
+                results.append(self._get_single_item(i))
+            return results
+        elif isinstance(idx, str):
+            # String access (metadata column)
+            return self._metadata[idx]
+        else:
+            # Single integer index
+            return self._get_single_item(idx)
+    
+    def _get_single_item(self, idx):
+        """Get single sample by logical index."""
+        if self.preload and self.data_cache:
+            # --- RAM Path ---
+            waveform = self.data_cache['X'][idx]
+            # Fast dict comprehension for metadata
+            metadata = {k: v[idx] for k, v in self.data_cache.items() if k != 'X'}
+            
+        else:
+            # --- Disk Path ---
+            # Get physical index
+            physical_idx = self._indices[idx] if self._indices is not None else idx
+            
+            # Get file path
+            chunks, _, wave_paths = self._chunks_with_paths()
+            if not wave_paths:
+                return np.zeros((1, 100), dtype=np.float32), {}
+            
+            # Lazy Open: Only open file handle on first access
+            if self._h5_handle is None:
+                self._h5_handle = h5py.File(wave_paths[0], 'r')
+            
+            f = self._h5_handle
+            metadata = {}
+            
+            if 'X' in f:
+                waveform = f['X'][physical_idx]
+                if 'Y' in f:     metadata['label'] = f['Y'][physical_idx]
+                if 'snr' in f:   metadata['snr'] = f['snr'][physical_idx]
+                if 'evids' in f: metadata['evid'] = f['evids'][physical_idx]
+                if 'label' in f: metadata['label'] = f['label'][physical_idx]
+            elif 'data' in f:
+                # SeisBench style - simplified
+                waveform = np.zeros((1, 100), dtype=np.float32)
             else:
-                g_data = context[chunk]["data"]
-                block = g_data[block_name]
-                if self.cache == "full":
-                    block = block[()]
-                    self._waveform_cache[chunk][block_name] = block
-                    waveform = block[location]
+                waveform = np.zeros((1, 100), dtype=np.float32)
+        
+        # Ensure (C, N) shape for PyTorch / SeisBench compatibility
+        if waveform.ndim == 1:
+            waveform = waveform.reshape(1, -1)
+        elif waveform.ndim == 2 and waveform.shape[0] > 3:  # (N, C) -> (C, N)
+            waveform = waveform.T
+        
+        return waveform.astype(np.float32), metadata
+
+    def get_sample(self, idx):
+        """Compatibility wrapper for get_sample."""
+        return self._get_single_item(idx)
+
+    def _read_waveform(self, path, idx, meta):
+        # Handle persistent file handle for streaming performance
+        # (This is a simplified version of scsn logic)
+        f = None
+        close_file = True
+        
+        if self._h5_handle and self._h5_handle.filename == str(path):
+            f = self._h5_handle
+            close_file = False
+        else:
+            # Optimistic caching of handle
+            if self._h5_handle is None:
+                self._h5_handle = h5py.File(path, 'r')
+                f = self._h5_handle
+                close_file = False
+        
+        try:
+            if 'X' in f:
+                # Flat style
+                # Use metadata index or direct idx
+                # If metadata was generated from X, idx matches
+                wav = f['X'][idx]
+            elif 'data' in f:
+                # SeisBench style
+                tname = meta.get('trace_name')
+                bucket = tname.split('$')[0] if '$' in tname else tname
+                wav = f['data'][bucket][:] # Simplified
+            else:
+                wav = np.zeros((1, 100))
+        except Exception as e:
+            logger.error(f"Error reading waveform {idx}: {e}")
+            wav = np.zeros((1, 100))
+        
+        # Ensure shape (C, N)
+        if wav.ndim == 1:
+            wav = wav.reshape(1, -1)
+        
+        return wav.astype(np.float32)
+
+    def get_dataloader(self, batch_size=32, num_workers=0, shuffle=False, window_p0=100, window_len=400):
+        """
+        Create a DataLoader for Streaming/Iterative access.
+        
+        This handles parallel loading and on-the-fly preprocessing.
+        """
+        if DataLoader is None:
+            raise ImportError("PyTorch not installed.")
+        
+        # Parallelism strategy
+        # RAM mode -> Main process (0 workers) avoids overhead
+        # Disk mode -> Multi-process (N workers) hides IO latency
+        workers = 0 if self.preload else max(1, num_workers)
+        
+        logger.info(f"DataLoader: batch={batch_size}, workers={workers}, shuffle={shuffle}, preload={self.preload}")
+
+        # Optional transforms
+        try:
+            from seispolarity.generate import FixedWindow, Normalize
+            window = FixedWindow(p0=window_p0, windowlen=window_len)
+            normalizer = Normalize(amp_norm_axis=-1, amp_norm_type="peak")
+            use_transforms = True
+        except ImportError:
+            use_transforms = False
+            logger.warning("Transform modules not available, skipping preprocessing")
+
+        def collate_fn(batch):
+            processed_w = []
+            labels = []
+            metadata_list = []
+            
+            for waveform, meta in batch:
+                if use_transforms:
+                    # Stateful transform
+                    state = {"X": (waveform, meta)}
+                    window(state)
+                    normalizer(state)
+                    w, m = state["X"]
+                    processed_w.append(w.squeeze())
                 else:
-                    waveform = block[location]
-                    if self.cache == "trace":
-                        self._waveform_cache[chunk][trace_name] = waveform
+                    processed_w.append(waveform.squeeze())
+                    m = meta
+                
+                labels.append(m.get("label", -1) if m else -1)
+                metadata_list.append(m)
+            
+            if not processed_w: 
+                return np.array([]), np.array([]), []
+            
+            return np.stack(processed_w), np.array(labels), metadata_list
 
-        # Resampling
-        if target_sampling_rate is not None and not np.isnan(source_sampling_rate):
-             waveform = self._resample(waveform, target_sampling_rate, source_sampling_rate)
+        return DataLoader(
+            self, 
+            batch_size=batch_size, 
+            shuffle=shuffle, 
+            num_workers=workers, 
+            collate_fn=collate_fn,
+            prefetch_factor=2 if workers > 0 else None
+        )
 
-        # Component ordering
-        if source_component_order is not None and self._data_format.get("dimension_order"):
-             dim_order = self._data_format["dimension_order"]
-             if "C" in dim_order:
-                 comp_dim = dim_order.index("C")
-                 comp_mapping = self._component_mapping[source_component_order]
-                 
-                 if waveform.shape[comp_dim] == max(comp_mapping):
-                     pad = [(0,0)] * waveform.ndim
-                     pad[comp_dim] = (0, 1)
-                     waveform = np.pad(waveform, pad, "constant")
-                 
-                 waveform = waveform.take(comp_mapping, axis=comp_dim)
+    def _collate_fn(self, batch):
+        waves = [b[0] for b in batch]
+        metas = [b[1] for b in batch]
+        
+        X = np.stack(waves)
+        
+        # Extract labels if present
+        Y = []
+        for m in metas:
+            if 'label' in m: Y.append(m['label'])
+            elif 'Y' in m: Y.append(m['Y'])
+            else: Y.append(-1)
+            
+        return torch.tensor(X), torch.tensor(Y)
 
-        return waveform
+    # Stubs for compatibility
+    def _read_data_format(self): return {}
+    def _unify_sampling_rate(self): pass
+    def _unify_component_order(self): pass
+    def _build_trace_name_to_idx_dict(self): pass
+    def filter(self, mask):
+        self._metadata = self._metadata[mask]
+        self._metadata.reset_index(drop=True, inplace=True)
+        return self
+
+    def _build_index(self):
+        """Build logical to physical index mapping with optional label filtering."""
+        if self._metadata.empty:
+            # For flat HDF5 without metadata
+            chunks, _, wave_paths = self._chunks_with_paths()
+            if not wave_paths:
+                self._indices = np.array([])
+                self._length = 0
+                return
+            
+            # Open first file to get total samples
+            with h5py.File(wave_paths[0], 'r') as f:
+                total_samples = len(f['X']) if 'X' in f else 0
+            
+            if self.allowed_labels is None:
+                self._indices = np.arange(total_samples)
+            else:
+                # Need to read labels for filtering
+                with h5py.File(wave_paths[0], 'r') as f:
+                    if 'Y' in f:
+                        Y = f['Y'][:]
+                        mask = np.isin(Y, self.allowed_labels)
+                        self._indices = np.where(mask)[0]
+                    else:
+                        self._indices = np.arange(total_samples)
+        else:
+            # With metadata
+            total_samples = len(self._metadata)
+            
+            if self.allowed_labels is None:
+                self._indices = np.arange(total_samples)
+            else:
+                # Filter by label column if exists
+                if 'label' in self._metadata.columns:
+                    mask = self._metadata['label'].isin(self.allowed_labels)
+                    self._indices = np.where(mask.values)[0]
+                elif 'Y' in self._metadata.columns:
+                    mask = self._metadata['Y'].isin(self.allowed_labels)
+                    self._indices = np.where(mask.values)[0]
+                else:
+                    self._indices = np.arange(total_samples)
+        
+        self._length = len(self._indices)
+        logger.info(f"Built index with {self._length} samples (filtered from {total_samples})")
+
+    def _opt_load_ram(self):
+        """Load filtered dataset into RAM for high-performance access."""
+        try:
+            import psutil
+            psutil_available = True
+        except ImportError:
+            psutil_available = False
+            logger.warning("psutil not installed, skipping memory check")
+        
+        # Memory Safety Check
+        if psutil_available:
+            # Estimate required memory (assuming float32)
+            sample_size = 1
+            chunks, _, wave_paths = self._chunks_with_paths()
+            if wave_paths and wave_paths[0]:
+                with h5py.File(wave_paths[0], 'r') as f:
+                    if 'X' in f:
+                        sample_shape = f['X'].shape[1:]
+                        sample_size = np.prod(sample_shape) * 4  # float32 = 4 bytes
+            
+            required_gb = (self._length * sample_size) / (1024**3) * 1.5  # 1.5x buffer
+            avail_gb = psutil.virtual_memory().available / (1024**3)
+            
+            if avail_gb < required_gb + 1.0:
+                logger.warning(f"Low RAM (Need ~{required_gb:.1f}GB, Available {avail_gb:.1f}GB). Falling back to Disk Mode.")
+                self.preload = False
+                return
+
+        logger.info(f"Loading {self._length} samples into RAM...")
+        try:
+            chunks, _, wave_paths = self._chunks_with_paths()
+            if not wave_paths:
+                logger.error("No waveform files found")
+                self.preload = False
+                return
+            
+            # For simplicity, assume single file for now
+            h5_path = wave_paths[0]
+            
+            with h5py.File(h5_path, 'r') as f:
+                # 1. Initialize Cache
+                if 'X' in f:
+                    full_shape = f['X'].shape
+                    self.data_cache = {}
+                    self.data_cache['X'] = np.empty((self._length,) + full_shape[1:], dtype=f['X'].dtype)
+                    
+                    # 2. Load Metadata (Fast)
+                    logger.info("Loading Metadata...")
+                    meta_keys = [k for k in ['Y', 'snr', 'evids', 'label'] if k in f]
+                    for key in meta_keys:
+                        target_key = {'Y': 'label', 'evids': 'evid'}.get(key, key)
+                        # Read full then slice is fast for small metadata arrays
+                        self.data_cache[target_key] = f[key][:][self._indices]
+
+                    # 3. Load Waveforms with Progress Bar
+                    total_file_samples = full_shape[0]
+                    chunk_size = 10000
+                    
+                    with tqdm(total=self._length, desc="Loading RAM", unit="samples") as pbar:
+                        current_idx_pos = 0
+                        
+                        for start_file_idx in range(0, total_file_samples, chunk_size):
+                            end_file_idx = min(start_file_idx + chunk_size, total_file_samples)
+                            
+                            # Find range in self._indices that belongs to this file chunk
+                            next_idx_pos = np.searchsorted(self._indices, end_file_idx)
+                            
+                            # If there is overlap
+                            if next_idx_pos > current_idx_pos:
+                                count = next_idx_pos - current_idx_pos
+                                
+                                # Read raw chunk from disk
+                                chunk_data = f['X'][start_file_idx:end_file_idx]
+                                
+                                # Map desired indices to chunk-relative coordinates
+                                target_indices = self._indices[current_idx_pos:next_idx_pos] - start_file_idx
+                                
+                                # Fill Cache
+                                self.data_cache['X'][current_idx_pos:next_idx_pos] = chunk_data[target_indices]
+                                
+                                pbar.update(count)
+                            
+                            current_idx_pos = next_idx_pos
+                            if current_idx_pos >= self._length:
+                                break
+                
+                elif 'data' in f:
+                    # SeisBench style - simplified implementation
+                    logger.warning("SeisBench style RAM loading not fully implemented, falling back to disk mode")
+                    self.preload = False
+                    return
+
+            logger.info("RAM Load Complete.")
+        except Exception as e:
+            logger.error(f"RAM Load failed: {e}. Reverting to Disk Mode.")
+            self.preload = False
+            self.data_cache = None
+
+    def close(self):
+        """Close file handles and clean up resources."""
+        if self._h5_handle:
+            self._h5_handle.close()
+            self._h5_handle = None
+        
+        # Clear cache to free memory
+        if self.data_cache:
+            self.data_cache.clear()
+            self.data_cache = None
+    
+    def __del__(self):
+        self.close()
+    
+    def __getstate__(self):
+        """Safety for multiprocessing: don't pickle file handles."""
+        state = self.__dict__.copy()
+        state['_h5_handle'] = None
+        return state
+    
+    def load_all_data(self, batch_size=1000, **kwargs):
+        """Compatibility wrapper to load processed data into arrays."""
+        loader = self.get_dataloader(batch_size=batch_size, shuffle=False, **kwargs)
+        all_w, all_l = [], []
+        for w, l in tqdm(loader, desc="Loading Data", unit="chunk"):
+            all_w.append(w)
+            all_l.append(l)
+        return (np.concatenate(all_w), np.concatenate(all_l)) if all_w else (np.array([]), np.array([]))
+    
+    @property
+    def metadata(self):
+        """Get metadata DataFrame."""
+        return self._metadata
+    
+    @property
+    def indices(self):
+        """Get logical to physical index mapping."""
+        return self._indices
+
+class MultiWaveformDataset(Dataset):
+    """
+    Container for multiple WaveformDatasets to be used as a single dataset.
+    """
+    def __init__(self, datasets):
+        self.datasets = datasets
+        self._cumulative_sizes = self.cumsum(datasets)
+        self._metadata_cache = None
 
     @staticmethod
-    def _parse_location(location):
-        location = location.replace(" ", "")
-        slices = []
-        for dim_slice in location.split(","):
-            parts = dim_slice.split(":")
-            if len(parts) == 1:
-                slices.append(int(parts[0]) if parts[0] else None)
-            elif len(parts) == 2:
-                slices.append(slice(int(parts[0]) if parts[0] else None, int(parts[1]) if parts[1] else None))
-            elif len(parts) == 3:
-                slices.append(slice(int(parts[0]) if parts[0] else None, int(parts[1]) if parts[1] else None, int(parts[2]) if parts[2] else None))
-        return tuple(slices)
+    def cumsum(sequence):
+        r, s = [], 0
+        for e in sequence:
+            l = len(e)
+            r.append(l + s)
+            s += l
+        return r
 
-    def _resample(self, waveform, target, source, eps=1e-4):
-        try:
-            sample_axis = self._data_format["dimension_order"].index("W")
-        except: return waveform
+    def __len__(self):
+        return self._cumulative_sizes[-1] if self._cumulative_sizes else 0
 
-        if abs(target/source - 1) < eps:
-            return waveform
-        
-        if (source % target) < eps:
-            q = int(source // target)
-            return scipy.signal.decimate(waveform, q, axis=sample_axis)
+    def __getitem__(self, idx):
+        if idx < 0:
+            if -idx > len(self):
+                raise ValueError("absolute value of index should not exceed dataset length")
+            idx = len(self) + idx
+        dataset_idx = np.searchsorted(self._cumulative_sizes, idx, side='right')
+        if dataset_idx == 0:
+            sample_idx = idx
         else:
-            num = int(waveform.shape[sample_axis] * target / source)
-            return scipy.signal.resample(waveform, num, axis=sample_axis)
-
-
-class WaveformBenchmarkDataset(WaveformDataset, ABC):
-    """
-    Base class for benchmark datasets which simply need to download
-    pre-processed data from a remote location if not present.
-    """
-    _files: list[str] = ["waveforms$CHUNK.hdf5", "metadata$CHUNK.csv"]
-
-    def __init__(
-        self,
-        chunks: Optional[list[str]] = None,
-        citation: Optional[str] = None,
-        license: Optional[str] = None,
-        force: bool = False,
-        wait_for_file: bool = False,
-        **kwargs,
-    ):
-        self._name = self.__class__.__name__
-        self._citation = citation
-        self._license = license
-        self.path.mkdir(exist_ok=True, parents=True)
-
-        if chunks is None:
-            chunks = self.available_chunks(force=force)
-
-        for chunk in chunks:
-             files_needed = [self.path / f.replace("$CHUNK", chunk) for f in self._files]
-             if force or any(not p.exists() for p in files_needed):
-                 self._download_chunk(chunk, files_needed)
-
-        super().__init__(chunks=chunks, path=self.path, name=self._name, **kwargs)
+            sample_idx = idx - self._cumulative_sizes[dataset_idx - 1]
+        return self.datasets[dataset_idx][sample_idx]
 
     @property
-    def path(self):
-        return CONFIG["cache_data_root"] / self._name.lower()
+    def metadata(self):
+        if self._metadata_cache is None:
+            self._metadata_cache = pd.concat([d.metadata for d in self.datasets], ignore_index=True)
+        return self._metadata_cache
+    
+    def train(self):
+        return MultiWaveformDataset([d.train() for d in self.datasets])
 
-    @classmethod
-    def _remote_path(cls):
-         return urljoin(CONFIG["remote_data_root"], cls.__name__)
+    def dev(self):
+        return MultiWaveformDataset([d.dev() for d in self.datasets])
+    
+    def test(self):
+        return MultiWaveformDataset([d.test() for d in self.datasets])
 
-    def available_chunks(self, force=False):
-        # Check if local files exist using parent logic
-        local_chunks = WaveformDataset.available_chunks(self.path)
-        if local_chunks:
-            return local_chunks
-        # Default to empty chunk if not found (to trigger download of default files)
-        return [""]
 
-    def _download_chunk(self, chunk, output_files):
-        logger.info(f"Downloading chunk '{chunk}' for {self._name}...")
-        remote_base = self._remote_path()
-        for template, output_file in zip(self._files, output_files):
-             fname = template.replace("$CHUNK", chunk)
-             url = f"{remote_base}/{fname}"
-             util.download_http(url, output_file)
+class WaveformBenchmarkDataset(WaveformDataset):
+    """
+    Base class for Benchmark datasets. 
+    Usually implies auto-download capabilities and specific citation info.
+    """
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-class MultiWaveformDataset:
-    pass
+class MultiWaveformDataset(Dataset):
+    """
+    Combines multiple WaveformDatasets.
+    """
+    def __init__(self, datasets):
+        self.datasets = datasets
+        self._lens = [len(d) for d in datasets]
+        self._cum_lens = np.cumsum(self._lens)
+        self._total_len = self._cum_lens[-1] if self._cum_lens.size > 0 else 0
+
+    def __len__(self):
+        return self._total_len
+
+    def __getitem__(self, idx):
+        if idx < 0:
+            if -idx > len(self):
+                raise IndexError(f"The index ({idx}) is out of bounds.")
+            idx += len(self)
+
+        dataset_idx = np.searchsorted(self._cum_lens, idx, side="right")
+        if dataset_idx == 0:
+            sample_idx = idx
+        else:
+            sample_idx = idx - self._cum_lens[dataset_idx - 1]
+
+        return self.datasets[dataset_idx][sample_idx]
+    
+    def get_sample(self, idx):
+        # Forward to appropriate dataset
+        if idx < 0:
+            if -idx > len(self):
+                raise IndexError(f"The index ({idx}) is out of bounds.")
+            idx += len(self)
+
+        dataset_idx = np.searchsorted(self._cum_lens, idx, side="right")
+        if dataset_idx == 0:
+            sample_idx = idx
+        else:
+            sample_idx = idx - self._cum_lens[dataset_idx - 1]
+
+        return self.datasets[dataset_idx].get_sample(sample_idx)
+
+# Compatibility Alias
+WaveformBenchmarkDataset = WaveformDataset

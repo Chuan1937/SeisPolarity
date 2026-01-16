@@ -23,8 +23,6 @@ from seispolarity.data.scsn import SCSNDataset
 from seispolarity.models.scsn import SCSN
 from seispolarity.training import Trainer, TrainingConfig
 
-
-
 """
 Main execution entry point.
 主执行入口函数。
@@ -41,7 +39,7 @@ TEST_H5  = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5
 OUT_DIR  = "./checkpoints_ross_scsn"
 
 # --- Performance (性能优化) ---
-PRELOAD_RAM = False  # Load all data into RAM for speed / 是否全量加载到内存
+PRELOAD_RAM = True  # Load all data into RAM for speed / 是否全量加载到内存
 
 # Auto-configure workers:
 # If Preload=True, usage of multiple workers adds overhead (forking RAM), so use 0.
