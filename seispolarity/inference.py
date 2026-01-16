@@ -4,6 +4,7 @@ seispolarity 模型的统一推断接口。
 """
 
 import os
+import  sys
 import torch
 import numpy as np
 import warnings
@@ -11,9 +12,10 @@ import httpx
 from typing import Union, List, Optional
 from huggingface_hub import hf_hub_download
 from tqdm import tqdm
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parent.parent)) # Add project root to sys.path
 
-# Import models
-from seispolarity.models import SCSN
+from seispolarity.models import SCSN, EQPolarityCCT
 
 # Constants
 HF_REPO = "HeXingChen/SeisPolarity-Model"
@@ -24,6 +26,13 @@ MODELS_CONFIG = {
         "input_len": 400,                    # Expected input length
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"} # Example map
+    },
+    "eqpolarity": {
+        "filename": "Eqpolarity_SCSN.pth",   # Filename in HF repo
+        "model_class": EQPolarityCCT,        # Python class
+        "input_len": 600,                    # EQPolarity 使用完整的 600 点输入
+        "num_classes": 2,                    # 二分类：Up vs Down
+        "class_map": {0: "Up", 1: "Down"}    # 二分类映射
     }
 }
 
@@ -60,7 +69,17 @@ class Predictor:
         self.checkpoint_path = self._resolve_model_path(cache_dir, self.config["filename"], model_path)
         
         # 2. Initialize Model
-        self.model = self.config["model_class"](num_fm_classes=self.config["num_classes"])
+        # 2. Initialize Model
+        # 根据模型类型使用不同的初始化参数
+        if model_name == "eqpolarity":
+            # EQPolarityCCT 需要 input_length 参数
+            # 先创建模型但不立即加载权重
+            self.model = self.config["model_class"](input_length=self.config["input_len"])
+        else:
+            # 其他模型使用 num_fm_classes 参数
+            self.model = self.config["model_class"](num_fm_classes=self.config["num_classes"])
+        
+        # 3. 加载权重（这会处理输出层形状不匹配的问题）
         self._load_weights(self.checkpoint_path)
         self.model.to(self.device)
         self.model.eval()
@@ -81,8 +100,12 @@ class Predictor:
         candidates = [
             # 1. Source repo structure: pretrained_model/Ross/Ross_SCSN.pth
             os.path.join(project_root, "pretrained_model", "Ross", filename),
-            # 2. Source repo structure: pretrained_models/Ross/Ross_SCSN.pth (plural)
+            # 2. Source repo structure: pretrained_model/Eqpolarity/Eqpolarity_SCSN.pth
+            os.path.join(project_root, "pretrained_model", "Eqpolarity", filename),
+            # 3. Source repo structure: pretrained_models/Ross/Ross_SCSN.pth (plural)
             os.path.join(project_root, "pretrained_models", "Ross", filename),
+            # 4. Source repo structure: pretrained_models/Eqpolarity/Eqpolarity_SCSN.pth (plural)
+            os.path.join(project_root, "pretrained_models", "Eqpolarity", filename),
         ]
         
         for cand in candidates:
@@ -185,10 +208,44 @@ class Predictor:
             for k, v in state_dict.items():
                 name = k.replace("module.", "") if k.startswith("module.") else k
                 new_state_dict[name] = v
-                
-            self.model.load_state_dict(new_state_dict)
-            print("Weights loaded successfully.")
             
+            # 尝试加载权重
+            try:
+                self.model.load_state_dict(new_state_dict, strict=True)
+                print("Weights loaded successfully (strict mode).")
+            except RuntimeError as e:
+                # 如果严格模式失败，检查是否是输出层形状不匹配
+                if "output_layer" in str(e) and "size mismatch" in str(e):
+                    print("Output layer size mismatch detected. Adapting model...")
+                    
+                    # 对于 EQPolarity 模型，动态调整输出层
+                    if hasattr(self.model, 'output_layer'):
+                        # 获取检查点中输出层的形状
+                        checkpoint_output_weight = new_state_dict.get('output_layer.weight')
+                        checkpoint_output_bias = new_state_dict.get('output_layer.bias')
+                        
+                        if checkpoint_output_weight is not None:
+                            # 获取输出类别数
+                            num_classes = checkpoint_output_weight.shape[0]
+                            in_features = checkpoint_output_weight.shape[1]
+                            
+                            # 动态创建新的输出层
+                            import torch.nn as nn
+                            self.model.output_layer = nn.Linear(in_features, num_classes)
+                            
+                            # 重新尝试加载（非严格模式）
+                            self.model.load_state_dict(new_state_dict, strict=False)
+                            print(f"Weights loaded successfully (adapted output layer to {num_classes} classes).")
+                        else:
+                            raise RuntimeError("Cannot adapt output layer: weight not found in checkpoint")
+                    else:
+                        # 非严格模式加载（跳过不匹配的层）
+                        self.model.load_state_dict(new_state_dict, strict=False)
+                        print("Weights loaded successfully (non-strict mode).")
+                else:
+                    # 其他错误，重新抛出
+                    raise e
+                
         except Exception as e:
             raise RuntimeError(f"Error loading model weights from {path}: {e}")
 
@@ -260,7 +317,15 @@ class Predictor:
                 batch = input_tensor[i : i + batch_size].to(self.device)
                 logits = self.model(batch)
                 
-                probs = torch.softmax(logits, dim=1)
+                # 处理不同形状的输出
+                if logits.shape[1] == 1:
+                    # 二分类的 sigmoid 输出 (batch, 1)
+                    probs = torch.sigmoid(logits)
+                    # 转换为两类的概率分布
+                    probs = torch.cat([1 - probs, probs], dim=1)
+                else:
+                    # 多分类的 softmax 输出 (batch, num_classes)
+                    probs = torch.softmax(logits, dim=1)
                 
                 if return_probs:
                     results.append(probs.cpu().numpy())
@@ -316,7 +381,16 @@ class Predictor:
                 
                 # 3. Model Inference
                 logits = self.model(x)
-                probs = torch.softmax(logits, dim=1)
+                
+                # 处理不同形状的输出
+                if logits.shape[1] == 1:
+                    # 二分类的 sigmoid 输出 (batch, 1)
+                    probs = torch.sigmoid(logits)
+                    # 转换为两类的概率分布
+                    probs = torch.cat([1 - probs, probs], dim=1)
+                else:
+                    # 多分类的 softmax 输出 (batch, num_classes)
+                    probs = torch.softmax(logits, dim=1)
                 
                 # 4. Store Results
                 if return_probs:
