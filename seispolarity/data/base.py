@@ -69,9 +69,10 @@ class WaveformDataset(Dataset):
     """
     Unified Base Dataset for SeisPolarity.
     Supports:
-    1. SeisBench-style Metadata (CSV) + Waveforms (HDF5 Group/Bucket structure)
-    2. Polarity-style Flat Data (Single HDF5 with X/Y datasets, virtually indexed)
+    1. Metadata (CSV) + Waveforms (HDF5 Group/Bucket structure)
+    2. Flat Data (Single HDF5 with X/Y datasets, virtually indexed)
     """
+
 
     def __init__(
         self,
@@ -124,8 +125,8 @@ class WaveformDataset(Dataset):
         self._indices = None    # Logical to physical index mapping
         
         # --- Initialize Data ---
-        # 1. Try Loading Metadata (SeisBench Style)
-        # 2. If fails or not applicable, try loading Flat Index (SCSN Style)
+        # 1. Try Loading Metadata 
+        # 2. If fails or not applicable, try loading Flat Index 
         self._metadata = self._load_metadata()
         
         # If metadata is empty, we might be in a Flat HDF5 scenario without CSV
@@ -228,7 +229,7 @@ class WaveformDataset(Dataset):
             if p.is_file() and p.suffix == '.hdf5':
                 self._chunks_with_paths_cache = ([''], [None], [p])
             
-            # Case 2: Path is directory (SeisBench)
+            # Case 2: Path is directory 
             else:
                 meta_paths = [p / f"metadata_{c}.csv" if c != "" else p / "metadata.csv" for c in chunks]
                 wave_paths = [p / f"waveforms_{c}.hdf5" if c != "" else p / "waveforms.hdf5" for c in chunks]
@@ -304,12 +305,11 @@ class WaveformDataset(Dataset):
                 if 'evids' in f: metadata['evid'] = f['evids'][physical_idx]
                 if 'label' in f: metadata['label'] = f['label'][physical_idx]
             elif 'data' in f:
-                # SeisBench style - simplified
                 waveform = np.zeros((1, 100), dtype=np.float32)
             else:
                 waveform = np.zeros((1, 100), dtype=np.float32)
         
-        # Ensure (C, N) shape for PyTorch / SeisBench compatibility
+        # Ensure (C, N) shape for PyTorch compatibility
         if waveform.ndim == 1:
             waveform = waveform.reshape(1, -1)
         elif waveform.ndim == 2 and waveform.shape[0] > 3:  # (N, C) -> (C, N)
@@ -344,7 +344,6 @@ class WaveformDataset(Dataset):
                 # If metadata was generated from X, idx matches
                 wav = f['X'][idx]
             elif 'data' in f:
-                # SeisBench style
                 tname = meta.get('trace_name')
                 bucket = tname.split('$')[0] if '$' in tname else tname
                 wav = f['data'][bucket][:] # Simplified
@@ -577,8 +576,7 @@ class WaveformDataset(Dataset):
                                 break
                 
                 elif 'data' in f:
-                    # SeisBench style - simplified implementation
-                    logger.warning("SeisBench style RAM loading not fully implemented, falling back to disk mode")
+                    logger.warning("RAM loading for this data format not fully implemented, falling back to disk mode")
                     self.preload = False
                     return
 
