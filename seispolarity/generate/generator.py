@@ -3,32 +3,22 @@ from torch.utils.data import Dataset
 
 class GenericGenerator(Dataset):
     """
-    A generic data generator which can be used to build preprocessing and data augmentation pipelines.
-    The data generator subclasses the pytorch Dataset class and can therefore be used directly with DataLoaders
-    in pytorch. The processing pipeline of the generator is defined through a series of processing steps or
-    augmentations. For each data sample, the generator calls the augmentations in order.
-    Information between the augmentation steps is passed through a state dict.
-    The state dict is a python dictionary mapping keys to a tuple (data, metadata).
-    In getitem, the generator automatically populates the initial dictionary with the waveforms
-    and the corresponding metadata for the row from the underlying data set using the key "X".
-    After applying all augmentation, the generator removes all metadata information.
-    This means that the output dict only maps keys to the data part.
-    Any metadata that should be output needs to explicitly be written to data.
-
-    Augmentation can be either callable classes of functions.
-    Functions are usually best suited for simple operations, while callable classes offer more configuration
-    options. SeisPolarity already offers a set of standard augmentations for augmentation and preprocessing,
-    e.g., for window selection, data normalization or different label encodings,
-    which should cover many common use cases.
-    For details on implementing custom augmentations we suggest looking at the examples provided.
-
-    SeisPolarity augmentations by default always work on the key "X".
-    Label generating augmentations by default put labels into the key "y".
-    However, for more complex workflows, the augmentations can be adjusted using the key argument.
-    This allows in particular none-sequential augmentation sequences.
-
-    :param dataset: The underlying SeisPolarity data set.
-    :type dataset: seispolarity.data.WaveformDataset or seispolarity.data.MultiWaveformDataset
+    通用数据生成器，用于构建数据预处理和增强流水线。
+    继承自PyTorch的Dataset类，可以直接与DataLoader一起使用。
+    
+    生成器的处理流水线通过一系列处理步骤或增强函数定义。
+    对于每个数据样本，生成器按顺序调用增强函数。
+    增强函数之间的信息通过状态字典（state_dict）传递。
+    
+    状态字典是一个Python字典，将键映射到元组（数据, 元数据）。
+    在__getitem__中，生成器自动使用键"X"将波形数据和对应的元数据填充到初始字典中。
+    应用所有增强后，生成器会移除所有元数据信息。
+    
+    这意味着输出字典只将键映射到数据部分。
+    任何应该输出的元数据都需要显式地写入到数据中。
+    
+    :param dataset: 底层SeisPolarity数据集
+    :type dataset: seispolarity.data.WaveformDataset 或 seispolarity.data.MultiWaveformDataset
     """
 
     def __init__(self, dataset):
@@ -46,8 +36,8 @@ class GenericGenerator(Dataset):
 
     def add_augmentations(self, augmentations):
         """
-        Adds a list of augmentations to the generator. Can not be used as decorator.
-
+        向生成器添加增强函数列表。不能用作装饰器。
+        
         :param augmentations: List of augmentations
         :type augmentations: list[callable]
         """
@@ -110,30 +100,19 @@ class GenericGenerator(Dataset):
 
 class SteeredGenerator(GenericGenerator):
     """
-    This data generator follows the same principles as the :py:func:`~GenericGenerator`.
-    However, in contrast to the :py:func:`~GenericGenerator` the generator is controlled by a dataframe with control
-    information. Each row in the control dataframe corresponds to one example output by the generator.
-    The dataframe holds two types of information. First, information identifying the traces, provided using the
-    `trace_name` (required), `trace_chunk` (optional), and `trace_dataset` (optional). See the description of
-    :py:func:`~seispolarity.data.base.WaveformDataset.get_idx_from_trace_name` for details.
-    Second, additional information for the augmentations.
-    This additional information is stored in `state_dict["_control_"]` as a dict.
-    This generator is particularly useful for evaluation, e.g., when extracting predefined windows from a trace.
-
-    Note that the "_control_" group will usually not be modified by augmentations.
-    This means, that for example after a window selection, sample positions might be off.
-    To automatically handle these, you must explicitly put the relevant control information
-    into the state_dict metadata of the relevant key.
-
-    .. warning::
-        This generator should in most cases not be used for changing label distributions by resampling the dataset.
-        For this application, we recommend using a
-        `pytorch Sampler <https://pytorch.org/docs/stable/data.html#data-loading-order-and-sampler>`_.
-
-    :param dataset: The underlying SeisPolarity data set
-    :type dataset: seispolarity.data.WaveformDataset or seispolarity.data.MultiWaveformDataset
-    :param metadata: The additional information as pandas dataframe.
-                     Each row corresponds to one sample from the generator.
+    受控数据生成器，继承自GenericGenerator。
+    与GenericGenerator不同，此生成器由包含控制信息的数据框控制。
+    控制数据框中的每一行对应生成器输出的一个样本。
+    
+    数据框包含两种信息：
+    1. 识别迹线的信息（trace_name必需，trace_chunk和trace_dataset可选）
+    2. 增强的附加信息，存储在state_dict["_control_"]中作为字典
+    
+    此生成器特别适用于评估，例如从迹线中提取预定义窗口时。
+    
+    :param dataset: 底层SeisPolarity数据集
+    :type dataset: seispolarity.data.WaveformDataset 或 seispolarity.data.MultiWaveformDataset
+    :param metadata: 附加信息，作为pandas数据框
     :type metadata: pandas.DataFrame
     """
 
@@ -163,8 +142,9 @@ class SteeredGenerator(GenericGenerator):
 
 class GroupGenerator(GenericGenerator):
     """
-    This data generator follows the same principle as the :py:class:`GenericGenerator` but instead of single traces
-    always loads groups into the state dict. The `grouping` parameter of the underlying dataset needs to be set.
+    组数据生成器，继承自GenericGenerator。
+    与GenericGenerator不同，此生成器总是将组加载到状态字典中，而不是单个迹线。
+    底层数据集的`grouping`参数需要被设置。
     """
 
     def __init__(self, dataset):

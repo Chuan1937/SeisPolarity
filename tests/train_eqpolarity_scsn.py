@@ -37,23 +37,23 @@ dataset = WaveformDataset(
     label_key="Y",
     clarity_key=None,
     pick_key=None,
-    metadata_keys=[]  # SCSN不需要额外的元数据键
+    metadata_keys=[],  # SCSN不需要额外的元数据键
+    window_p0=P0,      # 裁剪起始点
+    window_len=WINDOWLEN  # 裁剪长度
 )
 
 # 训练配置
 config = TrainingConfig(
-    h5_path=DATA_PATH,
     batch_size=BATCH_SIZE,
     epochs=EPOCHS,
     learning_rate=LR,
     num_workers=NUM_WORKERS,
-    p0=P0,
-    windowlen=WINDOWLEN,
-    picker_p=300,
     device=DEVICE,
     checkpoint_dir=OUT_DIR,
     label_key="label",  # MetadataToLabel会从元数据中提取'label'字段
-    train_val_split=0.9,
+    train_val_split=0.9,  # 训练集比例
+    val_split=0.1,        # 验证集比例
+    test_split=0.0,       # 测试集比例
     patience=5
 )
 
@@ -66,12 +66,11 @@ model = EQPolarityCCT(input_length=WINDOWLEN)
 # 适配输出层为2类
 in_features = model.output_layer.in_features
 model.output_layer = nn.Linear(in_features, 2)
-print(f"Model adapted for Binary CrossEntropy via 2-class logits. Output layer: {model.output_layer}")
 
-trainer = Trainer(model=model, dataset=dataset, val_dataset=None, config=config)
+trainer = Trainer(model=model, dataset=dataset, val_dataset=None, test_dataset=None, config=config)
 
 # 开始训练
-best_acc = trainer.train()
+best_val_acc, final_test_acc = trainer.train()
 
 # 保存最终模型
 final_model_path = Path(OUT_DIR) / "final_model.pth"

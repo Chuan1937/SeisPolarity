@@ -34,23 +34,23 @@ dataset = WaveformDataset(
     label_key="Y",
     clarity_key=None,
     pick_key=None,
-    metadata_keys=[]  
+    metadata_keys=[],
+    window_p0=P0,      # 裁剪起始点
+    window_len=WINDOWLEN  # 裁剪长度
 )
 
 # 训练配置
 config = TrainingConfig(
-    h5_path=DATA_PATH,
     batch_size=BATCH_SIZE,
     epochs=EPOCHS,
     learning_rate=LR,
     num_workers=NUM_WORKERS,
-    p0=P0,
-    windowlen=WINDOWLEN,
-    picker_p=300,
     device=DEVICE,
     checkpoint_dir=OUT_DIR,
     label_key="label", 
-    train_val_split=0.9,
+    train_val_split=0.9,  # 训练集比例
+    val_split=0.1,        # 验证集比例
+    test_split=0,       # 测试集比例
     patience=5
 )
 
@@ -59,10 +59,10 @@ Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
 
 # 初始化模型和训练器
 model = SCSN(num_fm_classes=3)
-trainer = Trainer(model=model, dataset=dataset, val_dataset=None, config=config)
+trainer = Trainer(model=model, dataset=dataset, val_dataset=None, test_dataset=None, config=config)
 
 # 开始训练
-best_acc = trainer.train()
+best_val_acc, final_test_acc = trainer.train()
 
 # 保存最终模型
 final_model_path = Path(OUT_DIR) / "final_model.pth"

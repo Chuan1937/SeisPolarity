@@ -88,6 +88,9 @@ class WaveformDataset(Dataset):
         split=None,
         preload=False,
         allowed_labels=None,
+        citation: str = None,
+        license: str = None,
+        repository_lookup: bool = False,
         **kwargs,
     ):
         if name is None:
@@ -117,7 +120,16 @@ class WaveformDataset(Dataset):
         self._metadata_lookup = None
         self._chunks_with_paths_cache = None
         self.sampling_rate = sampling_rate
+        
+        # Citation and license information (from WaveformBenchmarkDataset)
+        self._citation = citation
+        self._license = license
+        self._repository_lookup = repository_lookup
 
+        # --- Cropping parameters ---
+        self.window_p0 = kwargs.get('window_p0', None)  # 裁剪起始点，None表示不裁剪
+        self.window_len = kwargs.get('window_len', None)  # 裁剪长度，None表示不裁剪
+        
         # --- New parameters for unified loading ---
         self.preload = preload
         self.allowed_labels = allowed_labels
@@ -131,8 +143,16 @@ class WaveformDataset(Dataset):
         self.clarity_key = kwargs.get('clarity_key', 'Z')
         self.pick_key = kwargs.get('pick_key', 'p_pick')
         
+        # 标签映射配置
+        self._label_map = kwargs.get('label_map', {'U': 0, 'D': 1, 'X': 2})
+        self._reverse_label_map = {v: k for k, v in self._label_map.items()}
+        
+        # Clarity标签映射（I:0, E:1, K:2）
+        self._clarity_map = kwargs.get('clarity_map', {'I': 0, 'E': 1, 'K': 2})
+        self._reverse_clarity_map = {v: k for k, v in self._clarity_map.items()}
+        
         # 其他可选元数据键
-        self.metadata_keys = kwargs.get('metadata_keys', ['snr', 'evids', 'split'])
+        self.metadata_keys = kwargs.get('metadata_keys', [])
         
         # --- Initialize Data ---
         # 1. Try Loading Metadata 
@@ -262,6 +282,57 @@ class WaveformDataset(Dataset):
         if (path / "waveforms.hdf5").exists(): return [""]
         return []
 
+    def __str__(self):
+        base_str = f"{self._name} - {len(self)} samples"
+        if self._citation or self._license:
+            info_lines = [base_str]
+            if self._citation:
+                # Take first line of citation for summary
+                first_line = self._citation.strip().split('\n')[0]
+                if len(first_line) > 100:
+                    first_line = first_line[:97] + "..."
+                info_lines.append(f"Citation: {first_line}")
+            if self._license:
+                info_lines.append(f"License: {self._license}")
+            return "\n".join(info_lines)
+        return base_str
+
+    @property
+    def citation(self):
+        """
+        The suggested citation for this dataset
+        """
+        return self._citation
+    
+    @property
+    def license(self):
+        """
+        The license attached to this dataset
+        """
+        return self._license
+    
+    def citation_info(self):
+        """
+        Print detailed citation information for this dataset.
+        """
+        info = []
+        info.append("=" * 80)
+        info.append(f"Dataset: {self._name}")
+        info.append("=" * 80)
+        
+        if self._citation:
+            info.append("\nCITATION:")
+            info.append("-" * 40)
+            info.append(self._citation)
+        
+        if self._license:
+            info.append("\nLICENSE:")
+            info.append("-" * 40)
+            info.append(self._license)
+        
+        info.append("=" * 80)
+        return "\n".join(info)
+
     def __len__(self):
         return self._length if hasattr(self, '_length') else len(self._metadata)
 
@@ -337,6 +408,25 @@ class WaveformDataset(Dataset):
         elif waveform.ndim == 2 and waveform.shape[0] > 3:  # (N, C) -> (C, N)
             waveform = waveform.T
         
+        # Apply cropping if parameters are set
+        if self.window_p0 is not None and self.window_len is not None:
+            # Get the actual waveform length
+            waveform_len = waveform.shape[1]
+            
+            # Calculate cropping range
+            start_idx = self.window_p0
+            end_idx = min(self.window_p0 + self.window_len, waveform_len)
+            
+            # Ensure we have enough samples
+            if end_idx <= waveform_len:
+                waveform = waveform[:, start_idx:end_idx]
+            else:
+                # If not enough samples, pad with zeros
+                padded_waveform = np.zeros((waveform.shape[0], self.window_len), dtype=np.float32)
+                actual_len = min(waveform_len - start_idx, self.window_len)
+                padded_waveform[:, :actual_len] = waveform[:, start_idx:start_idx+actual_len]
+                waveform = padded_waveform
+        
         return waveform.astype(np.float32), metadata
 
     def get_sample(self, idx):
@@ -381,11 +471,12 @@ class WaveformDataset(Dataset):
         
         return wav.astype(np.float32)
 
-    def get_dataloader(self, batch_size=32, num_workers=0, shuffle=False, window_p0=100, window_len=400):
+    def get_dataloader(self, batch_size=32, num_workers=0, shuffle=False, apply_normalization=True):
         """
         Create a DataLoader for Streaming/Iterative access.
         
         This handles parallel loading and on-the-fly preprocessing.
+        Note: Cropping is now applied at dataset level (in __init__ parameters).
         """
         if DataLoader is None:
             raise ImportError("PyTorch not installed.")
@@ -397,15 +488,14 @@ class WaveformDataset(Dataset):
         
         logger.info(f"DataLoader: batch={batch_size}, workers={workers}, shuffle={shuffle}, preload={self.preload}")
 
-        # Optional transforms
+        # Optional normalization (cropping is already applied at dataset level)
         try:
-            from seispolarity.generate import FixedWindow, Normalize
-            window = FixedWindow(p0=window_p0, windowlen=window_len)
+            from seispolarity.generate import Normalize
             normalizer = Normalize(amp_norm_axis=-1, amp_norm_type="peak")
-            use_transforms = True
+            use_normalization = apply_normalization
         except ImportError:
-            use_transforms = False
-            logger.warning("Transform modules not available, skipping preprocessing")
+            use_normalization = False
+            logger.warning("Normalize module not available, skipping normalization")
 
         def collate_fn(batch):
             processed_w = []
@@ -413,10 +503,9 @@ class WaveformDataset(Dataset):
             metadata_list = []
             
             for waveform, meta in batch:
-                if use_transforms:
-                    # Stateful transform
+                if use_normalization:
+                    # Apply normalization only
                     state = {"X": (waveform, meta)}
-                    window(state)
                     normalizer(state)
                     w, m = state["X"]
                     processed_w.append(w.squeeze())
@@ -487,7 +576,9 @@ class WaveformDataset(Dataset):
                 with h5py.File(wave_paths[0], 'r') as f:
                     if self.label_key in f:
                         Y = f[self.label_key][:]
-                        mask = np.isin(Y, self.allowed_labels)
+                        # 先将标签转换为数字，然后进行过滤
+                        numeric_labels = self.convert_labels(Y)
+                        mask = np.isin(numeric_labels, self.allowed_labels)
                         self._indices = np.where(mask)[0]
                     else:
                         self._indices = np.arange(total_samples)
@@ -500,11 +591,15 @@ class WaveformDataset(Dataset):
             else:
                 # Filter by label column if exists
                 if 'label' in self._metadata.columns:
-                    mask = self._metadata['label'].isin(self.allowed_labels)
-                    self._indices = np.where(mask.values)[0]
+                    # 先将标签转换为数字，然后进行过滤
+                    numeric_labels = self.convert_labels(self._metadata['label'].values)
+                    mask = np.isin(numeric_labels, self.allowed_labels)
+                    self._indices = np.where(mask)[0]
                 elif self.label_key in self._metadata.columns:
-                    mask = self._metadata[self.label_key].isin(self.allowed_labels)
-                    self._indices = np.where(mask.values)[0]
+                    # 先将标签转换为数字，然后进行过滤
+                    numeric_labels = self.convert_labels(self._metadata[self.label_key].values)
+                    mask = np.isin(numeric_labels, self.allowed_labels)
+                    self._indices = np.where(mask)[0]
                 else:
                     self._indices = np.arange(total_samples)
         
@@ -659,6 +754,500 @@ class WaveformDataset(Dataset):
             all_l.append(l)
         return (np.concatenate(all_w), np.concatenate(all_l)) if all_w else (np.array([]), np.array([]))
     
+    def convert_labels(self, labels):
+        """
+        通用的标签转换方法。
+        
+        将字符标签转换为数字标签，或反向转换。
+        支持混合类型的标签数组（数字、字符串、字节字符串）。
+        
+        Args:
+            labels: 标签数组，可以是字符或数字
+            
+        Returns:
+            np.ndarray: 转换后的标签数组（int64类型）
+        """
+        if labels is None or len(labels) == 0:
+            return labels
+            
+        # 转换为numpy数组以便处理
+        if not isinstance(labels, np.ndarray):
+            labels = np.array(labels)
+        
+        # 如果已经是数字类型，直接返回
+        if labels.dtype.kind in ('i', 'u', 'f'):  # 整数、无符号整数、浮点数
+            return labels.astype(np.int64)
+        
+        # 处理混合类型：逐个元素转换
+        numeric_labels = np.zeros(len(labels), dtype=np.int64)
+        
+        for i, label in enumerate(labels):
+            # 如果是数字类型
+            if isinstance(label, (int, float, np.integer, np.floating)):
+                numeric_labels[i] = int(label)
+            # 如果是字符串或字节字符串
+            elif isinstance(label, (str, bytes)):
+                # 处理字节字符串
+                if isinstance(label, bytes):
+                    label_str = label.decode()
+                else:
+                    label_str = str(label)
+                
+                # 转换为数字
+                numeric_labels[i] = self._label_map.get(label_str.upper(), 2)  # 默认设为X(2)
+            else:
+                # 未知类型，尝试转换
+                try:
+                    numeric_labels[i] = int(label)
+                except (ValueError, TypeError):
+                    # 无法转换，设为默认值X(2)
+                    numeric_labels[i] = 2
+                    logger.debug(f"无法转换标签: {label} (类型: {type(label)}), 设为默认值2")
+        
+        return numeric_labels
+    
+    def convert_labels_to_chars(self, labels):
+        """
+        将数字标签转换为字符标签。
+        
+        Args:
+            labels: 数字标签数组
+            
+        Returns:
+            list: 字符标签列表
+        """
+        if labels is None or len(labels) == 0:
+            return labels
+            
+        char_labels = []
+        for label in labels:
+            char_labels.append(self._reverse_label_map.get(int(label), 'X'))
+        
+        return char_labels
+    
+    def convert_clarities(self, clarities):
+        """
+        将字符清晰度标签转换为数字标签。
+        
+        Args:
+            clarities: 字符清晰度标签数组 ('I', 'E', 'K')
+            
+        Returns:
+            np.ndarray: 数字清晰度标签数组 (0, 1, 2)
+        """
+        if clarities is None or len(clarities) == 0:
+            return clarities
+            
+        # 如果是字符串类型，转换为数字
+        if isinstance(clarities, (list, np.ndarray)):
+            sample = clarities[0] if len(clarities) > 0 else None
+        else:
+            sample = clarities
+            
+        if isinstance(sample, (str, bytes)):
+            # 处理字节字符串
+            if isinstance(sample, bytes):
+                clarities = np.array([c.decode() if isinstance(c, bytes) else c for c in clarities])
+            
+            # 转换为数字
+            numeric_clarities = np.zeros(len(clarities), dtype=np.int64)
+            for i, clarity in enumerate(clarities):
+                numeric_clarities[i] = self._clarity_map.get(clarity, 2)  # 默认设为K(2)
+            
+            return numeric_clarities
+        elif isinstance(sample, (int, float, np.integer, np.floating)):
+            # 已经是数字，直接返回
+            return np.array(clarities, dtype=np.int64)
+        else:
+            # 未知类型，尝试转换
+            try:
+                return np.array(clarities, dtype=np.int64)
+            except:
+                logger.warning(f"无法转换清晰度标签类型: {type(sample)}")
+                return clarities
+    
+    def convert_clarities_to_chars(self, clarities):
+        """
+        将数字清晰度标签转换为字符标签。
+        
+        Args:
+            clarities: 数字清晰度标签数组
+            
+        Returns:
+            list: 字符清晰度标签列表
+        """
+        if clarities is None or len(clarities) == 0:
+            return clarities
+            
+        char_clarities = []
+        for clarity in clarities:
+            char_clarities.append(self._reverse_clarity_map.get(int(clarity), 'K'))
+        
+        return char_clarities
+    
+    def add_labels(self, label_type='clarity', label_value='K', selector=None, overwrite=False):
+        """
+        为数据集添加标签（clarity或polarity）。
+        
+        支持多种方式选择要添加标签的样本：
+        - 索引列表
+        - 布尔掩码数组
+        - 条件函数
+        - 查询字符串
+        - 标签值匹配
+        
+        Args:
+            label_type: 标签类型，'clarity' 或 'polarity'，默认为'clarity'
+            label_value: 标签值
+                - 对于clarity: 'I' (Impulsive), 'E' (Emergent), 'K' (Uncertain)
+                - 对于polarity: 'U' (Up), 'D' (Down), 'X' (Unknown)
+            selector: 选择要添加标签的样本，支持多种格式：
+                - None: 选择所有样本
+                - list[int]: 索引列表，如 [0, 1, 2]
+                - np.ndarray (bool): 布尔掩码数组，长度必须等于样本数
+                - callable: 条件函数，接受元数据行并返回布尔值
+                - str: 查询字符串，使用Pandas查询语法
+                - dict: 标签匹配条件，如 {'label': 'U'} 或 {'clarity': 'I'}
+            overwrite: 是否覆盖已存在的标签，默认为False
+        
+        Returns:
+            self: 返回数据集对象本身，支持链式调用
+        
+        Raises:
+            ValueError: 如果参数无效
+            TypeError: 如果selector类型不支持
+        """
+        if self._metadata.empty:
+            logger.warning("元数据为空，无法添加标签")
+            return self
+        
+        # 验证标签类型
+        if label_type not in ['clarity', 'polarity']:
+            raise ValueError(f"无效的标签类型: {label_type}，必须是 'clarity' 或 'polarity'")
+        
+        # 验证标签值
+        if label_type == 'clarity':
+            if label_value not in ['I', 'E', 'K']:
+                raise ValueError(f"无效的clarity标签值: {label_value}，必须是 'I', 'E', 或 'K'")
+            column_name = 'clarity'
+            config_key = 'clarity_key'
+            default_config_value = 'Z'
+        else:  # polarity
+            if label_value not in ['U', 'D', 'X']:
+                raise ValueError(f"无效的polarity标签值: {label_value}，必须是 'U', 'D', 或 'X'")
+            column_name = 'label'
+            config_key = 'label_key'
+            default_config_value = 'Y'
+        
+        # 获取样本数量
+        num_samples = len(self._metadata)
+        
+        # 根据selector类型选择样本
+        indices = self._parse_selector(selector)
+        
+        # 检查是否已经有该列
+        if column_name in self._metadata.columns:
+            if not overwrite:
+                # 只覆盖selector选中的且当前值为默认值的样本
+                default_value = 'K' if label_type == 'clarity' else 'X'
+                current_values = self._metadata[column_name]
+                
+                # 找出需要更新的索引：在selector中且当前值为默认值
+                update_indices = []
+                for idx in indices:
+                    if idx < len(current_values):
+                        current_val = current_values.iloc[idx]
+                        # 处理数字标签和字符标签的比较
+                        if isinstance(current_val, (int, float, np.integer, np.floating)):
+                            # 如果是数字标签，检查是否对应默认值
+                            if label_type == 'clarity':
+                                # clarity默认值'K'对应数字2
+                                if current_val == 2:
+                                    update_indices.append(idx)
+                            else:
+                                # polarity默认值'X'对应数字2
+                                if current_val == 2:
+                                    update_indices.append(idx)
+                        else:
+                            # 字符标签，转换为数字后比较
+                            try:
+                                if label_type == 'clarity':
+                                    clarity_map = {'I': 0, 'E': 1, 'K': 2}
+                                    char_val = str(current_val)
+                                    if isinstance(current_val, bytes):
+                                        char_val = current_val.decode()
+                                    if clarity_map.get(char_val, 2) == 2:
+                                        update_indices.append(idx)
+                                else:
+                                    polarity_map = {'U': 0, 'D': 1, 'X': 2}
+                                    char_val = str(current_val)
+                                    if isinstance(current_val, bytes):
+                                        char_val = current_val.decode()
+                                    if polarity_map.get(char_val, 2) == 2:
+                                        update_indices.append(idx)
+                            except:
+                                # 转换失败，跳过
+                                pass
+                
+                if not update_indices:
+                    logger.info(f"数据集已有{column_name}标签且没有默认值需要更新，跳过添加")
+                    return self
+                
+                indices = update_indices
+                logger.info(f"数据集已有{column_name}标签，将更新{len(indices)}个默认值样本")
+            else:
+                logger.info(f"数据集已有{column_name}标签，将覆盖{len(indices)}个样本的标签")
+        else:
+            # 创建全为默认值的列
+            if label_type == 'clarity':
+                default_value = 'K'
+            else:  # polarity
+                default_value = 'X'
+            
+            # 创建数字类型的列，将字符默认值转换为数字
+            if label_type == 'clarity':
+                # clarity默认值'K'对应数字2
+                numeric_default = 2
+            else:  # polarity
+                # polarity默认值'X'对应数字2
+                numeric_default = 2
+            
+            self._metadata[column_name] = np.full(num_samples, numeric_default, dtype=np.int64)
+            logger.info(f"创建新的{column_name}列，数字默认值为{numeric_default}（对应字符'{default_value}'）")
+        
+        # 为指定索引设置标签值（转换为数字）
+        # 首先将字符标签转换为数字
+        if label_type == 'clarity':
+            # clarity标签映射: 'I'->0, 'E'->1, 'K'->2
+            clarity_map = {'I': 0, 'E': 1, 'K': 2}
+            numeric_value = clarity_map.get(label_value, 2)
+        else:  # polarity
+            # polarity标签映射: 'U'->0, 'D'->1, 'X'->2
+            polarity_map = {'U': 0, 'D': 1, 'X': 2}
+            numeric_value = polarity_map.get(label_value, 2)
+        
+        for idx in indices:
+            self._metadata.at[idx, column_name] = numeric_value
+        
+        # 更新配置键
+        if not hasattr(self, config_key) or getattr(self, config_key) is None:
+            setattr(self, config_key, column_name)
+        
+        # 如果数据在RAM中，也需要更新缓存
+        if self.preload and self.data_cache:
+            # 更新整个列，而不仅仅是索引部分
+            if column_name == 'clarity':
+                numeric_labels = self.convert_clarities(self._metadata[column_name].values)
+            else:  # label
+                numeric_labels = self.convert_labels(self._metadata[column_name].values)
+            
+            self.data_cache[column_name] = numeric_labels
+        
+        logger.info(f"已为{len(indices)}个样本添加{label_type}标签，值为'{label_value}'")
+        
+        return self
+    
+    def _parse_selector(self, selector):
+        """
+        解析选择器，返回要操作的索引列表。
+        
+        Args:
+            selector: 选择器，支持多种格式
+            
+        Returns:
+            list[int]: 索引列表
+        """
+        num_samples = len(self._metadata)
+        
+        if selector is None:
+            # 选择所有样本
+            return list(range(num_samples))
+        
+        elif isinstance(selector, (list, tuple, np.ndarray)):
+            # 索引列表或布尔掩码
+            selector = np.array(selector)
+            
+            if selector.dtype == bool:
+                # 布尔掩码
+                if len(selector) != num_samples:
+                    raise ValueError(f"布尔掩码长度({len(selector)})必须等于样本数({num_samples})")
+                return np.where(selector)[0].tolist()
+            else:
+                # 索引列表
+                indices = selector.astype(np.int64)
+                if np.any(indices < 0) or np.any(indices >= num_samples):
+                    raise ValueError(f"索引超出范围: 有效范围是 [0, {num_samples-1}]")
+                return indices.tolist()
+        
+        elif callable(selector):
+            # 条件函数
+            mask = []
+            for idx, row in self._metadata.iterrows():
+                try:
+                    mask.append(bool(selector(row)))
+                except Exception as e:
+                    raise ValueError(f"条件函数执行错误 (索引 {idx}): {e}")
+            
+            mask = np.array(mask, dtype=bool)
+            if len(mask) != num_samples:
+                raise ValueError(f"条件函数返回的掩码长度({len(mask)})不等于样本数({num_samples})")
+            
+            return np.where(mask)[0].tolist()
+        
+        elif isinstance(selector, str):
+            # 查询字符串
+            try:
+                # 使用Pandas查询语法
+                mask = self._metadata.eval(selector)
+                if not isinstance(mask, (pd.Series, np.ndarray)):
+                    raise ValueError(f"查询字符串必须返回布尔序列")
+                
+                if len(mask) != num_samples:
+                    raise ValueError(f"查询结果长度({len(mask)})不等于样本数({num_samples})")
+                
+                return np.where(mask)[0].tolist()
+            except Exception as e:
+                raise ValueError(f"查询字符串解析错误: {e}")
+        
+        elif isinstance(selector, dict):
+            # 标签匹配条件
+            mask = np.ones(num_samples, dtype=bool)
+            
+            for column, value in selector.items():
+                if column not in self._metadata.columns:
+                    raise ValueError(f"列 '{column}' 不存在于元数据中")
+                
+                # 获取列的数据类型
+                col_dtype = self._metadata[column].dtype
+                col_values = self._metadata[column]
+                
+                # 检查值是数字还是字符
+                if isinstance(value, (int, float, np.integer, np.floating)):
+                    # 值是数字，直接比较
+                    column_mask = (col_values == value)
+                elif isinstance(value, str):
+                    # 值是字符，需要转换为数字后比较
+                    # 检查是否是polarity或clarity列
+                    if column == 'label' or column == 'polarity':
+                        # polarity标签映射
+                        polarity_map = {'U': 0, 'D': 1, 'X': 2}
+                        numeric_value = polarity_map.get(value.upper(), 2)
+                        column_mask = (col_values == numeric_value)
+                    elif column == 'clarity':
+                        # clarity标签映射
+                        clarity_map = {'I': 0, 'E': 1, 'K': 2}
+                        numeric_value = clarity_map.get(value.upper(), 2)
+                        column_mask = (col_values == numeric_value)
+                    else:
+                        # 其他列，尝试直接比较
+                        column_mask = (col_values == value)
+                else:
+                    # 其他类型，直接比较
+                    column_mask = (col_values == value)
+                
+                mask = mask & column_mask
+            
+            return np.where(mask)[0].tolist()
+        
+        else:
+            raise TypeError(f"不支持的选择器类型: {type(selector)}，支持的类型: list, np.ndarray, callable, str, dict")
+    
+    def add_clarity_labels(self, clarity_value='K', selector=None, overwrite=False):
+        """
+        为数据集添加clarity标签（兼容旧版本）。
+        
+        Args:
+            clarity_value: clarity标签值，默认为'K'（不确定）
+                - 'I': Impulsive（脉冲式）
+                - 'E': Emergent（渐现式）
+                - 'K': Uncertain（不确定）
+            selector: 选择要添加标签的样本，支持多种格式
+            overwrite: 是否覆盖已存在的标签，默认为False
+        
+        Returns:
+            self: 返回数据集对象本身，支持链式调用
+        """
+        return self.add_labels(
+            label_type='clarity', 
+            label_value=clarity_value, 
+            selector=selector, 
+            overwrite=overwrite
+        )
+    
+    def add_polarity_labels(self, polarity_value='X', selector=None, overwrite=False):
+        """
+        为数据集添加polarity标签。
+        
+        Args:
+            polarity_value: polarity标签值，默认为'X'（未知）
+                - 'U': Up（向上）
+                - 'D': Down（向下）
+                - 'X': Unknown（未知）
+            selector: 选择要添加标签的样本，支持多种格式
+            overwrite: 是否覆盖已存在的标签，默认为False
+        
+        Returns:
+            self: 返回数据集对象本身，支持链式调用
+        """
+        return self.add_labels(
+            label_type='polarity', 
+            label_value=polarity_value, 
+            selector=selector, 
+            overwrite=overwrite
+        )
+    
+
+    
+    def add_polarity_labels(self, polarity_value='X', selector=None, overwrite=False):
+        """
+        为数据集添加polarity标签。
+        
+        Args:
+            polarity_value: polarity标签值，默认为'X'（未知）
+                - 'U': Up（向上）
+                - 'D': Down（向下）
+                - 'X': Unknown（未知）
+            selector: 选择要添加标签的样本，支持多种格式：
+                - None: 选择所有样本
+                - list[int]: 索引列表，如 [0, 1, 2]
+                - np.ndarray (bool): 布尔掩码数组
+                - callable: 条件函数
+                - str: 查询字符串
+                - dict: 标签匹配条件
+            overwrite: 是否覆盖已存在的标签，默认为False
+        
+        Returns:
+            self: 返回数据集对象本身，支持链式调用
+        """
+        return self.add_labels(
+            label_type='polarity', 
+            label_value=polarity_value, 
+            selector=selector, 
+            overwrite=overwrite
+        )
+    
+    def __add__(self, other):
+        """
+        合并两个数据集，返回MultiWaveformDataset。
+        
+        Args:
+            other: 另一个WaveformDataset或MultiWaveformDataset
+            
+        Returns:
+            MultiWaveformDataset: 合并后的数据集
+            
+        Raises:
+            TypeError: 如果other不是WaveformDataset或MultiWaveformDataset
+        """
+        if isinstance(other, WaveformDataset):
+            return MultiWaveformDataset([self, other])
+        elif isinstance(other, MultiWaveformDataset):
+            return MultiWaveformDataset([self] + other.datasets)
+        else:
+            raise TypeError(
+                "只能将WaveformDataset和MultiWaveformDataset与WaveformDataset相加。"
+            )
+    
     @property
     def metadata(self):
         """Get metadata DataFrame."""
@@ -668,63 +1257,32 @@ class WaveformDataset(Dataset):
     def indices(self):
         """Get logical to physical index mapping."""
         return self._indices
-
-class MultiWaveformDataset(Dataset):
-    """
-    Container for multiple WaveformDatasets to be used as a single dataset.
-    """
-    def __init__(self, datasets):
-        self.datasets = datasets
-        self._cumulative_sizes = self.cumsum(datasets)
-        self._metadata_cache = None
-
-    @staticmethod
-    def cumsum(sequence):
-        r, s = [], 0
-        for e in sequence:
-            l = len(e)
-            r.append(l + s)
-            s += l
-        return r
-
-    def __len__(self):
-        return self._cumulative_sizes[-1] if self._cumulative_sizes else 0
-
-    def __getitem__(self, idx):
-        if idx < 0:
-            if -idx > len(self):
-                raise ValueError("absolute value of index should not exceed dataset length")
-            idx = len(self) + idx
-        dataset_idx = np.searchsorted(self._cumulative_sizes, idx, side='right')
-        if dataset_idx == 0:
-            sample_idx = idx
-        else:
-            sample_idx = idx - self._cumulative_sizes[dataset_idx - 1]
-        return self.datasets[dataset_idx][sample_idx]
-
+    
     @property
-    def metadata(self):
-        if self._metadata_cache is None:
-            self._metadata_cache = pd.concat([d.metadata for d in self.datasets], ignore_index=True)
-        return self._metadata_cache
+    def label_map(self):
+        """获取标签映射字典"""
+        return self._label_map
     
-    def train(self):
-        return MultiWaveformDataset([d.train() for d in self.datasets])
-
-    def dev(self):
-        return MultiWaveformDataset([d.dev() for d in self.datasets])
+    @property
+    def reverse_label_map(self):
+        """获取反向标签映射字典"""
+        return self._reverse_label_map
     
-    def test(self):
-        return MultiWaveformDataset([d.test() for d in self.datasets])
+    @property
+    def clarity_map(self):
+        """获取清晰度标签映射字典"""
+        return self._clarity_map
+    
+    @property
+    def reverse_clarity_map(self):
+        """获取反向清晰度标签映射字典"""
+        return self._reverse_clarity_map
 
 
-class WaveformBenchmarkDataset(WaveformDataset):
-    """
-    Base class for Benchmark datasets. 
-    Usually implies auto-download capabilities and specific citation info.
-    """
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+
+
+# Note: WaveformBenchmarkDataset functionality has been merged into WaveformDataset
+# All datasets now support citation and license information directly
 
 class MultiWaveformDataset(Dataset):
     """
@@ -768,5 +1326,21 @@ class MultiWaveformDataset(Dataset):
 
         return self.datasets[dataset_idx].get_sample(sample_idx)
 
-# Compatibility Alias
-WaveformBenchmarkDataset = WaveformDataset
+    def get_dataloader(self, batch_size=32, num_workers=0, shuffle=False, apply_normalization=True):
+        """
+        为MultiWaveformDataset创建DataLoader。
+        注意：由于MultiWaveformDataset包含多个子数据集，
+        我们使用第一个子数据集的get_dataloader方法。
+        """
+        if not self.datasets:
+            raise ValueError("MultiWaveformDataset没有包含任何数据集")
+        
+        # 使用第一个数据集的get_dataloader方法
+        # 注意：所有子数据集应该具有相同的预处理设置
+        return self.datasets[0].get_dataloader(
+            batch_size=batch_size,
+            num_workers=num_workers,
+            shuffle=shuffle,
+            apply_normalization=apply_normalization
+        )
+

@@ -27,7 +27,9 @@ dataset = WaveformDataset(
     label_key="Y",
     clarity_key=None,
     pick_key=None,
-    metadata_keys=[]  # SCSN不需要额外的元数据键
+    metadata_keys=[],  # SCSN不需要额外的元数据键
+    window_p0=WINDOW_P0,      # 裁剪起始点
+    window_len=WINDOW_LEN  # 裁剪长度
 )
 
 
@@ -35,9 +37,7 @@ dataset = WaveformDataset(
 loader = dataset.get_dataloader(
     batch_size=2048,  
     num_workers=4 if not USE_PRELOAD else 0, 
-    shuffle=False,  
-    window_p0=WINDOW_P0,
-    window_len=WINDOW_LEN
+    shuffle=False
 )
 
 probabilities, labels = predictor.predict_from_loader(loader, return_probs=True)

@@ -30,15 +30,15 @@ dataset = WaveformDataset(
     label_key="Y",
     clarity_key=None,
     pick_key=None,
-    metadata_keys=[]  # SCSN不需要额外的元数据键
+    metadata_keys=[],  # SCSN不需要额外的元数据键
+    window_p0=WINDOW_P0,      # 裁剪起始点
+    window_len=WINDOW_LEN  # 裁剪长度
 )
 
 loader = dataset.get_dataloader(
     batch_size=2048,  # Large batch size for inference
     num_workers=4 if not USE_PRELOAD else 0,  # 与训练时保持一致
-    shuffle=False,  # 推理时不需要打乱
-    window_p0=WINDOW_P0,
-    window_len=WINDOW_LEN
+    shuffle=False  # 推理时不需要打乱
 )
 
 probabilities, labels = predictor.predict_from_loader(loader, return_probs=True)
