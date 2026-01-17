@@ -124,6 +124,16 @@ class WaveformDataset(Dataset):
         self.data_cache = None  # Storage for RAM mode
         self._indices = None    # Logical to physical index mapping
         
+        # --- Key mapping configuration ---
+        # 默认使用SCSN格式的键名：X为数据，Y为标签
+        self.data_key = kwargs.get('data_key', 'X')
+        self.label_key = kwargs.get('label_key', 'Y')
+        self.clarity_key = kwargs.get('clarity_key', 'Z')
+        self.pick_key = kwargs.get('pick_key', 'p_pick')
+        
+        # 其他可选元数据键
+        self.metadata_keys = kwargs.get('metadata_keys', ['snr', 'evids', 'split'])
+        
         # --- Initialize Data ---
         # 1. Try Loading Metadata 
         # 2. If fails or not applicable, try loading Flat Index 
@@ -201,17 +211,25 @@ class WaveformDataset(Dataset):
         if not fpath.is_file(): return
 
         with h5py.File(fpath, 'r') as f:
-            if 'X' in f:
-                N = f['X'].shape[0]
+            if self.data_key in f:
+                N = f[self.data_key].shape[0]
                 # Create virtual metadata
                 meta = {'trace_chunk': [''] * N}
                 
-                # If Y exists, add it
-                if 'Y' in f:
-                    meta['label'] = f['Y'][:]
+                # If label exists, add it
+                if self.label_key in f:
+                    meta['label'] = f[self.label_key][:]
                 
-                # If other fields exist
-                for k in ['snr', 'evids', 'split']:
+                # If clarity exists, add it
+                if self.clarity_key and self.clarity_key in f:
+                    meta['clarity'] = f[self.clarity_key][:]
+                
+                # If pick exists, add it
+                if self.pick_key and self.pick_key in f:
+                    meta['p_pick'] = f[self.pick_key][:]
+                
+                # Add other metadata fields
+                for k in self.metadata_keys:
                     if k in f:
                         meta[k] = f[k][:]
                 
@@ -277,9 +295,9 @@ class WaveformDataset(Dataset):
         """Get single sample by logical index."""
         if self.preload and self.data_cache:
             # --- RAM Path ---
-            waveform = self.data_cache['X'][idx]
+            waveform = self.data_cache[self.data_key][idx]
             # Fast dict comprehension for metadata
-            metadata = {k: v[idx] for k, v in self.data_cache.items() if k != 'X'}
+            metadata = {k: v[idx] for k, v in self.data_cache.items() if k != self.data_key}
             
         else:
             # --- Disk Path ---
@@ -298,12 +316,16 @@ class WaveformDataset(Dataset):
             f = self._h5_handle
             metadata = {}
             
-            if 'X' in f:
-                waveform = f['X'][physical_idx]
-                if 'Y' in f:     metadata['label'] = f['Y'][physical_idx]
-                if 'snr' in f:   metadata['snr'] = f['snr'][physical_idx]
-                if 'evids' in f: metadata['evid'] = f['evids'][physical_idx]
-                if 'label' in f: metadata['label'] = f['label'][physical_idx]
+            if self.data_key in f:
+                waveform = f[self.data_key][physical_idx]
+                if self.label_key and self.label_key in f:     metadata['label'] = f[self.label_key][physical_idx]
+                if self.clarity_key and self.clarity_key in f:   metadata['clarity'] = f[self.clarity_key][physical_idx]
+                if self.pick_key and self.pick_key in f:      metadata['p_pick'] = f[self.pick_key][physical_idx]
+                
+                # Add other metadata fields
+                for k in self.metadata_keys:
+                    if k in f:
+                        metadata[k] = f[k][physical_idx]
             elif 'data' in f:
                 waveform = np.zeros((1, 100), dtype=np.float32)
             else:
@@ -338,11 +360,11 @@ class WaveformDataset(Dataset):
                 close_file = False
         
         try:
-            if 'X' in f:
+            if self.data_key in f:
                 # Flat style
                 # Use metadata index or direct idx
-                # If metadata was generated from X, idx matches
-                wav = f['X'][idx]
+                # If metadata was generated from data_key, idx matches
+                wav = f[self.data_key][idx]
             elif 'data' in f:
                 tname = meta.get('trace_name')
                 bucket = tname.split('$')[0] if '$' in tname else tname
@@ -429,7 +451,7 @@ class WaveformDataset(Dataset):
         Y = []
         for m in metas:
             if 'label' in m: Y.append(m['label'])
-            elif 'Y' in m: Y.append(m['Y'])
+            elif self.label_key in m: Y.append(m[self.label_key])
             else: Y.append(-1)
             
         return torch.tensor(X), torch.tensor(Y)
@@ -456,15 +478,15 @@ class WaveformDataset(Dataset):
             
             # Open first file to get total samples
             with h5py.File(wave_paths[0], 'r') as f:
-                total_samples = len(f['X']) if 'X' in f else 0
+                total_samples = len(f[self.data_key]) if self.data_key in f else 0
             
             if self.allowed_labels is None:
                 self._indices = np.arange(total_samples)
             else:
                 # Need to read labels for filtering
                 with h5py.File(wave_paths[0], 'r') as f:
-                    if 'Y' in f:
-                        Y = f['Y'][:]
+                    if self.label_key in f:
+                        Y = f[self.label_key][:]
                         mask = np.isin(Y, self.allowed_labels)
                         self._indices = np.where(mask)[0]
                     else:
@@ -480,8 +502,8 @@ class WaveformDataset(Dataset):
                 if 'label' in self._metadata.columns:
                     mask = self._metadata['label'].isin(self.allowed_labels)
                     self._indices = np.where(mask.values)[0]
-                elif 'Y' in self._metadata.columns:
-                    mask = self._metadata['Y'].isin(self.allowed_labels)
+                elif self.label_key in self._metadata.columns:
+                    mask = self._metadata[self.label_key].isin(self.allowed_labels)
                     self._indices = np.where(mask.values)[0]
                 else:
                     self._indices = np.arange(total_samples)
@@ -505,8 +527,8 @@ class WaveformDataset(Dataset):
             chunks, _, wave_paths = self._chunks_with_paths()
             if wave_paths and wave_paths[0]:
                 with h5py.File(wave_paths[0], 'r') as f:
-                    if 'X' in f:
-                        sample_shape = f['X'].shape[1:]
+                    if self.data_key in f:
+                        sample_shape = f[self.data_key].shape[1:]
                         sample_size = np.prod(sample_shape) * 4  # float32 = 4 bytes
             
             required_gb = (self._length * sample_size) / (1024**3) * 1.5  # 1.5x buffer
@@ -530,16 +552,38 @@ class WaveformDataset(Dataset):
             
             with h5py.File(h5_path, 'r') as f:
                 # 1. Initialize Cache
-                if 'X' in f:
-                    full_shape = f['X'].shape
+                if self.data_key in f:
+                    full_shape = f[self.data_key].shape
                     self.data_cache = {}
-                    self.data_cache['X'] = np.empty((self._length,) + full_shape[1:], dtype=f['X'].dtype)
+                    self.data_cache[self.data_key] = np.empty((self._length,) + full_shape[1:], dtype=f[self.data_key].dtype)
                     
                     # 2. Load Metadata (Fast)
                     logger.info("Loading Metadata...")
-                    meta_keys = [k for k in ['Y', 'snr', 'evids', 'label'] if k in f]
-                    for key in meta_keys:
-                        target_key = {'Y': 'label', 'evids': 'evid'}.get(key, key)
+                    # Load label, clarity, pick and other metadata
+                    meta_keys_to_load = []
+                    if self.label_key and self.label_key in f:
+                        meta_keys_to_load.append(self.label_key)
+                    if self.clarity_key and self.clarity_key in f:
+                        meta_keys_to_load.append(self.clarity_key)
+                    if self.pick_key and self.pick_key in f:
+                        meta_keys_to_load.append(self.pick_key)
+                    
+                    # Add other metadata keys
+                    for k in self.metadata_keys:
+                        if k in f:
+                            meta_keys_to_load.append(k)
+                    
+                    for key in meta_keys_to_load:
+                        # 创建映射字典，只包含非None的键
+                        key_mapping = {}
+                        if self.label_key:
+                            key_mapping[self.label_key] = 'label'
+                        if self.clarity_key:
+                            key_mapping[self.clarity_key] = 'clarity'
+                        if self.pick_key:
+                            key_mapping[self.pick_key] = 'p_pick'
+                        
+                        target_key = key_mapping.get(key, key)
                         # Read full then slice is fast for small metadata arrays
                         self.data_cache[target_key] = f[key][:][self._indices]
 
@@ -561,13 +605,13 @@ class WaveformDataset(Dataset):
                                 count = next_idx_pos - current_idx_pos
                                 
                                 # Read raw chunk from disk
-                                chunk_data = f['X'][start_file_idx:end_file_idx]
+                                chunk_data = f[self.data_key][start_file_idx:end_file_idx]
                                 
                                 # Map desired indices to chunk-relative coordinates
                                 target_indices = self._indices[current_idx_pos:next_idx_pos] - start_file_idx
                                 
                                 # Fill Cache
-                                self.data_cache['X'][current_idx_pos:next_idx_pos] = chunk_data[target_indices]
+                                self.data_cache[self.data_key][current_idx_pos:next_idx_pos] = chunk_data[target_indices]
                                 
                                 pbar.update(count)
                             

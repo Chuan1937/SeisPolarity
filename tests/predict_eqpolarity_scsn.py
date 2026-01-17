@@ -24,7 +24,13 @@ dataset = WaveformDataset(
     path=TEST_FILE,
     name="SCSN_Test",
     preload=USE_PRELOAD,
-    allowed_labels=[0, 1]  # EQPolarity 是二分类：Up vs Down
+    allowed_labels=[0, 1],  # EQPolarity 是二分类：Up vs Down
+    # SCSN数据使用标准键名：X为数据，Y为标签
+    data_key="X",
+    label_key="Y",
+    clarity_key=None,
+    pick_key=None,
+    metadata_keys=[]  # SCSN不需要额外的元数据键
 )
 
 loader = dataset.get_dataloader(

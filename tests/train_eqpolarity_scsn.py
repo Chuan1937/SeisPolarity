@@ -31,7 +31,13 @@ dataset = WaveformDataset(
     path=DATA_PATH,
     name="SCSN_Train",
     preload=PRELOAD,
-    allowed_labels=ALLOWED_LABELS
+    allowed_labels=ALLOWED_LABELS,
+    # SCSN数据使用标准键名：X为数据，Y为标签
+    data_key="X",
+    label_key="Y",
+    clarity_key=None,
+    pick_key=None,
+    metadata_keys=[]  # SCSN不需要额外的元数据键
 )
 
 # 训练配置
@@ -46,7 +52,7 @@ config = TrainingConfig(
     picker_p=300,
     device=DEVICE,
     checkpoint_dir=OUT_DIR,
-    label_key="label",
+    label_key="label",  # MetadataToLabel会从元数据中提取'label'字段
     train_val_split=0.9,
     patience=5
 )

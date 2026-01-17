@@ -16,11 +16,18 @@ LOCAL_MODEL_PATH = r"/home/yuan/code/SeisPolarity/pretrained_model/Ross/Ross_SCS
 predictor = Predictor(model_name="ross", model_path=LOCAL_MODEL_PATH, device=DEVICE)
 
 USE_PRELOAD = True 
+
 dataset = WaveformDataset(
     path=TEST_FILE,
     name="SCSN_Test",
     preload=USE_PRELOAD,
-    allowed_labels=[0, 1, 2]  
+    allowed_labels=[0, 1, 2],
+    # SCSN数据使用标准键名：X为数据，Y为标签
+    data_key="X",
+    label_key="Y",
+    clarity_key=None,
+    pick_key=None,
+    metadata_keys=[]  # SCSN不需要额外的元数据键
 )
 
 
