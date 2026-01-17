@@ -33,6 +33,7 @@ class TrainingConfig:
     patience: int = -1 # Early stopping patience. -1 means disabled.
     resume_checkpoint: Optional[str] = None
     loss_fn: Optional[Callable] = None # Custom loss function, defaults to nn.CrossEntropyLoss()
+    output_index: int = 0 # Index of output to use for metrics if model returns tuple
 
 
 def default_device(config: TrainingConfig) -> torch.device:
@@ -69,6 +70,12 @@ class MetadataToLabel:
                 return str(x)
 
             chars = np.vectorize(to_char)(arr)
+            
+            if chars.ndim == 0:
+                c = str(chars)
+                mapped = self.label_map.get(c.upper(), self.label_map.get("X", 2))
+                return np.array(mapped, dtype=np.int64)
+
             mapped = [self.label_map.get(c.upper(), self.label_map.get("X", 2)) for c in chars]
             return np.array(mapped, dtype=np.int64)
 
@@ -248,7 +255,9 @@ class Trainer:
                 optimizer.step()
 
                 running_loss += loss.item()
-                _, predicted = torch.max(outputs.data, 1)
+
+                metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                _, predicted = torch.max(metric_out.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
                 pbar.set_postfix({"loss": running_loss / (pbar.n + 1), "acc": 100 * correct / total})
@@ -268,7 +277,8 @@ class Trainer:
                     outputs = self.model(inputs)
                     loss = criterion(outputs, labels)
                     val_loss += loss.item()
-                    _, predicted = torch.max(outputs.data, 1)
+                    metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                    _, predicted = torch.max(metric_out.data, 1)
                     total += labels.size(0)
                     correct += (predicted == labels).sum().item()
             val_loss /= len(val_loader)
@@ -286,7 +296,8 @@ class Trainer:
                     outputs = self.model(inputs)
                     loss = criterion(outputs, labels)
                     test_loss += loss.item()
-                    _, predicted = torch.max(outputs.data, 1)
+                    metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                    _, predicted = torch.max(metric_out.data, 1)
                     test_total += labels.size(0)
                     test_correct += (predicted == labels).sum().item()
             test_loss /= len(test_loader)
@@ -347,7 +358,8 @@ class Trainer:
                 outputs = self.model(inputs)
                 loss = criterion(outputs, labels)
                 total_loss += loss.item()
-                _, predicted = torch.max(outputs.data, 1)
+                metric_out = outputs[self.config.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                _, predicted = torch.max(metric_out.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
         

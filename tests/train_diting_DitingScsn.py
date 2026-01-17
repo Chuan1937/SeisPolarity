@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 import torch
+import torch.nn as nn
 import numpy as np
 from seispolarity.data.base import WaveformDataset
 from seispolarity.models.diting_motion import DitingMotion
@@ -16,6 +17,22 @@ from seispolarity.generate import (
     OneOf,
     RandomTimeShift
 )
+
+class MultiHeadFocalLoss(nn.Module):
+    def __init__(self, gamma=2.0, weights=None):
+        super().__init__()
+        self.focal_loss = FocalLoss(gamma=gamma)
+        # Weights for o3, o4, o5, ofuse. 
+        self.weights = weights or [1.0, 1.0, 1.0, 1.0]
+
+    def forward(self, inputs, targets):
+        if isinstance(inputs, (tuple, list)) and len(inputs) >= 4:
+            loss = 0.0
+            # Only compute loss for the first 4 polarity outputs
+            for i in range(4):
+                loss += self.weights[i] * self.focal_loss(inputs[i], targets)
+            return loss
+        return self.focal_loss(inputs, targets)
 
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
@@ -132,7 +149,8 @@ config = TrainingConfig(
     val_split=0.1,        # 验证集比例
     test_split=0.0,       # 测试集比例
     patience=5,
-    loss_fn=FocalLoss(gamma=2.0)
+    loss_fn=MultiHeadFocalLoss(gamma=2.0),
+    output_index=3
 )
 
 # 创建输出目录
