@@ -34,6 +34,7 @@ class TrainingConfig:
     resume_checkpoint: Optional[str] = None
     loss_fn: Optional[Callable] = None # Custom loss function, defaults to nn.CrossEntropyLoss()
     output_index: int = 0 # Index of output to use for metrics if model returns tuple
+    random_seed: Optional[int] = 42 # Random seed for dataset splitting and reproducibility
 
 
 def default_device(config: TrainingConfig) -> torch.device:
@@ -90,6 +91,68 @@ class MetadataToLabel:
         raw_label = metadata.get(self.metadata_key, None)
         numeric_label = self._to_numeric_label(raw_label) if raw_label is not None else np.array([-1], dtype=np.int64)
         state_dict[self.key] = (numeric_label, None)
+
+
+class MultiLabelExtractor:
+    """
+    提取多个标签的增强类，适用于DitingMotion等多任务模型。
+    
+    可以同时提取polarity标签和clarity标签。
+    """
+    def __init__(self, polarity_key="label", clarity_key="clarity", 
+                 polarity_label_map=None, clarity_label_map=None):
+        self.polarity_key = polarity_key
+        self.clarity_key = clarity_key
+        self.polarity_label_map = polarity_label_map or {"U": 0, "D": 1, "X": 2}
+        self.clarity_label_map = clarity_label_map or {"I": 0, "E": 1, "K": 2}
+    
+    def _to_numeric_label(self, raw_label, label_map):
+        """Convert mixed/byte/string labels to int64 for collation."""
+        if raw_label is None:
+            return np.array([-1], dtype=np.int64)
+            
+        arr = np.array(raw_label)
+
+        # Numeric types are returned directly
+        if arr.dtype.kind in ("i", "u", "f"):
+            return arr.astype(np.int64)
+
+        # Handle string/bytes/object labels by mapping to integers
+        if arr.dtype.kind in ("S", "U", "O"):
+            def to_char(x):
+                if isinstance(x, bytes):
+                    return x.decode()
+                return str(x)
+
+            chars = np.vectorize(to_char)(arr)
+            
+            if chars.ndim == 0:
+                c = str(chars)
+                mapped = label_map.get(c.upper(), label_map.get("X", 2))
+                return np.array(mapped, dtype=np.int64)
+
+            mapped = [label_map.get(c.upper(), label_map.get("X", 2)) for c in chars]
+            return np.array(mapped, dtype=np.int64)
+
+        # Fallback conversion
+        try:
+            return arr.astype(np.int64)
+        except Exception:
+            return np.array([label_map.get("X", 2)], dtype=np.int64)
+    
+    def __call__(self, state_dict):
+        _, metadata = state_dict["X"]
+        
+        # 提取polarity标签
+        raw_polarity = metadata.get(self.polarity_key, None)
+        polarity_label = self._to_numeric_label(raw_polarity, self.polarity_label_map)
+        
+        # 提取clarity标签
+        raw_clarity = metadata.get(self.clarity_key, None)
+        clarity_label = self._to_numeric_label(raw_clarity, self.clarity_label_map)
+        
+        # 将两个标签存储为元组
+        state_dict["y"] = ((polarity_label, clarity_label), None)
 
 
 class Trainer:
@@ -163,29 +226,80 @@ class Trainer:
             if test_size < 0:
                 raise ValueError("train_val_split + val_split must be <= 1")
             
-            train_dataset, val_dataset, test_dataset = random_split(
-                self.dataset, [train_size, val_size, test_size]
-            )
+            # 设置随机种子以确保可复现性
+            if cfg.random_seed is not None:
+                generator = torch.Generator().manual_seed(cfg.random_seed)
+            else:
+                generator = None
+            
+            # 处理test_size为0的情况
+            if test_size == 0:
+                # 只划分训练集和验证集
+                train_dataset, val_dataset = random_split(
+                    self.dataset, [train_size, val_size], generator=generator
+                )
+                test_dataset = None
+            else:
+                train_dataset, val_dataset, test_dataset = random_split(
+                    self.dataset, [train_size, val_size, test_size], generator=generator
+                )
 
         # Generators
         train_gen = GenericGenerator(train_dataset)
         val_gen = GenericGenerator(val_dataset)
-        test_gen = GenericGenerator(test_dataset)
+        
+        # 处理test_dataset为None的情况
+        if test_dataset is not None:
+            test_gen = GenericGenerator(test_dataset)
+        else:
+            test_gen = None
 
-        # 基础数据增强：将标签从metadata移动到'y'键
-        base_augmentation = MetadataToLabel(metadata_key=cfg.label_key)
+        # 根据模型类型选择标签提取器
+        # 检查是否是DitingMotion模型（有8个输出）
+        model_class_name = self.model.__class__.__name__
+        is_diting_motion = model_class_name == "DitingMotion"
         
-        # 训练集增强：基础增强 + 训练集特定增强
-        train_augmentations = [base_augmentation] + self.train_augmentations
-        train_gen.add_augmentations(train_augmentations)
+        if is_diting_motion:
+            # 对于DitingMotion模型，使用MultiLabelExtractor提取polarity和clarity标签
+            base_augmentation = MultiLabelExtractor(
+                polarity_key=cfg.label_key,
+                clarity_key="clarity"
+            )
+        else:
+            # 对于其他模型，使用MetadataToLabel提取单个标签
+            base_augmentation = MetadataToLabel(metadata_key=cfg.label_key)
         
-        # 验证集增强：基础增强 + 验证集特定增强
-        val_augmentations = [base_augmentation] + self.val_augmentations
-        val_gen.add_augmentations(val_augmentations)
+        # 检查数据集是否已经有数据增强
+        # 如果数据集已经有数据增强，我们只添加MetadataToLabel
+        # 否则添加所有增强（包括用户传入的）
         
-        # 测试集增强：基础增强 + 测试集特定增强
-        test_augmentations = [base_augmentation] + self.test_augmentations
-        test_gen.add_augmentations(test_augmentations)
+        # 训练集增强
+        if hasattr(train_dataset, 'augmentations') and train_dataset.augmentations:
+            # 数据集已经有增强，只添加MetadataToLabel
+            train_gen.add_augmentations([base_augmentation])
+        else:
+            # 数据集没有增强，添加所有增强
+            train_augmentations = [base_augmentation] + self.train_augmentations
+            train_gen.add_augmentations(train_augmentations)
+        
+        # 验证集增强
+        if hasattr(val_dataset, 'augmentations') and val_dataset.augmentations:
+            # 数据集已经有增强，只添加MetadataToLabel
+            val_gen.add_augmentations([base_augmentation])
+        else:
+            # 数据集没有增强，添加所有增强
+            val_augmentations = [base_augmentation] + self.val_augmentations
+            val_gen.add_augmentations(val_augmentations)
+        
+        # 测试集增强（如果存在测试集）
+        if test_gen is not None:
+            if hasattr(test_dataset, 'augmentations') and test_dataset.augmentations:
+                # 数据集已经有增强，只添加MetadataToLabel
+                test_gen.add_augmentations([base_augmentation])
+            else:
+                # 数据集没有增强，添加所有增强
+                test_augmentations = [base_augmentation] + self.test_augmentations
+                test_gen.add_augmentations(test_augmentations)
 
         train_loader = DataLoader(
             train_gen,
@@ -199,12 +313,23 @@ class Trainer:
             shuffle=False,
             num_workers=cfg.num_workers,
         )
-        test_loader = DataLoader(
-            test_gen,
-            batch_size=cfg.batch_size,
-            shuffle=False,
-            num_workers=cfg.num_workers,
-        )
+        # 创建测试集DataLoader（如果存在测试集）
+        if test_gen is not None:
+            test_loader = DataLoader(
+                test_gen,
+                batch_size=cfg.batch_size,
+                shuffle=False,
+                num_workers=cfg.num_workers,
+            )
+        else:
+            # 创建一个空的测试集DataLoader
+            test_loader = DataLoader(
+                [],  # 空数据集
+                batch_size=cfg.batch_size,
+                shuffle=False,
+                num_workers=cfg.num_workers,
+            )
+        
         return train_loader, val_loader, test_loader
 
     def train(self):
@@ -246,7 +371,17 @@ class Trainer:
             pbar = tqdm(train_loader, desc=f"Epoch {epoch+1}/{cfg.epochs} [Train]")
             for batch in pbar:
                 inputs = batch["X"].to(device)
-                labels = batch["y"].to(device)
+                batch_labels = batch["y"]
+                
+                # 处理多标签情况：batch["y"]可能是元组(polarity_labels, clarity_labels)
+                if isinstance(batch_labels, (tuple, list)) and len(batch_labels) == 2:
+                    # 分别移动两个标签到设备
+                    polarity_labels = batch_labels[0].to(device)
+                    clarity_labels = batch_labels[1].to(device)
+                    labels = (polarity_labels, clarity_labels)
+                else:
+                    # 单标签情况
+                    labels = batch_labels.to(device)
 
                 optimizer.zero_grad()
                 outputs = self.model(inputs)
@@ -256,10 +391,21 @@ class Trainer:
 
                 running_loss += loss.item()
 
-                metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
-                _, predicted = torch.max(metric_out.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+                # 计算准确率
+                if isinstance(labels, (tuple, list)) and len(labels) == 2:
+                    # 对于DitingMotion，使用polarity标签计算准确率
+                    polarity_labels = labels[0]
+                    metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                    _, predicted = torch.max(metric_out.data, 1)
+                    total += polarity_labels.size(0)
+                    correct += (predicted == polarity_labels).sum().item()
+                else:
+                    # 对于单标签模型
+                    metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                    _, predicted = torch.max(metric_out.data, 1)
+                    total += labels.size(0)
+                    correct += (predicted == labels).sum().item()
+                
                 pbar.set_postfix({"loss": running_loss / (pbar.n + 1), "acc": 100 * correct / total})
 
             train_loss = running_loss / len(train_loader)
@@ -273,14 +419,34 @@ class Trainer:
             with torch.no_grad():
                 for batch in tqdm(val_loader, desc=f"Epoch {epoch+1}/{cfg.epochs} [Val]"):
                     inputs = batch["X"].to(device)
-                    labels = batch["y"].to(device)
+                    batch_labels = batch["y"]
+                    
+                    # 处理多标签情况
+                    if isinstance(batch_labels, (tuple, list)) and len(batch_labels) == 2:
+                        # 分别移动两个标签到设备
+                        polarity_labels = batch_labels[0].to(device)
+                        clarity_labels = batch_labels[1].to(device)
+                        labels = (polarity_labels, clarity_labels)
+                    else:
+                        # 单标签情况
+                        labels = batch_labels.to(device)
+                    
                     outputs = self.model(inputs)
                     loss = criterion(outputs, labels)
                     val_loss += loss.item()
-                    metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
-                    _, predicted = torch.max(metric_out.data, 1)
-                    total += labels.size(0)
-                    correct += (predicted == labels).sum().item()
+                    
+                    # 计算准确率
+                    if isinstance(labels, (tuple, list)) and len(labels) == 2:
+                        polarity_labels = labels[0]
+                        metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                        _, predicted = torch.max(metric_out.data, 1)
+                        total += polarity_labels.size(0)
+                        correct += (predicted == polarity_labels).sum().item()
+                    else:
+                        metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                        _, predicted = torch.max(metric_out.data, 1)
+                        total += labels.size(0)
+                        correct += (predicted == labels).sum().item()
             val_loss /= len(val_loader)
             val_acc = 100 * correct / total if total else 0.0
 
@@ -288,26 +454,57 @@ class Trainer:
             test_loss = 0.0
             test_correct = 0
             test_total = 0
-            self.model.eval()
-            with torch.no_grad():
-                for batch in test_loader:
-                    inputs = batch["X"].to(device)
-                    labels = batch["y"].to(device)
-                    outputs = self.model(inputs)
-                    loss = criterion(outputs, labels)
-                    test_loss += loss.item()
-                    metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
-                    _, predicted = torch.max(metric_out.data, 1)
-                    test_total += labels.size(0)
-                    test_correct += (predicted == labels).sum().item()
-            test_loss /= len(test_loader)
-            test_acc = 100 * test_correct / test_total if test_total else 0.0
-
-            print(
-                f"Epoch {epoch+1}: Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, "
-                f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, "
-                f"Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.2f}%"
-            )
+            test_acc = 0.0
+            
+            # 只有在有测试数据时才进行评估
+            if len(test_loader.dataset) > 0:
+                self.model.eval()
+                with torch.no_grad():
+                    for batch in test_loader:
+                        inputs = batch["X"].to(device)
+                        batch_labels = batch["y"]
+                        
+                        # 处理多标签情况
+                        if isinstance(batch_labels, (tuple, list)) and len(batch_labels) == 2:
+                            # 分别移动两个标签到设备
+                            polarity_labels = batch_labels[0].to(device)
+                            clarity_labels = batch_labels[1].to(device)
+                            labels = (polarity_labels, clarity_labels)
+                        else:
+                            # 单标签情况
+                            labels = batch_labels.to(device)
+                        
+                        outputs = self.model(inputs)
+                        loss = criterion(outputs, labels)
+                        test_loss += loss.item()
+                        
+                        # 计算准确率
+                        if isinstance(labels, (tuple, list)) and len(labels) == 2:
+                            polarity_labels = labels[0]
+                            metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                            _, predicted = torch.max(metric_out.data, 1)
+                            test_total += polarity_labels.size(0)
+                            test_correct += (predicted == polarity_labels).sum().item()
+                        else:
+                            metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                            _, predicted = torch.max(metric_out.data, 1)
+                            test_total += labels.size(0)
+                            test_correct += (predicted == labels).sum().item()
+                test_loss /= len(test_loader)
+                test_acc = 100 * test_correct / test_total if test_total else 0.0
+            
+            # 打印训练进度
+            if len(test_loader.dataset) > 0:
+                print(
+                    f"Epoch {epoch+1}: Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, "
+                    f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%, "
+                    f"Test Loss: {test_loss:.4f}, Test Acc: {test_acc:.2f}%"
+                )
+            else:
+                print(
+                    f"Epoch {epoch+1}: Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, "
+                    f"Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.2f}%"
+                )
             
             # Write to log file
             self._log_epoch(epoch+1, train_loss, train_acc, val_loss, val_acc, test_loss, test_acc)
@@ -335,9 +532,15 @@ class Trainer:
                 print(f"Early stop triggered! No improvement for {cfg.patience} epochs.")
                 break
 
-        # Final test evaluation
-        final_test_loss, final_test_acc = self.evaluate(test_loader, criterion, device)
-        print(f"Final Test Performance - Loss: {final_test_loss:.4f}, Acc: {final_test_acc:.2f}%")
+        # Final test evaluation (only if there is test data)
+        final_test_loss = 0.0
+        final_test_acc = 0.0
+        
+        if len(test_loader.dataset) > 0:
+            final_test_loss, final_test_acc = self.evaluate(test_loader, criterion, device)
+            print(f"Final Test Performance - Loss: {final_test_loss:.4f}, Acc: {final_test_acc:.2f}%")
+        else:
+            print("No test data available for final evaluation.")
         
         return best_val_acc, final_test_acc
 
@@ -345,6 +548,10 @@ class Trainer:
         """Evaluate model on a given data loader."""
         if device is None:
             device = self.device
+        
+        # 检查DataLoader是否为空
+        if len(data_loader.dataset) == 0:
+            return 0.0, 0.0
         
         self.model.eval()
         total_loss = 0.0
@@ -354,14 +561,34 @@ class Trainer:
         with torch.no_grad():
             for batch in data_loader:
                 inputs = batch["X"].to(device)
-                labels = batch["y"].to(device)
+                batch_labels = batch["y"]
+                
+                # 处理多标签情况
+                if isinstance(batch_labels, (tuple, list)) and len(batch_labels) == 2:
+                    # 分别移动两个标签到设备
+                    polarity_labels = batch_labels[0].to(device)
+                    clarity_labels = batch_labels[1].to(device)
+                    labels = (polarity_labels, clarity_labels)
+                else:
+                    # 单标签情况
+                    labels = batch_labels.to(device)
+                
                 outputs = self.model(inputs)
                 loss = criterion(outputs, labels)
                 total_loss += loss.item()
-                metric_out = outputs[self.config.output_index] if isinstance(outputs, (tuple, list)) else outputs
-                _, predicted = torch.max(metric_out.data, 1)
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
+                
+                # 计算准确率
+                if isinstance(labels, (tuple, list)) and len(labels) == 2:
+                    polarity_labels = labels[0]
+                    metric_out = outputs[self.config.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                    _, predicted = torch.max(metric_out.data, 1)
+                    total += polarity_labels.size(0)
+                    correct += (predicted == polarity_labels).sum().item()
+                else:
+                    metric_out = outputs[self.config.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                    _, predicted = torch.max(metric_out.data, 1)
+                    total += labels.size(0)
+                    correct += (predicted == labels).sum().item()
         
         avg_loss = total_loss / len(data_loader)
         accuracy = 100 * correct / total if total else 0.0

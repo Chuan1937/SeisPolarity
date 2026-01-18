@@ -15,7 +15,7 @@ from tqdm import tqdm
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent)) # Add project root to sys.path
 
-from seispolarity.models import SCSN, EQPolarityCCT
+from seispolarity.models import SCSN, EQPolarityCCT, DitingMotion
 
 # Constants
 HF_REPO = "HeXingChen/SeisPolarity-Model"
@@ -33,6 +33,13 @@ MODELS_CONFIG = {
         "input_len": 600,                    # EQPolarity 使用完整的 600 点输入
         "num_classes": 2,                    # 二分类：Up vs Down
         "class_map": {0: "Up", 1: "Down"}    # 二分类映射
+    },
+    "diting_motion": {
+        "filename": "DiTingMotion_DitingScsn.pth",   # Filename in HF repo
+        "model_class": DitingMotion,         # Python class
+        "input_len": 128,                    # DiTingMotion 使用128点输入
+        "num_classes": 3,                    # 三分类：Up, Down, Unknown
+        "class_map": {0: "Up", 1: "Down", 2: "Unknown"} # 三分类映射
     }
 }
 
@@ -47,7 +54,7 @@ class Predictor:
         >>> preds = model.predict(waveforms)
     """
     
-    def __init__(self, model_name: str = "ross", device: Optional[str] = None, cache_dir: str = "./checkpoints_download", model_path: Optional[str] = None):
+    def __init__(self, model_name: str = "ross", device: Optional[str] = None, cache_dir: str = "./checkpoints_download", model_path: Optional[str] = None, force_ud: bool = False):
         """
         Initialize the predictor.
         初始化预测器。
@@ -57,24 +64,31 @@ class Predictor:
             device (str, optional): "cuda" or "cpu". If None, auto-detect.
             cache_dir (str): Directory to store downloaded models (default: "./checkpoints_download").
             model_path (str, optional): Manually specified path to the model file. If provided, skips download.
+            force_ud (bool): 是否强制输出U/D（不输出X）。对于DiTingMotion模型，如果为True，则当模型预测为X时，
+                             会选择U和D中概率较高的那个作为最终预测。
         """
         if model_name not in MODELS_CONFIG:
             raise ValueError(f"Unknown model '{model_name}'. Available: {list(MODELS_CONFIG.keys())}")
         
         self.config = MODELS_CONFIG[model_name]
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.force_ud = force_ud
         print(f"Using device: {self.device}")
+        if force_ud and model_name == "diting_motion":
+            print("启用强制输出U/D模式：当预测为X时，选择U/D中概率较高的那个")
         
         # 1. Download/Load Checkpoint
         self.checkpoint_path = self._resolve_model_path(cache_dir, self.config["filename"], model_path)
         
-        # 2. Initialize Model
         # 2. Initialize Model
         # 根据模型类型使用不同的初始化参数
         if model_name == "eqpolarity":
             # EQPolarityCCT 需要 input_length 参数
             # 先创建模型但不立即加载权重
             self.model = self.config["model_class"](input_length=self.config["input_len"])
+        elif model_name == "diting_motion":
+            # DitingMotion 需要 input_channels 参数
+            self.model = self.config["model_class"](input_channels=2)
         else:
             # 其他模型使用 num_fm_classes 参数
             self.model = self.config["model_class"](num_fm_classes=self.config["num_classes"])
@@ -102,10 +116,14 @@ class Predictor:
             os.path.join(project_root, "pretrained_model", "Ross", filename),
             # 2. Source repo structure: pretrained_model/Eqpolarity/Eqpolarity_SCSN.pth
             os.path.join(project_root, "pretrained_model", "Eqpolarity", filename),
-            # 3. Source repo structure: pretrained_models/Ross/Ross_SCSN.pth (plural)
+            # 3. Source repo structure: pretrained_model/DiTingMotion/DiTingMotion_DitingScsn.pth
+            os.path.join(project_root, "pretrained_model", "DiTingMotion", filename),
+            # 4. Source repo structure: pretrained_models/Ross/Ross_SCSN.pth (plural)
             os.path.join(project_root, "pretrained_models", "Ross", filename),
-            # 4. Source repo structure: pretrained_models/Eqpolarity/Eqpolarity_SCSN.pth (plural)
+            # 5. Source repo structure: pretrained_models/Eqpolarity/Eqpolarity_SCSN.pth (plural)
             os.path.join(project_root, "pretrained_models", "Eqpolarity", filename),
+            # 6. Source repo structure: pretrained_models/DiTingMotion/DiTingMotion_DitingScsn.pth (plural)
+            os.path.join(project_root, "pretrained_models", "DiTingMotion", filename),
         ]
         
         for cand in candidates:
@@ -289,7 +307,7 @@ class Predictor:
             
         return tensor.float()
 
-    def predict(self, waveforms: Union[np.ndarray, List[np.ndarray]], return_probs: bool = False, batch_size: int = 2048):
+    def predict(self, waveforms: Union[np.ndarray, List[np.ndarray]], return_probs: bool = False, batch_size: int = 2048, force_ud: Optional[bool] = None):
         """
         Run inference.
         
@@ -297,6 +315,9 @@ class Predictor:
             waveforms: Input data.
             return_probs: If True, return probabilities instead of class indices.
             batch_size: Batch size for inference to avoid OOM.
+            force_ud: 是否强制输出U/D（不输出X）。如果为None，则使用初始化时的设置。
+                     对于DiTingMotion模型，如果为True，则当模型预测为X时，
+                     会选择U和D中概率较高的那个作为最终预测。
             
         Returns:
             np.ndarray: Predicted classes (or probabilities).
@@ -312,13 +333,21 @@ class Predictor:
         
         results = []
         
+        # 确定是否使用force_ud
+        use_force_ud = force_ud if force_ud is not None else self.force_ud
+        
         with torch.no_grad():
             for i in tqdm(range(0, n_samples, batch_size), desc="Predicting", disable=n_samples <= batch_size):
                 batch = input_tensor[i : i + batch_size].to(self.device)
                 logits = self.model(batch)
                 
                 # 处理不同形状的输出
-                if logits.shape[1] == 1:
+                # DitingMotion模型返回8个输出，我们需要使用第4个输出（索引3）即融合输出
+                if isinstance(logits, (tuple, list)) and len(logits) == 8:
+                    # DitingMotion模型：使用融合输出（索引3）
+                    fuse_output = logits[3]
+                    probs = torch.softmax(fuse_output, dim=1)
+                elif logits.shape[1] == 1:
                     # 二分类的 sigmoid 输出 (batch, 1)
                     probs = torch.sigmoid(logits)
                     # 转换为两类的概率分布
@@ -327,21 +356,38 @@ class Predictor:
                     # 多分类的 softmax 输出 (batch, num_classes)
                     probs = torch.softmax(logits, dim=1)
                 
+                # 处理force_ud（强制输出U/D）
+                if use_force_ud and probs.shape[1] == 3:
+                    # 对于三分类（U, D, X），强制输出U/D
+                    # 如果预测为X（索引2），则选择U和D中概率较高的那个
+                    preds = torch.argmax(probs, dim=1)
+                    x_mask = preds == 2  # 找到预测为X的样本
+                    
+                    if x_mask.any():
+                        # 对于预测为X的样本，选择U(0)和D(1)中概率较高的那个
+                        ud_probs = probs[x_mask, :2]  # 只取U和D的概率
+                        ud_preds = torch.argmax(ud_probs, dim=1)
+                        preds[x_mask] = ud_preds
+                else:
+                    preds = torch.argmax(probs, dim=1)
+                
                 if return_probs:
                     results.append(probs.cpu().numpy())
                 else:
-                    classes = torch.argmax(probs, dim=1)
-                    results.append(classes.cpu().numpy())
+                    results.append(preds.cpu().numpy())
             
         return np.concatenate(results, axis=0)
 
-    def predict_from_loader(self, loader: torch.utils.data.DataLoader, return_probs: bool = False):
+    def predict_from_loader(self, loader: torch.utils.data.DataLoader, return_probs: bool = False, force_ud: Optional[bool] = None):
         """
         Run inference on a DataLoader.
         
         Args:
             loader: PyTorch DataLoader yielding (waveforms, labels) or waveforms.
             return_probs: If True, return probabilities.
+            force_ud: 是否强制输出U/D（不输出X）。如果为None，则使用初始化时的设置。
+                     对于DiTingMotion模型，如果为True，则当模型预测为X时，
+                     会选择U和D中概率较高的那个作为最终预测。
             
         Returns:
             (predictions, labels): 
@@ -353,6 +399,9 @@ class Predictor:
         labels_list = []
         
         device = self.device
+        
+        # 确定是否使用force_ud
+        use_force_ud = force_ud if force_ud is not None else self.force_ud
         
         # Iterate through loader
         with torch.no_grad():
@@ -383,7 +432,12 @@ class Predictor:
                 logits = self.model(x)
                 
                 # 处理不同形状的输出
-                if logits.shape[1] == 1:
+                # DitingMotion模型返回8个输出，我们需要使用第4个输出（索引3）即融合输出
+                if isinstance(logits, (tuple, list)) and len(logits) == 8:
+                    # DitingMotion模型：使用融合输出（索引3）
+                    fuse_output = logits[3]
+                    probs = torch.softmax(fuse_output, dim=1)
+                elif logits.shape[1] == 1:
                     # 二分类的 sigmoid 输出 (batch, 1)
                     probs = torch.sigmoid(logits)
                     # 转换为两类的概率分布
@@ -392,11 +446,25 @@ class Predictor:
                     # 多分类的 softmax 输出 (batch, num_classes)
                     probs = torch.softmax(logits, dim=1)
                 
-                # 4. Store Results
+                # 4. 处理force_ud（强制输出U/D）
+                if use_force_ud and probs.shape[1] == 3:
+                    # 对于三分类（U, D, X），强制输出U/D
+                    # 如果预测为X（索引2），则选择U和D中概率较高的那个
+                    preds = torch.argmax(probs, dim=1)
+                    x_mask = preds == 2  # 找到预测为X的样本
+                    
+                    if x_mask.any():
+                        # 对于预测为X的样本，选择U(0)和D(1)中概率较高的那个
+                        ud_probs = probs[x_mask, :2]  # 只取U和D的概率
+                        ud_preds = torch.argmax(ud_probs, dim=1)
+                        preds[x_mask] = ud_preds
+                else:
+                    preds = torch.argmax(probs, dim=1)
+                
+                # 5. Store Results
                 if return_probs:
                     results.append(probs.cpu().numpy())
                 else:
-                    preds = torch.argmax(probs, dim=1)
                     results.append(preds.cpu().numpy())
         
         # Concatenate

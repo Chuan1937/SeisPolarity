@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Optional, List, Union, Tuple, Literal, Dict
+from typing import Any, Optional, List, Union, Tuple, Literal, Dict, Callable
 from urllib.parse import urljoin
 import os
 
@@ -91,6 +91,7 @@ class WaveformDataset(Dataset):
         citation: str = None,
         license: str = None,
         repository_lookup: bool = False,
+        augmentations: Optional[List[Callable]] = None,
         **kwargs,
     ):
         if name is None:
@@ -129,6 +130,9 @@ class WaveformDataset(Dataset):
         # --- Cropping parameters ---
         self.window_p0 = kwargs.get('window_p0', None)  # 裁剪起始点，None表示不裁剪
         self.window_len = kwargs.get('window_len', None)  # 裁剪长度，None表示不裁剪
+        
+        # --- Data augmentations ---
+        self.augmentations = augmentations or []
         
         # --- New parameters for unified loading ---
         self.preload = preload
@@ -407,6 +411,13 @@ class WaveformDataset(Dataset):
             waveform = waveform.reshape(1, -1)
         elif waveform.ndim == 2 and waveform.shape[0] > 3:  # (N, C) -> (C, N)
             waveform = waveform.T
+        
+        # Apply data augmentations if any
+        if self.augmentations:
+            state_dict = {"X": (waveform, metadata)}
+            for aug in self.augmentations:
+                aug(state_dict)
+            waveform, metadata = state_dict["X"]
         
         # Apply cropping if parameters are set
         if self.window_p0 is not None and self.window_len is not None:
@@ -1277,7 +1288,34 @@ class WaveformDataset(Dataset):
     def reverse_clarity_map(self):
         """获取反向清晰度标签映射字典"""
         return self._reverse_clarity_map
-
+    
+    # --- Data augmentation methods ---
+    
+    def add_augmentation(self, augmentation: Callable):
+        """
+        添加单个数据增强函数到数据集中。
+        
+        Args:
+            augmentation: 数据增强函数，接受state_dict作为参数
+        """
+        self.augmentations.append(augmentation)
+    
+    def add_augmentations(self, augmentations: List[Callable]):
+        """
+        添加多个数据增强函数到数据集中。
+        
+        Args:
+            augmentations: 数据增强函数列表
+        """
+        self.augmentations.extend(augmentations)
+    
+    def clear_augmentations(self):
+        """清除所有数据增强函数"""
+        self.augmentations.clear()
+    
+    def get_augmentations(self) -> List[Callable]:
+        """获取当前的数据增强函数列表"""
+        return self.augmentations.copy()
 
 
 

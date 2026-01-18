@@ -339,32 +339,103 @@ class ChannelDropout:
 # ==============================================================================
 # Loss Functions (损失函数)
 # ==============================================================================
-
 class FocalLoss(nn.Module):
     """Focal Loss for addressing class imbalance."""
-    def __init__(self, gamma=2.0, reduction='mean'):
-        super(FocalLoss, self).__init__()
+    def __init__(self, gamma=2.0, alpha=None, reduction='mean'):
+        super().__init__()
         self.gamma = gamma
+        self.alpha = alpha
         self.reduction = reduction
+
     def forward(self, inputs, targets):
-        """
-        :param inputs: Logits (N, C)
-        :param targets: Labels (N,)
-        """
-        # Calculate cross entropy (without reduction)
         ce_loss = F.cross_entropy(inputs, targets, reduction='none')
-        
-        # Calculate p_t (probability of correct class)
         pt = torch.exp(-ce_loss)
-        
-        # Calculate focal term
         focal_loss = ((1 - pt) ** self.gamma) * ce_loss
+        
+        if self.alpha is not None:
+            alpha_t = self.alpha[targets]
+            focal_loss = alpha_t * focal_loss
         
         if self.reduction == 'mean':
             return focal_loss.mean()
         elif self.reduction == 'sum':
             return focal_loss.sum()
-        return focal_loss
+        else:
+            return focal_loss
+
+class MultiHeadFocalLoss(nn.Module):
+    """Multi-head Focal Loss for models with multiple outputs."""
+    def __init__(self, gamma=2.0, weights=None):
+        super().__init__()
+        self.focal_loss = FocalLoss(gamma=gamma)
+        # Weights for o3, o4, o5, ofuse. 
+        self.weights = weights or [1.0, 1.0, 1.0, 1.0]
+
+    def forward(self, inputs, targets):
+        if isinstance(inputs, (tuple, list)) and len(inputs) >= 4:
+            loss = 0.0
+            # Only compute loss for the first 4 polarity outputs
+            for i in range(4):
+                loss += self.weights[i] * self.focal_loss(inputs[i], targets)
+            return loss
+        return self.focal_loss(inputs, targets)
+
+class DitingMotionLoss(nn.Module):
+    """
+    DitingMotion模型的专用损失函数。
+    
+    DitingMotion有8个输出：
+    1-4: polarity输出 (o3, o4, o5, ofuse)
+    5-8: clarity输出 (o3_clarity, o4_clarity, o5_clarity, ofuse_clarity)
+    
+    这个损失函数可以处理以下情况：
+    1. 只有polarity标签：计算前4个输出的损失
+    2. 同时有polarity和clarity标签：计算所有8个输出的损失
+    """
+    def __init__(self, gamma=2.0, polarity_weights=None, clarity_weights=None, 
+                 has_clarity_labels=True):
+        super().__init__()
+        self.focal_loss = FocalLoss(gamma=gamma)
+        # polarity输出的权重
+        self.polarity_weights = polarity_weights or [1.0, 1.0, 1.0, 1.0]
+        # clarity输出的权重
+        self.clarity_weights = clarity_weights or [1.0, 1.0, 1.0, 1.0]
+        self.has_clarity_labels = has_clarity_labels
+        
+    def forward(self, inputs, targets):
+        """
+        Args:
+            inputs: 模型输出，应该是8个张量的元组/列表
+            targets: 目标标签，可以是：
+                - 单个张量：只有polarity标签
+                - 元组/列表：(polarity_targets, clarity_targets)
+        """
+        if not isinstance(inputs, (tuple, list)) or len(inputs) != 8:
+            raise ValueError(f"DitingMotionLoss expects 8 outputs, got {len(inputs) if isinstance(inputs, (tuple, list)) else 1}")
+        
+        # 处理目标标签
+        if isinstance(targets, (tuple, list)) and len(targets) == 2:
+            polarity_targets, clarity_targets = targets
+            has_clarity = True
+        else:
+            polarity_targets = targets
+            clarity_targets = None
+            has_clarity = False
+        
+        total_loss = 0.0
+        
+        # 计算polarity损失（前4个输出）
+        for i in range(4):
+            loss = self.focal_loss(inputs[i], polarity_targets)
+            total_loss += self.polarity_weights[i] * loss
+        
+        # 计算clarity损失（后4个输出），如果有clarity标签
+        if self.has_clarity_labels and has_clarity and clarity_targets is not None:
+            for i in range(4):
+                loss = self.focal_loss(inputs[i+4], clarity_targets)
+                total_loss += self.clarity_weights[i] * loss
+        
+        return total_loss
 
 # ==============================================================================
 # Utility Augmentations (实用增强工具)

@@ -51,7 +51,8 @@ config = TrainingConfig(
     train_val_split=0.9,  # 训练集比例
     val_split=0.1,        # 验证集比例
     test_split=0,       # 测试集比例
-    patience=5
+    patience=5,
+    random_seed=36  # 设置随机种子以确保可复现性
 )
 
 # 创建输出目录
