@@ -119,14 +119,18 @@ SeisPolarity/
 ├── tests/                           # Example scripts and unit tests
 │   ├── train_ross_scsn.py           # Train Ross model on SCSN
 │   ├── train_eqpolarity_scsn.py     # Train Eqpolarity model on SCSN
-│   ├── predict_ross_scsn.py         # Large-scale inference example
+│   ├── train_diting_DitingScsn.py   # Train DiTingMotion model on SCSN
+│   ├── predict_ross_scsn.py         # Large-scale inference example (Ross model)
+│   ├── predict_eqpolarity_scsn.py   # Large-scale inference example (Eqpolarity model)
+│   ├── predict_diting_scsn.py       # Large-scale inference example (DiTingMotion model with forced U/D output)
 │   ├── test_models.py               # Model unit tests
 │   └── test_data_structure.py       # Data structure tests
 ├── checkpoints_ross_scsn/           # Ross model checkpoints
 ├── checkpoints_eqpolarity_scsn/     # Eqpolarity model checkpoints
 ├── pretrained_model/                # Pre-trained model weights
 │   ├── Eqpolarity/                  # Eqpolarity pre-trained models
-│   └── Ross/                        # Ross pre-trained models
+│   ├── Ross/                        # Ross pre-trained models
+│   └── DiTingMotion/                # DiTingMotion pre-trained models
 ├── datasets/                        # Dataset storage (optional)
 ├── Polarity-model/                  # Cross-domain evaluation notebooks
 ├── Methods Valid.ipynb              # Data validation and analysis notebook
@@ -366,14 +370,19 @@ SeisPolarity/
 ├── tests/                           # 示例脚本和单元测试
 │   ├── train_ross_scsn.py           # 在 SCSN 上训练 Ross 模型
 │   ├── train_eqpolarity_scsn.py     # 在 SCSN 上训练 Eqpolarity 模型
+│   ├── train_diting_DitingScsn.py   # 在 SCSN 上训练 DiTingMotion 模型
 │   ├── predict_ross_scsn.py         # 大规模推理示例
+│   ├── predict_eqpolarity_scsn.py   # Eqpolarity 模型推理示例
+│   ├── predict_diting_scsn.py       # 大规模推理示例 (DiTingMotion 模型，强制输出 U/D)
 │   ├── test_models.py               # 模型单元测试
 │   └── test_data_structure.py       # 数据结构测试
 ├── checkpoints_ross_scsn/           # Ross 模型检查点
 ├── checkpoints_eqpolarity_scsn/     # Eqpolarity 模型检查点
+├── checkpoints_diting_DitingScsn/   # DiTingMotion 模型检查点
 ├── pretrained_model/                # 预训练模型权重
 │   ├── Eqpolarity/                  # Eqpolarity 预训练模型
-│   └── Ross/                        # Ross 预训练模型
+│   ├── Ross/                        # Ross 预训练模型
+│   └── DiTingMotion/                # DiTingMotion 预训练模型
 ├── datasets/                        # 数据集存储（可选）
 ├── Polarity-model/                  # 跨域评估笔记本
 ├── Methods Valid.ipynb              # 数据验证和分析笔记本

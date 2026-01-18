@@ -102,3 +102,59 @@ results_df = pd.DataFrame({
     'prob_D': probabilities[:, 1],
     'prob_X': probabilities[:, 2]
 })
+
+# 保存到CSV文件
+output_csv = "diting_scsn_predictions.csv"
+results_df.to_csv(output_csv, index=False)
+print(f"预测结果已保存到: {output_csv}")
+
+# 评估模型性能（只使用U/D样本）
+print("\n=== 模型评估（只使用U/D样本）===")
+print(f"总样本数: {len(labels)}")
+print(f"U/D样本数: {len(labels_ud)}")
+print(f"X样本数: {len(labels) - len(labels_ud)}")
+
+if len(labels_ud) > 0:
+    # 计算准确率
+    accuracy = accuracy_score(labels_ud, predictions_ud)
+    print(f"准确率 (U/D样本): {accuracy:.4f}")
+    
+    # 混淆矩阵
+    print("\n混淆矩阵 (U/D样本):")
+    cm = confusion_matrix(labels_ud, predictions_ud, labels=[0, 1])
+    print(cm)
+    
+    # 分类报告
+    print("\n分类报告 (U/D样本):")
+    target_names = ['U', 'D']
+    print(classification_report(labels_ud, predictions_ud, target_names=target_names))
+    
+    # 可视化混淆矩阵
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
+                xticklabels=target_names, yticklabels=target_names)
+    plt.title(f'DiTingMotion 模型混淆矩阵 (强制U/D模式)\n准确率: {accuracy:.4f}')
+    plt.ylabel('真实标签')
+    plt.xlabel('预测标签')
+    plt.tight_layout()
+    
+    # 保存混淆矩阵图像
+    cm_output = "diting_scsn_confusion_matrix.png"
+    plt.savefig(cm_output, dpi=300, bbox_inches='tight')
+    print(f"混淆矩阵已保存到: {cm_output}")
+    
+    # 显示图像
+    plt.show()
+else:
+    print("警告：没有找到U/D样本进行评估")
+
+print("\n=== 预测统计 ===")
+print(f"总预测样本数: {len(predictions)}")
+print(f"U预测数: {(predictions == 0).sum()}")
+print(f"D预测数: {(predictions == 1).sum()}")
+print(f"X预测数: {(predictions == 2).sum()}")
+
+if FORCE_UD:
+    print("\n=== 强制U/D模式统计 ===")
+    print(f"原始X预测数: {x_mask.sum() if 'x_mask' in locals() else 0}")
+    print("所有预测已被强制转换为U或D")
