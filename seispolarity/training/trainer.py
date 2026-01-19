@@ -87,10 +87,17 @@ class MetadataToLabel:
             return np.array([self.label_map.get("X", 2)], dtype=np.int64)
 
     def __call__(self, state_dict):
-        _, metadata = state_dict["X"]
+        # 处理state_dict["X"]可能不是元组的情况
+        if isinstance(state_dict["X"], tuple) and len(state_dict["X"]) == 2:
+            _, metadata = state_dict["X"]
+        else:
+            # 如果state_dict["X"]不是元组，尝试从其他地方获取metadata
+            metadata = state_dict.get("metadata", {})
+        
         raw_label = metadata.get(self.metadata_key, None)
         numeric_label = self._to_numeric_label(raw_label) if raw_label is not None else np.array([-1], dtype=np.int64)
-        state_dict[self.key] = (numeric_label, None)
+        # 只返回标签数据，而不是元组，以避免DataLoader的collate问题
+        state_dict[self.key] = numeric_label
 
 
 class MultiLabelExtractor:
@@ -141,7 +148,12 @@ class MultiLabelExtractor:
             return np.array([label_map.get("X", 2)], dtype=np.int64)
     
     def __call__(self, state_dict):
-        _, metadata = state_dict["X"]
+        # 处理state_dict["X"]可能不是元组的情况
+        if isinstance(state_dict["X"], tuple) and len(state_dict["X"]) == 2:
+            _, metadata = state_dict["X"]
+        else:
+            # 如果state_dict["X"]不是元组，尝试从其他地方获取metadata
+            metadata = state_dict.get("metadata", {})
         
         # 提取polarity标签
         raw_polarity = metadata.get(self.polarity_key, None)
@@ -151,8 +163,8 @@ class MultiLabelExtractor:
         raw_clarity = metadata.get(self.clarity_key, None)
         clarity_label = self._to_numeric_label(raw_clarity, self.clarity_label_map)
         
-        # 将两个标签存储为元组
-        state_dict["y"] = ((polarity_label, clarity_label), None)
+        # 将两个标签存储为元组（但不包含None），以避免DataLoader的collate问题
+        state_dict["y"] = (polarity_label, clarity_label)
 
 
 class Trainer:
@@ -306,12 +318,14 @@ class Trainer:
             batch_size=cfg.batch_size,
             shuffle=True,
             num_workers=cfg.num_workers,
+            collate_fn=self._collate_fn,
         )
         val_loader = DataLoader(
             val_gen,
             batch_size=cfg.batch_size,
             shuffle=False,
             num_workers=cfg.num_workers,
+            collate_fn=self._collate_fn,
         )
         # 创建测试集DataLoader（如果存在测试集）
         if test_gen is not None:
@@ -320,6 +334,7 @@ class Trainer:
                 batch_size=cfg.batch_size,
                 shuffle=False,
                 num_workers=cfg.num_workers,
+                collate_fn=self._collate_fn,
             )
         else:
             # 创建一个空的测试集DataLoader
@@ -331,6 +346,62 @@ class Trainer:
             )
         
         return train_loader, val_loader, test_loader
+
+    @staticmethod
+    def _collate_fn(batch):
+        """
+        自定义 collate 函数来处理生成器的输出。
+        生成器返回的字典包含：
+        - "X": (波形数据, 元数据字典) 或 波形数据
+        - "y": 标签数据 或 (polarity_label, clarity_label)
+        """
+        # 提取 X 和 y
+        X_list = []
+        y_list = []
+        
+        for sample in batch:
+            # 提取 X（波形数据）
+            if "X" in sample:
+                x_val = sample["X"]
+                if isinstance(x_val, tuple) and len(x_val) == 2:
+                    X_list.append(x_val[0])  # 波形数据
+                else:
+                    X_list.append(x_val)
+            
+            # 提取 y（标签）
+            if "y" in sample:
+                y_list.append(sample["y"])
+        
+        # 转换为张量
+        if X_list:
+            # 检查是否所有 X 都是 numpy 数组
+            if all(isinstance(x, np.ndarray) for x in X_list):
+                X_batch = torch.tensor(np.stack(X_list))
+            else:
+                # 如果已经是张量，直接 stack
+                X_batch = torch.stack(X_list) if isinstance(X_list[0], torch.Tensor) else torch.tensor(X_list)
+        else:
+            X_batch = torch.tensor([])
+        
+        if y_list:
+            # 检查 y 是否是元组（多标签情况）
+            if all(isinstance(y, tuple) for y in y_list):
+                # 多标签情况：y 是 (polarity_label, clarity_label)
+                polarity_labels = [y[0] for y in y_list]
+                clarity_labels = [y[1] for y in y_list]
+                
+                # 转换为张量
+                polarity_batch = torch.tensor(np.stack(polarity_labels)) if isinstance(polarity_labels[0], np.ndarray) else torch.stack(polarity_labels)
+                clarity_batch = torch.tensor(np.stack(clarity_labels)) if isinstance(clarity_labels[0], np.ndarray) else torch.stack(clarity_labels)
+                
+                y_batch = (polarity_batch, clarity_batch)
+            else:
+                # 单标签情况
+                y_batch = torch.tensor(np.stack(y_list)) if isinstance(y_list[0], np.ndarray) else torch.stack(y_list)
+        else:
+            y_batch = torch.tensor([])
+        
+        return {"X": X_batch, "y": y_batch}
 
     def train(self):
         cfg = self.config

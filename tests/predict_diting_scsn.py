@@ -24,8 +24,8 @@ LOCAL_MODEL_PATH = r"/home/yuan/code/SeisPolarity/pretrained_model/DiTingMotion/
 
 # 测试数据路径
 TEST_FILE = "/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
-WINDOW_P0 = 236      
-WINDOW_LEN = 128   
+CROP_LEFT = 64  # p_pick左侧裁剪长度（p_pick=300, 开始点=236）
+CROP_RIGHT = 64  # p_pick右侧裁剪长度（结束点=364）   
 
 # 数据增强（与训练时验证集一致）
 test_augmentations = [
@@ -51,15 +51,16 @@ dataset = WaveformDataset(
     clarity_key=None,
     pick_key=None,
     metadata_keys=[],
-    window_p0=WINDOW_P0,      # 裁剪起始点
-    window_len=WINDOW_LEN,    # 裁剪长度
+    p_pick_position=300,      # SCSN数据集的固定P波位置（第300个样本点）
+    crop_left=CROP_LEFT,      # p_pick左侧裁剪长度
+    crop_right=CROP_RIGHT,    # p_pick右侧裁剪长度
     augmentations=test_augmentations  # 应用数据增强
 )
 
 # 创建数据加载器
 loader = dataset.get_dataloader(
-    batch_size=1024,
-    num_workers=0,  # preload=True时使用0个worker
+    batch_size=800,
+    num_workers=8,  # preload=True时使用0个worker
     shuffle=False
 )
 
@@ -103,58 +104,32 @@ results_df = pd.DataFrame({
     'prob_X': probabilities[:, 2]
 })
 
-# 保存到CSV文件
-output_csv = "diting_scsn_predictions.csv"
-results_df.to_csv(output_csv, index=False)
-print(f"预测结果已保存到: {output_csv}")
 
-# 评估模型性能（只使用U/D样本）
-print("\n=== 模型评估（只使用U/D样本）===")
-print(f"总样本数: {len(labels)}")
-print(f"U/D样本数: {len(labels_ud)}")
-print(f"X样本数: {len(labels) - len(labels_ud)}")
+# 简洁的混淆矩阵输出
+print("\n" + "="*60)
+print("DiTingMotion模型预测结果 - 简洁混淆矩阵")
+print("="*60)
 
 if len(labels_ud) > 0:
-    # 计算准确率
-    accuracy = accuracy_score(labels_ud, predictions_ud)
-    print(f"准确率 (U/D样本): {accuracy:.4f}")
-    
-    # 混淆矩阵
-    print("\n混淆矩阵 (U/D样本):")
     cm = confusion_matrix(labels_ud, predictions_ud, labels=[0, 1])
-    print(cm)
+    print(f"\n混淆矩阵 (U/D样本):")
+    print(f"真实标签\\预测标签 | 0 (U) | 1 (D)")
+    print("-" * 40)
+    for i in range(2):
+        label_name = ['U', 'D'][i]
+        row_str = f"      {i} ({label_name})     |"
+        for j in range(2):
+            row_str += f" {cm[i, j]:7d} |"
+        print(row_str)
     
-    # 分类报告
+    accuracy = accuracy_score(labels_ud, predictions_ud)
+    print(f"\n总体准确率 (U/D样本): {accuracy:.4f}")
+    
+    # 打印分类报告
     print("\n分类报告 (U/D样本):")
-    target_names = ['U', 'D']
-    print(classification_report(labels_ud, predictions_ud, target_names=target_names))
+    print(classification_report(labels_ud, predictions_ud, target_names=['U', 'D']))
     
-    # 可视化混淆矩阵
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', 
-                xticklabels=target_names, yticklabels=target_names)
-    plt.title(f'DiTingMotion 模型混淆矩阵 (强制U/D模式)\n准确率: {accuracy:.4f}')
-    plt.ylabel('真实标签')
-    plt.xlabel('预测标签')
-    plt.tight_layout()
-    
-    # 保存混淆矩阵图像
-    cm_output = "diting_scsn_confusion_matrix.png"
-    plt.savefig(cm_output, dpi=300, bbox_inches='tight')
-    print(f"混淆矩阵已保存到: {cm_output}")
-    
-    # 显示图像
-    plt.show()
 else:
     print("警告：没有找到U/D样本进行评估")
 
-print("\n=== 预测统计 ===")
-print(f"总预测样本数: {len(predictions)}")
-print(f"U预测数: {(predictions == 0).sum()}")
-print(f"D预测数: {(predictions == 1).sum()}")
-print(f"X预测数: {(predictions == 2).sum()}")
-
-if FORCE_UD:
-    print("\n=== 强制U/D模式统计 ===")
-    print(f"原始X预测数: {x_mask.sum() if 'x_mask' in locals() else 0}")
-    print("所有预测已被强制转换为U或D")
+print("="*60)

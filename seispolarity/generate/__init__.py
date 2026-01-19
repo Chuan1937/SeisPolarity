@@ -10,9 +10,10 @@ from .augmentation import (
     MultiHeadFocalLoss,
     Normalize,
     OneOf,
+    PolarityInversion,
     RandomTimeShift,
 )
-from .generator import GenericGenerator, GroupGenerator, SteeredGenerator
+from .generator import GenericGenerator, GroupGenerator, SteeredGenerator, BalancedPolarityGenerator
 
 
 __all__ = [
@@ -27,8 +28,10 @@ __all__ = [
     "MultiHeadFocalLoss",
     "Normalize",
     "OneOf",
+    "PolarityInversion",
     "RandomTimeShift",
     "GenericGenerator",
     "GroupGenerator",
     "SteeredGenerator",
+    "BalancedPolarityGenerator",
 ]

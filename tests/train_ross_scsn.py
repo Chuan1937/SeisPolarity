@@ -21,8 +21,8 @@ NUM_WORKERS = 4
 # 数据参数
 PRELOAD = True
 ALLOWED_LABELS = [0, 1, 2]
-P0 = 100
-WINDOWLEN = 400
+CROP_LEFT = 200  # p_pick左侧裁剪长度（p_pick=300, 开始点=100）
+CROP_RIGHT = 200  # p_pick右侧裁剪长度（结束点=500）
 
 # 创建数据集
 dataset = WaveformDataset(
@@ -33,10 +33,11 @@ dataset = WaveformDataset(
     data_key="X",
     label_key="Y",
     clarity_key=None,
-    pick_key=None,
+    pick_key=None,  # SCSN数据集没有p_pick字段
     metadata_keys=[],
-    window_p0=P0,      # 裁剪起始点
-    window_len=WINDOWLEN  # 裁剪长度
+    p_pick_position=300,      # SCSN数据集的固定P波位置（第300个样本点）
+    crop_left=CROP_LEFT,      # p_pick左侧裁剪长度
+    crop_right=CROP_RIGHT     # p_pick右侧裁剪长度
 )
 
 # 训练配置

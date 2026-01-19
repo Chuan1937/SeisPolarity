@@ -35,12 +35,12 @@ NUM_WORKERS = 8
 # SCSN数据参数
 PRELOAD = True
 ALLOWED_LABELS = [0, 1, 2]
-SCSN_P0 = 236
-SCSN_WINDOWLEN = 128
+SCSN_CROP_LEFT = 64  # p_pick左侧裁剪长度（p_pick=300, 开始点=236）
+SCSN_CROP_RIGHT = 64  # p_pick右侧裁剪长度（结束点=364）
 
 # Diting数据参数
-DITING_P0 = 0
-DITING_WINDOWLEN = 128
+DITING_CROP_LEFT = 64  # p_pick左侧裁剪长度
+DITING_CROP_RIGHT = 64  # p_pick右侧裁剪长度
 
 # 训练数据增强流水线（包含随机增强）
 train_augmentations = [
@@ -74,10 +74,11 @@ scsn_dataset_train = WaveformDataset(
     data_key="X",
     label_key="Y",
     clarity_key=None,
-    pick_key=None,
+    pick_key=None,  # SCSN数据集没有p_pick字段
     metadata_keys=[],
-    window_p0=SCSN_P0,      # 裁剪起始点
-    window_len=SCSN_WINDOWLEN,  # 裁剪长度
+    p_pick_position=300,           # SCSN数据集的固定P波位置（第300个样本点）
+    crop_left=SCSN_CROP_LEFT,      # p_pick左侧裁剪长度
+    crop_right=SCSN_CROP_RIGHT,    # p_pick右侧裁剪长度
     augmentations=train_augmentations  # 直接在数据集上应用训练数据增强
 )
 
@@ -89,10 +90,11 @@ scsn_dataset_test = WaveformDataset(
     data_key="X",
     label_key="Y",
     clarity_key=None,
-    pick_key=None,
+    pick_key=None,  # SCSN数据集没有p_pick字段
     metadata_keys=[],
-    window_p0=SCSN_P0,      # 裁剪起始点
-    window_len=SCSN_WINDOWLEN,  # 裁剪长度
+    p_pick_position=300,           # SCSN数据集的固定P波位置（第300个样本点）
+    crop_left=SCSN_CROP_LEFT,      # p_pick左侧裁剪长度
+    crop_right=SCSN_CROP_RIGHT,    # p_pick右侧裁剪长度
     augmentations=val_augmentations  # 测试集使用验证数据增强
 )
 
@@ -106,8 +108,8 @@ diting_dataset = WaveformDataset(
     clarity_key="Z",
     pick_key="p_pick",
     metadata_keys=[],
-    window_p0=DITING_P0,      # 裁剪起始点
-    window_len=DITING_WINDOWLEN,  # 裁剪长度
+    crop_left=DITING_CROP_LEFT,      # p_pick左侧裁剪长度
+    crop_right=DITING_CROP_RIGHT,    # p_pick右侧裁剪长度
     augmentations=train_augmentations  # Diting数据集也使用训练数据增强
 )
 

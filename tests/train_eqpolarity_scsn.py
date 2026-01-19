@@ -23,8 +23,8 @@ NUM_WORKERS = 4
 # 数据参数
 PRELOAD = True
 ALLOWED_LABELS = [0, 1]
-P0 = 0
-WINDOWLEN = 600
+CROP_LEFT = 300  # p_pick左侧裁剪长度（p_pick=300, 开始点=0）
+CROP_RIGHT = 300  # p_pick右侧裁剪长度（结束点=600）
 
 # 创建数据集
 dataset = WaveformDataset(
@@ -36,10 +36,11 @@ dataset = WaveformDataset(
     data_key="X",
     label_key="Y",
     clarity_key=None,
-    pick_key=None,
+    pick_key=None,  # SCSN数据集没有p_pick字段
     metadata_keys=[],  # SCSN不需要额外的元数据键
-    window_p0=P0,      # 裁剪起始点
-    window_len=WINDOWLEN  # 裁剪长度
+    p_pick_position=300,      # SCSN数据集的固定P波位置（第300个样本点）
+    crop_left=CROP_LEFT,      # p_pick左侧裁剪长度
+    crop_right=CROP_RIGHT     # p_pick右侧裁剪长度
 )
 
 # 训练配置
@@ -62,7 +63,7 @@ config = TrainingConfig(
 Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
 
 # 初始化模型和训练器
-model = EQPolarityCCT(input_length=WINDOWLEN)
+model = EQPolarityCCT(input_length=600)
 
 # 适配输出层为2类
 in_features = model.output_layer.in_features

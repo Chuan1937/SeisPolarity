@@ -128,8 +128,13 @@ class WaveformDataset(Dataset):
         self._repository_lookup = repository_lookup
 
         # --- Cropping parameters ---
-        self.window_p0 = kwargs.get('window_p0', None)  # 裁剪起始点，None表示不裁剪
-        self.window_len = kwargs.get('window_len', None)  # 裁剪长度，None表示不裁剪
+        self.window_p0 = kwargs.get('window_p0', None)  # 裁剪起始点，None表示不裁剪（向后兼容）
+        self.window_len = kwargs.get('window_len', None)  # 裁剪长度，None表示不裁剪（向后兼容）
+        
+        # 新的以p_pick为中心的裁剪参数
+        self.crop_left = kwargs.get('crop_left', None)  # p_pick左侧裁剪长度
+        self.crop_right = kwargs.get('crop_right', None)  # p_pick右侧裁剪长度
+        self.p_pick_position = kwargs.get('p_pick_position', None)  # 固定P波位置（用于SCSN等数据集）
         
         # --- Data augmentations ---
         self.augmentations = augmentations or []
@@ -420,23 +425,87 @@ class WaveformDataset(Dataset):
             waveform, metadata = state_dict["X"]
         
         # Apply cropping if parameters are set
-        if self.window_p0 is not None and self.window_len is not None:
-            # Get the actual waveform length
-            waveform_len = waveform.shape[1]
+        waveform_len = waveform.shape[1]
+        
+        # 统一的裁剪逻辑
+        if self.crop_left is not None and self.crop_right is not None:
+            total_len = self.crop_left + self.crop_right
             
-            # Calculate cropping range
-            start_idx = self.window_p0
-            end_idx = min(self.window_p0 + self.window_len, waveform_len)
+            # 确定p_pick值：优先级1. metadata中的p_pick，2. p_pick_position参数，3. 无p_pick
+            p_pick_value = None
+            if 'p_pick' in metadata and metadata['p_pick'] is not None:
+                p_pick_value = int(metadata['p_pick'])
+            elif self.p_pick_position is not None:
+                p_pick_value = self.p_pick_position
             
-            # Ensure we have enough samples
-            if end_idx <= waveform_len:
-                waveform = waveform[:, start_idx:end_idx]
+            if p_pick_value is not None:
+                # 以p_pick为中心的裁剪
+                start_idx = p_pick_value - self.crop_left
+                end_idx = p_pick_value + self.crop_right
             else:
-                # If not enough samples, pad with zeros
-                padded_waveform = np.zeros((waveform.shape[0], self.window_len), dtype=np.float32)
-                actual_len = min(waveform_len - start_idx, self.window_len)
-                padded_waveform[:, :actual_len] = waveform[:, start_idx:start_idx+actual_len]
+                # 没有p_pick信息，从波形开始裁剪
+                start_idx = 0
+                end_idx = total_len
+            
+            # 处理边界情况
+            if start_idx < 0 or end_idx > waveform_len:
+                # 需要填充
+                padded_waveform = np.zeros((waveform.shape[0], total_len), dtype=np.float32)
+                
+                # 计算实际可用的数据范围
+                actual_start = max(0, start_idx)
+                actual_end = min(waveform_len, end_idx)
+                
+                if actual_end > actual_start:
+                    # 计算在填充数组中的位置
+                    pad_start = max(0, -start_idx)  # 如果start_idx为负，从填充数组的中间开始
+                    pad_len = actual_end - actual_start
+                    
+                    # 确保不会越界
+                    if pad_start + pad_len <= total_len:
+                        padded_waveform[:, pad_start:pad_start+pad_len] = waveform[:, actual_start:actual_end]
+                
                 waveform = padded_waveform
+            else:
+                # 正常裁剪
+                waveform = waveform[:, start_idx:end_idx]
+                
+        # 向后兼容：使用旧的裁剪方式
+        elif self.window_len is not None:
+            # Determine start index: use p_pick from metadata if available, otherwise use window_p0
+            if 'p_pick' in metadata and metadata['p_pick'] is not None:
+                # Use p_pick as reference point, with window_p0 as offset
+                p_pick_value = int(metadata['p_pick'])
+                start_idx = p_pick_value + (self.window_p0 if self.window_p0 is not None else 0)
+            elif self.window_p0 is not None:
+                # Fallback to fixed window_p0
+                start_idx = self.window_p0
+            else:
+                # No cropping start specified
+                return waveform.astype(np.float32), metadata
+            
+            # Handle negative start index (when cropping before p_pick)
+            if start_idx < 0:
+                # Pad with zeros at the beginning
+                padded_waveform = np.zeros((waveform.shape[0], self.window_len), dtype=np.float32)
+                actual_start = max(0, start_idx)
+                actual_len = min(waveform_len - actual_start, self.window_len + min(0, start_idx))
+                if actual_len > 0:
+                    padded_waveform[:, -start_idx:-start_idx+actual_len] = waveform[:, actual_start:actual_start+actual_len]
+                waveform = padded_waveform
+            else:
+                # Calculate cropping range
+                end_idx = min(start_idx + self.window_len, waveform_len)
+                
+                # Ensure we have enough samples
+                if end_idx <= waveform_len:
+                    waveform = waveform[:, start_idx:end_idx]
+                else:
+                    # If not enough samples, pad with zeros at the end
+                    padded_waveform = np.zeros((waveform.shape[0], self.window_len), dtype=np.float32)
+                    actual_len = min(waveform_len - start_idx, self.window_len)
+                    padded_waveform[:, :actual_len] = waveform[:, start_idx:start_idx+actual_len]
+                    waveform = padded_waveform
         
         return waveform.astype(np.float32), metadata
 

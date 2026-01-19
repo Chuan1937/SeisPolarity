@@ -32,10 +32,33 @@ __all__ = [
     "PickList",
     "PolarityLabel",
     "PolarityOutput",
-
-    "settings",
-    "Pick",
-    "PickList",
-    "PolarityLabel",
-    "PolarityOutput",
 ]
+
+# 延迟导入以避免循环依赖
+def __getattr__(name):
+    if name == "WaveformDataset":
+        from .data.base import WaveformDataset
+        return WaveformDataset
+    elif name == "MultiWaveformDataset":
+        from .data.base import MultiWaveformDataset
+        return MultiWaveformDataset
+    elif name == "GenericGenerator":
+        from .generate.generator import GenericGenerator
+        return GenericGenerator
+    elif name == "BalancedPolarityGenerator":
+        from .generate.generator import BalancedPolarityGenerator
+        return BalancedPolarityGenerator
+    elif name == "PolarityInversion":
+        from .generate.augmentation import PolarityInversion
+        return PolarityInversion
+    elif name == "Demean":
+        from .generate.augmentation import Demean
+        return Demean
+    elif name == "Normalize":
+        from .generate.augmentation import Normalize
+        return Normalize
+    elif name == "RandomTimeShift":
+        from .generate.augmentation import RandomTimeShift
+        return RandomTimeShift
+    else:
+        raise AttributeError(f"module 'seispolarity' has no attribute '{name}'")

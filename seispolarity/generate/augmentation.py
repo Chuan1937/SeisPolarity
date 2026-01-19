@@ -336,6 +336,54 @@ class ChannelDropout:
             else:
                 state_dict[self.key] = x
 
+class PolarityInversion:
+    """反转波形极性并相应地更新标签。
+    
+    这个增强专门用于极性分类任务：
+    - 对于U（正向）标签：反转波形，标签变为D（负向）
+    - 对于D（负向）标签：反转波形，标签变为U（正向）
+    - 对于X（不确定）标签：不进行反转
+    
+    注意：这个增强假设标签映射为 {'U': 0, 'D': 1, 'X': 2}
+    """
+    def __init__(self, key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2}):
+        self.key = key
+        self.label_key = label_key
+        self.label_map = label_map
+        self.reverse_label_map = {v: k for k, v in label_map.items()}
+    
+    def __call__(self, state_dict):
+        if self.key in state_dict:
+            value = state_dict[self.key]
+            
+            # 处理元组情况：当value是(waveform, metadata)元组时
+            if isinstance(value, tuple) and len(value) == 2:
+                x, meta = value
+                is_tuple = True
+            else:
+                x = value
+                meta = None
+                is_tuple = False
+            
+            # 检查是否有标签信息
+            if meta is not None and self.label_key in meta:
+                label = meta[self.label_key]
+                
+                # 只对U和D标签进行反转
+                if label == self.label_map['U']:  # U -> D
+                    x = -x  # 反转波形
+                    meta[self.label_key] = self.label_map['D']
+                elif label == self.label_map['D']:  # D -> U
+                    x = -x  # 反转波形
+                    meta[self.label_key] = self.label_map['U']
+                # X标签保持不变
+            
+            # 根据原始类型返回
+            if is_tuple:
+                state_dict[self.key] = (x, meta)
+            else:
+                state_dict[self.key] = x
+
 # ==============================================================================
 # Loss Functions (损失函数)
 # ==============================================================================
