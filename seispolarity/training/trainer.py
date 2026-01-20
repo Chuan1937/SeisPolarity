@@ -33,7 +33,8 @@ class TrainingConfig:
     patience: int = -1 # Early stopping patience. -1 means disabled.
     resume_checkpoint: Optional[str] = None
     loss_fn: Optional[Callable] = None # Custom loss function, defaults to nn.CrossEntropyLoss()
-    output_index: int = 0 # Index of output to use for metrics if model returns tuple
+    output_index: Optional[int] = 0 # Index of output to use for loss if model returns tuple. Set to None to pass all outputs.
+    metric_index: int = 0 # Index of output to use for metrics if model returns tuple.
     random_seed: Optional[int] = 42 # Random seed for dataset splitting and reproducibility
 
 
@@ -190,6 +191,19 @@ class Trainer:
         self.val_augmentations = val_augmentations or []
         self.test_augmentations = test_augmentations or []
         
+        # Check if loss function takes 'inputs' argument
+        self._loss_takes_inputs = False
+        if self.config.loss_fn is not None:
+            import inspect
+            try:
+                # Use forward method signature if it's an nn.Module, else the callable itself
+                fn = self.config.loss_fn.forward if hasattr(self.config.loss_fn, 'forward') else self.config.loss_fn
+                sig = inspect.signature(fn)
+                if 'inputs' in sig.parameters:
+                    self._loss_takes_inputs = True
+            except Exception:
+                pass
+
         # Initialize Log File
         self.log_path = Path(config.checkpoint_dir) / "training_log.txt"
         self._init_log_file()
@@ -460,30 +474,51 @@ class Trainer:
                 
                 # 提取正确的输出用于损失计算
                 if isinstance(outputs, (tuple, list)):
-                    loss_output = outputs[cfg.output_index]
+                    loss_output = outputs[cfg.output_index] if cfg.output_index is not None else outputs
                 else:
                     loss_output = outputs
                 
-                loss = criterion(loss_output, labels)
+                # 稳健性处理：如果输出是 (batch, 1) 而标签是 (batch,)，自动处理
+                curr_labels = labels
+                if not isinstance(loss_output, (tuple, list)):
+                    if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
+                        curr_labels = curr_labels.unsqueeze(1).float()
+                    elif isinstance(criterion, (nn.BCEWithLogitsLoss, nn.BCELoss)):
+                        curr_labels = curr_labels.float()
+                        if curr_labels.ndim == 1:
+                            curr_labels = curr_labels.unsqueeze(1)
+                
+                # 计算损失，考虑是否需要传递原始输入
+                if self._loss_takes_inputs:
+                    loss = criterion(loss_output, curr_labels, inputs=inputs)
+                else:
+                    loss = criterion(loss_output, curr_labels)
+
                 loss.backward()
                 optimizer.step()
 
                 running_loss += loss.item()
 
                 # 计算准确率
-                if isinstance(labels, (tuple, list)) and len(labels) == 2:
-                    # 对于DitingMotion，使用polarity标签计算准确率
-                    polarity_labels = labels[0]
-                    metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
-                    _, predicted = torch.max(metric_out.data, 1)
-                    total += polarity_labels.size(0)
-                    correct += (predicted == polarity_labels).sum().item()
+                if isinstance(outputs, (tuple, list)):
+                    metric_out = outputs[cfg.metric_index]
                 else:
-                    # 对于单标签模型
-                    metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                    metric_out = outputs
+                if isinstance(labels, (tuple, list)) and len(labels) == 2:
+                    current_labels = labels[0]
+                else:
+                    current_labels = labels
+
+                # 稳健的准确率计算：处理 2 分类 (batch, 1) 和多分类 (batch, C)
+                if metric_out.ndim == 2 and metric_out.shape[1] == 1:
+                    # 二分类 (batch, 1)，使用 0.5 阈值
+                    predicted = (torch.sigmoid(metric_out) > 0.5).long().view(-1)
+                else:
+                    # 多分类 (batch, C)
                     _, predicted = torch.max(metric_out.data, 1)
-                    total += labels.size(0)
-                    correct += (predicted == labels).sum().item()
+                
+                total += current_labels.size(0)
+                correct += (predicted == current_labels.view(-1)).sum().item()
                 
                 pbar.set_postfix({"loss": running_loss / (pbar.n + 1), "acc": 100 * correct / total})
 
@@ -514,25 +549,44 @@ class Trainer:
                     
                     # 提取正确的输出用于损失计算
                     if isinstance(outputs, (tuple, list)):
-                        loss_output = outputs[cfg.output_index]
+                        loss_output = outputs[cfg.output_index] if cfg.output_index is not None else outputs
                     else:
                         loss_output = outputs
                     
-                    loss = criterion(loss_output, labels)
+                    # 稳健性处理
+                    curr_labels = labels
+                    if not isinstance(loss_output, (tuple, list)):
+                        if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
+                            curr_labels = curr_labels.unsqueeze(1).float()
+                        elif isinstance(criterion, (nn.BCEWithLogitsLoss, nn.BCELoss)):
+                            curr_labels = curr_labels.float()
+                            if curr_labels.ndim == 1:
+                                curr_labels = curr_labels.unsqueeze(1)
+                    
+                    # 计算损失
+                    if self._loss_takes_inputs:
+                        loss = criterion(loss_output, curr_labels, inputs=inputs)
+                    else:
+                        loss = criterion(loss_output, curr_labels)
                     val_loss += loss.item()
                     
                     # 计算准确率
-                    if isinstance(labels, (tuple, list)) and len(labels) == 2:
-                        polarity_labels = labels[0]
-                        metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
-                        _, predicted = torch.max(metric_out.data, 1)
-                        total += polarity_labels.size(0)
-                        correct += (predicted == polarity_labels).sum().item()
+                    if isinstance(outputs, (tuple, list)):
+                        metric_out = outputs[cfg.metric_index]
                     else:
-                        metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                        metric_out = outputs
+                    if isinstance(labels, (tuple, list)) and len(labels) == 2:
+                        current_labels = labels[0]
+                    else:
+                        current_labels = labels
+
+                    if metric_out.ndim == 2 and metric_out.shape[1] == 1:
+                        predicted = (torch.sigmoid(metric_out) > 0.5).long().view(-1)
+                    else:
                         _, predicted = torch.max(metric_out.data, 1)
-                        total += labels.size(0)
-                        correct += (predicted == labels).sum().item()
+                    
+                    total += current_labels.size(0)
+                    correct += (predicted == current_labels.view(-1)).sum().item()
             val_loss /= len(val_loader)
             val_acc = 100 * correct / total if total else 0.0
 
@@ -564,25 +618,44 @@ class Trainer:
                         
                         # 提取正确的输出用于损失计算
                         if isinstance(outputs, (tuple, list)):
-                            loss_output = outputs[cfg.output_index]
+                            loss_output = outputs[cfg.output_index] if cfg.output_index is not None else outputs
                         else:
                             loss_output = outputs
                         
-                        loss = criterion(loss_output, labels)
+                        # 稳健性处理
+                        curr_labels = labels
+                        if not isinstance(loss_output, (tuple, list)):
+                            if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
+                                curr_labels = curr_labels.unsqueeze(1).float()
+                            elif isinstance(criterion, (nn.BCEWithLogitsLoss, nn.BCELoss)):
+                                curr_labels = curr_labels.float()
+                                if curr_labels.ndim == 1:
+                                    curr_labels = curr_labels.unsqueeze(1)
+                        
+                        # 计算损失
+                        if self._loss_takes_inputs:
+                            loss = criterion(loss_output, curr_labels, inputs=inputs)
+                        else:
+                            loss = criterion(loss_output, curr_labels)
                         test_loss += loss.item()
                         
                         # 计算准确率
-                        if isinstance(labels, (tuple, list)) and len(labels) == 2:
-                            polarity_labels = labels[0]
-                            metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
-                            _, predicted = torch.max(metric_out.data, 1)
-                            test_total += polarity_labels.size(0)
-                            test_correct += (predicted == polarity_labels).sum().item()
+                        if isinstance(outputs, (tuple, list)):
+                            metric_out = outputs[cfg.metric_index]
                         else:
-                            metric_out = outputs[cfg.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                            metric_out = outputs
+                        if isinstance(labels, (tuple, list)) and len(labels) == 2:
+                            current_labels = labels[0]
+                        else:
+                            current_labels = labels
+
+                        if metric_out.ndim == 2 and metric_out.shape[1] == 1:
+                            predicted = (torch.sigmoid(metric_out) > 0.5).long().view(-1)
+                        else:
                             _, predicted = torch.max(metric_out.data, 1)
-                            test_total += labels.size(0)
-                            test_correct += (predicted == labels).sum().item()
+                        
+                        test_total += current_labels.size(0)
+                        test_correct += (predicted == current_labels.view(-1)).sum().item()
                 test_loss /= len(test_loader)
                 test_acc = 100 * test_correct / test_total if test_total else 0.0
             
@@ -667,21 +740,47 @@ class Trainer:
                     labels = batch_labels.to(device)
                 
                 outputs = self.model(inputs)
-                loss = criterion(outputs, labels)
+                
+                # 提取正确的输出用于损失计算
+                if isinstance(outputs, (tuple, list)):
+                    loss_output = outputs[self.config.output_index] if self.config.output_index is not None else outputs
+                else:
+                    loss_output = outputs
+                
+                # 稳健性处理
+                curr_labels = labels
+                if not isinstance(loss_output, (tuple, list)):
+                    if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
+                        curr_labels = curr_labels.unsqueeze(1).float()
+                    elif isinstance(criterion, (nn.BCEWithLogitsLoss, nn.BCELoss)):
+                        curr_labels = curr_labels.float()
+                        if curr_labels.ndim == 1:
+                            curr_labels = curr_labels.unsqueeze(1)
+                
+                # 计算损失
+                if self._loss_takes_inputs:
+                    loss = criterion(loss_output, curr_labels, inputs=inputs)
+                else:
+                    loss = criterion(loss_output, curr_labels)
                 total_loss += loss.item()
                 
                 # 计算准确率
-                if isinstance(labels, (tuple, list)) and len(labels) == 2:
-                    polarity_labels = labels[0]
-                    metric_out = outputs[self.config.output_index] if isinstance(outputs, (tuple, list)) else outputs
-                    _, predicted = torch.max(metric_out.data, 1)
-                    total += polarity_labels.size(0)
-                    correct += (predicted == polarity_labels).sum().item()
+                if isinstance(outputs, (tuple, list)):
+                    metric_out = outputs[self.config.metric_index]
                 else:
-                    metric_out = outputs[self.config.output_index] if isinstance(outputs, (tuple, list)) else outputs
+                    metric_out = outputs
+                if isinstance(labels, (tuple, list)) and len(labels) == 2:
+                    current_labels = labels[0]
+                else:
+                    current_labels = labels
+
+                if metric_out.ndim == 2 and metric_out.shape[1] == 1:
+                    predicted = (torch.sigmoid(metric_out) > 0.5).long().view(-1)
+                else:
                     _, predicted = torch.max(metric_out.data, 1)
-                    total += labels.size(0)
-                    correct += (predicted == labels).sum().item()
+                
+                total += current_labels.size(0)
+                correct += (predicted == current_labels.view(-1)).sum().item()
         
         avg_loss = total_loss / len(data_loader)
         accuracy = 100 * correct / total if total else 0.0

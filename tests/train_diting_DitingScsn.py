@@ -136,7 +136,8 @@ config = TrainingConfig(
     test_split=0.15,       # 测试集比例
     patience=5, 
     loss_fn=DitingMotionLoss(gamma=2.0, has_clarity_labels=True),
-    output_index=3,  # 使用ofuse（索引3）作为评估指标
+    output_index=None,     # 为 None 则将全部 8 个输出传递给 DitingMotionLoss
+    metric_index=3,        # 使用 ofuse（索引 3）进行准确率评估
     random_seed=36  # 设置随机种子以确保可复现性
 )
 
