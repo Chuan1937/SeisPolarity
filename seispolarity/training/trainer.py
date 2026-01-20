@@ -457,7 +457,14 @@ class Trainer:
 
                 optimizer.zero_grad()
                 outputs = self.model(inputs)
-                loss = criterion(outputs, labels)
+                
+                # 提取正确的输出用于损失计算
+                if isinstance(outputs, (tuple, list)):
+                    loss_output = outputs[cfg.output_index]
+                else:
+                    loss_output = outputs
+                
+                loss = criterion(loss_output, labels)
                 loss.backward()
                 optimizer.step()
 
@@ -504,7 +511,14 @@ class Trainer:
                         labels = batch_labels.to(device)
                     
                     outputs = self.model(inputs)
-                    loss = criterion(outputs, labels)
+                    
+                    # 提取正确的输出用于损失计算
+                    if isinstance(outputs, (tuple, list)):
+                        loss_output = outputs[cfg.output_index]
+                    else:
+                        loss_output = outputs
+                    
+                    loss = criterion(loss_output, labels)
                     val_loss += loss.item()
                     
                     # 计算准确率
@@ -547,7 +561,14 @@ class Trainer:
                             labels = batch_labels.to(device)
                         
                         outputs = self.model(inputs)
-                        loss = criterion(outputs, labels)
+                        
+                        # 提取正确的输出用于损失计算
+                        if isinstance(outputs, (tuple, list)):
+                            loss_output = outputs[cfg.output_index]
+                        else:
+                            loss_output = outputs
+                        
+                        loss = criterion(loss_output, labels)
                         test_loss += loss.item()
                         
                         # 计算准确率

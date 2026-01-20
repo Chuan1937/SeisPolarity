@@ -2,19 +2,20 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 import torch
+import torch.nn as nn
 from seispolarity.data.base import WaveformDataset
-from seispolarity.models.scsn import SCSN
+from seispolarity.models import PPNet
 from seispolarity.training import Trainer, TrainingConfig
 
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 # 配置
 DATA_PATH = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
-OUT_DIR = "./checkpoints_ross_scsn"
+OUT_DIR = "./checkpoints_app_scsn"
 
 # 训练参数
 EPOCHS = 50
-BATCH_SIZE = 256
+BATCH_SIZE = 512
 LR = 1e-3
 NUM_WORKERS = 4
 
@@ -53,23 +54,39 @@ config = TrainingConfig(
     val_split=0.1,        # 验证集比例
     test_split=0.1,       # 测试集比例
     patience=5,
-    random_seed=36  # 设置随机种子以确保可复现性
+    random_seed=36,  # 设置随机种子以确保可复现性
+    output_index=1   # PPNet返回(out1, out2)，使用索引1的分类输出
 )
 
 # 创建输出目录
 Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
 
-# 初始化模型和训练器
-model = SCSN(num_fm_classes=3)
+# 创建PPNet模型
+model = PPNet(
+    input_len=400,         
+    input_channels=1,        # 先设置为1，后续根据数据形状调整
+    num_classes=3,           # 3个类别：0=上, 1=下, 2=未知
+    filter_sizes=[16, 32, 64],
+    kernel_size=3,
+    num_dense=128,
+    lstm_units=None,         # 自动计算：filter_sizes[2] * 2 = 64 * 2 = 128
+    attention_heads=4
+)
+
+# 初始化训练器
 trainer = Trainer(model=model, dataset=dataset, val_dataset=None, test_dataset=None, config=config)
 
 # 开始训练
+print("\nStarting training...")
 best_val_acc, final_test_acc = trainer.train()
 
 # 保存最终模型
 final_model_path = Path(OUT_DIR) / "final_model.pth"
 torch.save(model.state_dict(), final_model_path)
+print(f"模型已保存到: {final_model_path}")
 
 # 清理
 if not PRELOAD and hasattr(dataset, 'dataset') and hasattr(dataset.dataset, 'close'):
     dataset.dataset.close()
+
+print("Training completed successfully!")
