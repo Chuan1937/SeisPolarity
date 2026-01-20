@@ -88,8 +88,9 @@ class MetadataToLabel:
 
     def __call__(self, state_dict):
         # 处理state_dict["X"]可能不是元组的情况
-        if isinstance(state_dict["X"], tuple) and len(state_dict["X"]) == 2:
-            _, metadata = state_dict["X"]
+        x_value = state_dict.get("X", None)
+        if isinstance(x_value, tuple) and len(x_value) == 2:
+            _, metadata = x_value
         else:
             # 如果state_dict["X"]不是元组，尝试从其他地方获取metadata
             metadata = state_dict.get("metadata", {})

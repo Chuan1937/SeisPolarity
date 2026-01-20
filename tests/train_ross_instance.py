@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 import torch
 import numpy as np
-from seispolarity import WaveformDataset, BalancedPolarityGenerator, Demean, Normalize, RandomTimeShift
+from seispolarity import WaveformDataset, Demean, Normalize, RandomTimeShift,PolarityInversion
 from seispolarity.models.scsn import SCSN
 from seispolarity.training import Trainer, TrainingConfig
 
@@ -51,16 +51,12 @@ dataset = WaveformDataset(
     metadata_keys=[],
     crop_left=CROP_LEFT,      # p_pick左侧裁剪长度
     crop_right=CROP_RIGHT,    # p_pick右侧裁剪长度
-    augmentations=train_augmentations  # 与其他训练文件格式一致
 )
 
-balanced_generator = BalancedPolarityGenerator(
-    dataset=dataset,
-    apply_polarity_inversion=True,  # 添加U/D倒转增强
-    label_key="label",
-    label_map={'U': 0, 'D': 1, 'X': 2},
-    random_seed=RANDOM_SEED
-)
+dataset.add_augmentations(train_augmentations)
+# 添加极性反转增强到数据集
+polarity_inversion = PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})
+dataset.add_augmentation(polarity_inversion)
 
 # 训练配置
 config = TrainingConfig(
@@ -83,7 +79,7 @@ Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
 
 # 初始化模型和训练器
 model = SCSN(num_fm_classes=3)
-trainer = Trainer(model=model, dataset=balanced_generator, val_dataset=None, test_dataset=None, config=config)
+trainer = Trainer(model=model, dataset=dataset, val_dataset=None, test_dataset=None, config=config)
 
 # 开始训练
 best_val_acc, final_test_acc = trainer.train()

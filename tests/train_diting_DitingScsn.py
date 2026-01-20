@@ -79,7 +79,6 @@ scsn_dataset_train = WaveformDataset(
     p_pick_position=300,           # SCSN数据集的固定P波位置（第300个样本点）
     crop_left=SCSN_CROP_LEFT,      # p_pick左侧裁剪长度
     crop_right=SCSN_CROP_RIGHT,    # p_pick右侧裁剪长度
-    augmentations=train_augmentations  # 直接在数据集上应用训练数据增强
 )
 
 scsn_dataset_test = WaveformDataset(
@@ -95,7 +94,6 @@ scsn_dataset_test = WaveformDataset(
     p_pick_position=300,           # SCSN数据集的固定P波位置（第300个样本点）
     crop_left=SCSN_CROP_LEFT,      # p_pick左侧裁剪长度
     crop_right=SCSN_CROP_RIGHT,    # p_pick右侧裁剪长度
-    augmentations=val_augmentations  # 测试集使用验证数据增强
 )
 
 diting_dataset = WaveformDataset(
@@ -110,12 +108,16 @@ diting_dataset = WaveformDataset(
     metadata_keys=[],
     crop_left=DITING_CROP_LEFT,      # p_pick左侧裁剪长度
     crop_right=DITING_CROP_RIGHT,    # p_pick右侧裁剪长度
-    augmentations=train_augmentations  # Diting数据集也使用训练数据增强
 )
 
 # 对scsn_dataset 添加clarity，全部设置为'K'
 scsn_dataset_train.add_clarity_labels(clarity_value='K')
 scsn_dataset_test.add_clarity_labels(clarity_value='K')
+
+# 使用点操作方式添加数据增强
+scsn_dataset_train.add_augmentations(train_augmentations)
+scsn_dataset_test.add_augmentations(val_augmentations)
+diting_dataset.add_augmentations(train_augmentations)
 
 # 合并数据集
 combined_dataset = scsn_dataset_train + scsn_dataset_test + diting_dataset

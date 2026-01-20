@@ -27,6 +27,11 @@ class GenericGenerator(Dataset):
         self.dataset = dataset
         super().__init__()
 
+    @property
+    def augmentations(self):
+        """获取增强函数列表（与WaveformDataset兼容）"""
+        return self._augmentations
+
     def augmentation(self, f):
         """
         Decorator for augmentations.
@@ -195,7 +200,8 @@ class BalancedPolarityGenerator(GenericGenerator):
     ```
     """
     def __init__(self, dataset, apply_polarity_inversion=True, label_key="label", 
-                 label_map={'U': 0, 'D': 1, 'X': 2}, random_seed=42):
+                 label_map={'U': 0, 'D': 1, 'X': 2}, random_seed=42, 
+                 inherit_augmentations=False):
         super().__init__(dataset)
         self.label_key = label_key
         self.label_map = label_map
@@ -203,8 +209,8 @@ class BalancedPolarityGenerator(GenericGenerator):
         self.random_seed = random_seed
         np.random.seed(random_seed)
         
-        # 继承dataset的增强（如果存在）
-        if hasattr(dataset, 'augmentations') and dataset.augmentations:
+        # 可选择是否继承dataset的增强
+        if inherit_augmentations and hasattr(dataset, 'augmentations') and dataset.augmentations:
             print(f"继承数据集中的 {len(dataset.augmentations)} 个增强")
             self.add_augmentations(dataset.augmentations)
         
@@ -224,7 +230,23 @@ class BalancedPolarityGenerator(GenericGenerator):
         labels = []
         for i in range(len(self.dataset)):
             try:
-                _, metadata = self.dataset[i]
+                sample = self.dataset[i]
+                # 处理不同的返回格式
+                if isinstance(sample, tuple) and len(sample) == 2:
+                    _, metadata = sample
+                elif isinstance(sample, dict) and "X" in sample:
+                    # 处理GenericGenerator返回的state_dict格式
+                    x_value = sample["X"]
+                    if isinstance(x_value, tuple) and len(x_value) == 2:
+                        _, metadata = x_value
+                    else:
+                        metadata = {}
+                else:
+                    # 未知格式，跳过
+                    print(f"警告: 样本{i}的返回格式无法识别: {type(sample)}")
+                    labels.append(-1)
+                    continue
+                
                 raw_label = metadata.get(self.label_key, -1)
                 
                 # 处理字节字符串标签

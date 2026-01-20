@@ -422,7 +422,15 @@ class WaveformDataset(Dataset):
             state_dict = {"X": (waveform, metadata)}
             for aug in self.augmentations:
                 aug(state_dict)
-            waveform, metadata = state_dict["X"]
+            # 处理数据增强后的state_dict["X"]，确保它是元组
+            x_value = state_dict["X"]
+            if isinstance(x_value, tuple) and len(x_value) == 2:
+                waveform, metadata = x_value
+            else:
+                # 如果数据增强函数没有返回元组，保持原始数据
+                # 这可能发生在某些增强函数修改了数据结构的情况下
+                waveform = x_value if isinstance(x_value, np.ndarray) else waveform
+                # metadata保持不变
         
         # Apply cropping if parameters are set
         waveform_len = waveform.shape[1]

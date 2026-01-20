@@ -54,8 +54,11 @@ dataset = WaveformDataset(
     p_pick_position=300,      # SCSN数据集的固定P波位置（第300个样本点）
     crop_left=CROP_LEFT,      # p_pick左侧裁剪长度
     crop_right=CROP_RIGHT,    # p_pick右侧裁剪长度
-    augmentations=test_augmentations  # 应用数据增强
+    augmentations=None  # 不在初始化时添加增强，后续使用点操作添加
 )
+
+# 使用点操作方式添加数据增强
+dataset.add_augmentations(test_augmentations)
 
 # 创建数据加载器
 loader = dataset.get_dataloader(
