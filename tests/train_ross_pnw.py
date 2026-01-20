@@ -10,8 +10,8 @@ from seispolarity.training import Trainer, TrainingConfig
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 # 配置
-DATA_PATH = r"/home/yuan/code/SeisPolarity/datasets/Instance/Instance_polarity.hdf5"
-OUT_DIR = "./checkpoints_ross_instance"
+DATA_PATH = r"/home/yuan/code/SeisPolarity/datasets/PNW/pnw_polarity.hdf5"
+OUT_DIR = "./checkpoints_ross_pnw"
 
 # 训练参数
 EPOCHS = 50
@@ -40,7 +40,7 @@ train_augmentations = [
 # 创建原始数据集（与其他训练文件格式一致）
 dataset = WaveformDataset(
     path=DATA_PATH,
-    name="Instance_Train",
+    name="PNW_Train",
     preload=PRELOAD,
     allowed_labels=ALLOWED_LABELS,
     data_key="X",
