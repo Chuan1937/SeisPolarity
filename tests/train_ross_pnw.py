@@ -10,6 +10,21 @@ from seispolarity.training import Trainer, TrainingConfig
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 # 配置
+
+# ==================== 数据集路径配置 ====================
+# 方式1: 使用本地文件 (当前使用)
+# DATA_PATH = r"/home/yuan/code/SeisPolarity/datasets/PNW/pnw_polarity.hdf5"
+#
+# 方式2: 使用自动下载 (取消注释下面的代码)
+# from seispolarity import get_dataset_path
+# DATA_PATH = get_dataset_path(
+#     dataset_name="PNW",
+#     subset="hdf5",  # HDF5 格式文件
+#     cache_dir="./datasets_download",  # 自定义缓存目录
+#     use_hf=False  # 默认使用 ModelScope，设为 True 使用 Hugging Face
+# )
+
+# 当前使用本地文件路径
 DATA_PATH = r"/home/yuan/code/SeisPolarity/datasets/PNW/pnw_polarity.hdf5"
 OUT_DIR = "./checkpoints_ross_pnw"
 

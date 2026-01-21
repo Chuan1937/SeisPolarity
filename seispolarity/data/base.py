@@ -808,6 +808,10 @@ class WaveformDataset(Dataset):
                     return
 
             logger.info("RAM Load Complete.")
+        except KeyboardInterrupt:
+            logger.warning("RAM loading interrupted by user (Ctrl+C). Reverting to Disk Mode.")
+            self.preload = False
+            self.data_cache = None
         except Exception as e:
             logger.error(f"RAM Load failed: {e}. Reverting to Disk Mode.")
             self.preload = False

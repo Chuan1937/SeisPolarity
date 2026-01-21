@@ -17,6 +17,21 @@ from seispolarity.training import Trainer, TrainingConfig
 # 1. 配置参数
 # ==========================================
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
+
+# ==================== 数据集路径配置 ====================
+# 方式1: 使用本地文件 (当前使用)
+# DATA_PATH = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
+#
+# 方式2: 使用自动下载 (取消注释下面的代码)
+# from seispolarity import get_dataset_path
+# DATA_PATH = get_dataset_path(
+#     dataset_name="SCSN",
+#     subset="train",  # 训练集
+#     cache_dir="./datasets_download",  # 自定义缓存目录
+#     use_hf=False  # 默认使用 ModelScope，设为 True 使用 Hugging Face
+# )
+
+# 当前使用本地文件路径
 DATA_PATH = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
 OUT_DIR = "./checkpoints_polarcap_scsn"
 

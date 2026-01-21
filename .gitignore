@@ -11,3 +11,4 @@ Update_model.ipynb
 datasets/
 pretrained_model/
 /Model_Tensorflow_Hdf5/
+/checkpoints*/

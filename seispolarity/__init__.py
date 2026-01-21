@@ -60,5 +60,8 @@ def __getattr__(name):
     elif name == "RandomTimeShift":
         from .generate.augmentation import RandomTimeShift
         return RandomTimeShift
+    elif name == "get_dataset_path":
+        from .data.download import get_dataset_path
+        return get_dataset_path
     else:
         raise AttributeError(f"module 'seispolarity' has no attribute '{name}'")

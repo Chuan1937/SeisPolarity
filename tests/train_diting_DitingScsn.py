@@ -21,6 +21,35 @@ from seispolarity.generate import (
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 # 配置
+
+# ==================== 数据集路径配置 ====================
+# 方式1: 使用本地文件 (当前使用)
+# SCSN_PATH_train = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
+# SCSN_PATH_test = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
+# Diting_path = r"/home/yuan/code/SeisPolarity/datasets/DiTing/DiTing_augmented_merge.hdf5"
+#
+# 方式2: 使用自动下载 (取消注释下面的代码)
+# from seispolarity import get_dataset_path
+# SCSN_PATH_train = get_dataset_path(
+#     dataset_name="SCSN",
+#     subset="train",  # 训练集
+#     cache_dir="./datasets_download",
+#     use_hf=False
+# )
+# SCSN_PATH_test = get_dataset_path(
+#     dataset_name="SCSN",
+#     subset="test",  # 测试集
+#     cache_dir="./datasets_download",
+#     use_hf=False
+# )
+# Diting_path = get_dataset_path(
+#     dataset_name="DiTing",
+#     subset="default",  # 默认子集
+#     cache_dir="./datasets_download",
+#     use_hf=False
+# )
+
+# 当前使用本地文件路径
 SCSN_PATH_train = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
 SCSN_PATH_test = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
 Diting_path = r"/home/yuan/code/SeisPolarity/datasets/DiTing/DiTing_augmented_merge.hdf5"

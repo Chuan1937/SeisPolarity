@@ -11,20 +11,34 @@ import seaborn as sns
 
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
-# 测试数据路径 (如有需请修改)
+# ==================== 数据集路径配置 ====================
+# 方式1: 使用本地文件 (当前使用)
+# TEST_FILE = "/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
+#
+# 方式2: 使用自动下载 (取消注释下面的代码)
+# from seispolarity import get_dataset_path
+# TEST_FILE = get_dataset_path(
+#     dataset_name="SCSN",
+#     subset="test",  # 测试集
+#     cache_dir="./datasets_download",  # 自定义缓存目录
+#     use_hf=False  # 默认使用 ModelScope，设为 True 使用 Hugging Face
+# )
+
+# 当前使用本地文件路径
 TEST_FILE = "/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
 CROP_LEFT = 200  # p_pick左侧裁剪长度（p_pick=300, 开始点=100）
 CROP_RIGHT = 200  # p_pick右侧裁剪长度（结束点=500）
 
-LOCAL_MODEL_PATH = r"/home/yuan/code/SeisPolarity/pretrained_model/Ross/Ross_SCSN.pth"
-predictor = Predictor(model_name="ross", model_path=LOCAL_MODEL_PATH, device=DEVICE)
+# 网络下载模型
+predictor = Predictor(model_name="Ross_SCSN.pth",device=DEVICE)
+# 本地加载模型示例
+# predictor = Predictor(model_name="Ross_SCSN.pth", model_path="/home/yuan/code/SeisPolarity/pretrained_model/Ross/Ross_SCSN.pth", device=DEVICE)
 
-USE_PRELOAD = True 
 
 dataset = WaveformDataset(
     path=TEST_FILE,
     name="SCSN_Test",
-    preload=USE_PRELOAD,
+    preload=True,
     allowed_labels=[0, 1, 2],
     # SCSN数据使用标准键名：X为数据，Y为标签
     data_key="X",

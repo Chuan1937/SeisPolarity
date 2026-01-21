@@ -17,6 +17,7 @@ dependencies = [
     "torch>=2.1",
     "requests>=2.32",
     "huggingface-hub>=0.24",
+    "modelscope>=1.0",
     "h5py>=3.0",
     "scipy>=1.10",
     "matplotlib>=3.7",
@@ -29,6 +30,19 @@ dev = [
     "pytest>=7.4",
     "ruff>=0.6",
     "black>=24.10",
+]
+modelscope = [
+    "modelscope>=1.0.0",
+    "datasets>=3.0.0,<=3.6.0",
+    "addict",
+    "attrs",
+    "einops",
+    "oss2",
+    "Pillow",
+    "python-dateutil>=2.1",
+    "simplejson>=3.3.0",
+    "sortedcontainers>=1.5.9",
+    "urllib3>=1.26",
 ]
 
 [tool.black]

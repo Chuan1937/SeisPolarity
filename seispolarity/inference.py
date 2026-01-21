@@ -4,42 +4,52 @@ seispolarity 模型的统一推断接口。
 """
 
 import os
-import  sys
+import sys
 import torch
 import numpy as np
 import warnings
 import httpx
+import requests
 from typing import Union, List, Optional
 from huggingface_hub import hf_hub_download
 from tqdm import tqdm
 from pathlib import Path
+
 sys.path.append(str(Path(__file__).resolve().parent.parent)) # Add project root to sys.path
 
 from seispolarity.models import SCSN, EQPolarityCCT, DitingMotion
 
 # Constants
 HF_REPO = "HeXingChen/SeisPolarity-Model"
+MODELSCOPE_REPO = "chuanjun/HeXingChen"
+
 MODELS_CONFIG = {
     "ross": {
-        "filename": "Ross_SCSN.pth",         # Filename in HF repo
-        "model_class": SCSN,                 # Python class
-        "input_len": 400,                    # Expected input length
+        "filename": "ROSS_SCSN.pth",
+        "filename_hf": "ROSS/ROSS_SCSN.pth",  # Hugging Face路径（带子文件夹）
+        "filename_ms": "ROSS/ROSS_SCSN.pth",  # ModelScope路径（带子文件夹）
+        "model_class": SCSN,
+        "input_len": 400,
         "num_classes": 3,
-        "class_map": {0: "Up", 1: "Down", 2: "Unknown"} # Example map
+        "class_map": {0: "Up", 1: "Down", 2: "Unknown"}
     },
     "eqpolarity": {
-        "filename": "Eqpolarity_SCSN.pth",   # Filename in HF repo
-        "model_class": EQPolarityCCT,        # Python class
-        "input_len": 600,                    # EQPolarity 使用完整的 600 点输入
-        "num_classes": 2,                    # 二分类：Up vs Down
-        "class_map": {0: "Up", 1: "Down"}    # 二分类映射
+        "filename": "EQPOLARITY_SCSN.pth",
+        "filename_hf": "EQPOLARITY/EQPOLARITY_SCSN.pth",  # Hugging Face路径（带子文件夹）
+        "filename_ms": "EQPOLARITY/EQPOLARITY_SCSN.pth",  # ModelScope路径（带子文件夹）
+        "model_class": EQPolarityCCT,
+        "input_len": 600,
+        "num_classes": 2,
+        "class_map": {0: "Up", 1: "Down"}
     },
     "diting_motion": {
-        "filename": "DiTingMotion_DitingScsn.pth",   # Filename in HF repo
-        "model_class": DitingMotion,         # Python class
-        "input_len": 128,                    # DiTingMotion 使用128点输入
-        "num_classes": 3,                    # 三分类：Up, Down, Unknown
-        "class_map": {0: "Up", 1: "Down", 2: "Unknown"} # 三分类映射
+        "filename": "DITINGMOTION_DITINGSCSN.pth",
+        "filename_hf": "DITINGMOTION/DITINGMOTION_DITINGSCSN.pth",  # Hugging Face路径（带子文件夹）
+        "filename_ms": "DITINGMOTION/DITINGMOTION_DITINGSCSN.pth",  # ModelScope路径（带子文件夹）
+        "model_class": DitingMotion,
+        "input_len": 128,
+        "num_classes": 3,
+        "class_map": {0: "Up", 1: "Down", 2: "Unknown"}
     }
 }
 
@@ -58,19 +68,39 @@ class Predictor:
         """
         Initialize the predictor.
         初始化预测器。
-        
+
         Args:
-            model_name (str): Name of the model to use (default: "ross").
+            model_name (str): Name of the model to use (default: "ross"). 可以使用简写如 "ross" 或完整文件名如 "Ross_SCSN"。
             device (str, optional): "cuda" or "cpu". If None, auto-detect.
             cache_dir (str): Directory to store downloaded models (default: "./checkpoints_download").
             model_path (str, optional): Manually specified path to the model file. If provided, skips download.
             force_ud (bool): 是否强制输出U/D（不输出X）。对于DiTingMotion模型，如果为True，则当模型预测为X时，
                              会选择U和D中概率较高的那个作为最终预测。
         """
-        if model_name not in MODELS_CONFIG:
-            raise ValueError(f"Unknown model '{model_name}'. Available: {list(MODELS_CONFIG.keys())}")
-        
-        self.config = MODELS_CONFIG[model_name]
+        # Print all available models
+        print("=" * 60)
+        print("Available models / 可用模型:")
+        print("-" * 60)
+        for name, config in MODELS_CONFIG.items():
+            print(f"  - {config['filename']}: {name}")
+        print("=" * 60)
+
+        # model_name 必须是完整的文件名，如 "Ross_SCSN"
+        # 在 MODELS_CONFIG 中查找匹配的配置
+        self.model_filename = model_name
+        found_config = None
+        for name, config in MODELS_CONFIG.items():
+            if model_name == config['filename'] or model_name == config['filename_hf'] or model_name == config['filename_ms'].split('/')[-1]:
+                found_config = config
+                self.config_key = name
+                break
+
+        if found_config is None:
+            raise ValueError(f"Unknown model '{model_name}'. Available filenames: {[config['filename'] for config in MODELS_CONFIG.values()]}")
+
+        print(f"Using model: {self.model_filename} ({self.config_key})")
+
+        self.config = found_config
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.force_ud = force_ud
         print(f"Using device: {self.device}")
@@ -82,11 +112,11 @@ class Predictor:
         
         # 2. Initialize Model
         # 根据模型类型使用不同的初始化参数
-        if model_name == "eqpolarity":
+        if self.config_key == "eqpolarity":
             # EQPolarityCCT 需要 input_length 参数
             # 先创建模型但不立即加载权重
             self.model = self.config["model_class"](input_length=self.config["input_len"])
-        elif model_name == "diting_motion":
+        elif self.config_key == "diting_motion":
             # DitingMotion 需要 input_channels 参数
             self.model = self.config["model_class"](input_channels=2)
         else:
@@ -100,113 +130,107 @@ class Predictor:
 
     def _resolve_model_path(self, cache_dir: str, filename: str, user_path: Optional[str]) -> str:
         """
-        Resolve model path in the following order:
-        1. Pre-defined local paths (e.g. source repo structure)
-        2. User specified path (if provided)
-        3. Local cache directory
-        4. Auto-download (HF -> GitHub)
+        Resolve model path:
+        1. User specified path (if provided, use it directly)
+        2. Hugging Face (优先)
+        3. ModelScope (国内备用)
+        如果都失败，直接报错
         """
-        # A. Check pre-defined local paths (relative to this file or project root)
-        # Assuming inference.py is in seispolarity/inference.py
-        # Project root is likely two levels up
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
-        candidates = [
-            # 1. Source repo structure: pretrained_model/Ross/Ross_SCSN.pth
-            os.path.join(project_root, "pretrained_model", "Ross", filename),
-            # 2. Source repo structure: pretrained_model/Eqpolarity/Eqpolarity_SCSN.pth
-            os.path.join(project_root, "pretrained_model", "Eqpolarity", filename),
-            # 3. Source repo structure: pretrained_model/DiTingMotion/DiTingMotion_DitingScsn.pth
-            os.path.join(project_root, "pretrained_model", "DiTingMotion", filename),
-            # 4. Source repo structure: pretrained_models/Ross/Ross_SCSN.pth (plural)
-            os.path.join(project_root, "pretrained_models", "Ross", filename),
-            # 5. Source repo structure: pretrained_models/Eqpolarity/Eqpolarity_SCSN.pth (plural)
-            os.path.join(project_root, "pretrained_models", "Eqpolarity", filename),
-            # 6. Source repo structure: pretrained_models/DiTingMotion/DiTingMotion_DitingScsn.pth (plural)
-            os.path.join(project_root, "pretrained_models", "DiTingMotion", filename),
-        ]
-        
-        for cand in candidates:
-            if os.path.exists(cand):
-                print(f"Found model in repo structure: {cand}")
-                return cand
-
-        # B. Check User Specified Path
+        # A. Check User Specified Path (最高优先级)
         if user_path:
             if os.path.exists(user_path):
                 print(f"Using manually specified model: {user_path}")
                 return user_path
             else:
-                print(f"Warning: Manual model path '{user_path}' not found.")
+                raise FileNotFoundError(f"Model path not found: {user_path}")
 
-        # C. Check Local Cache / Auto-Download
+        # B. Try Hugging Face and ModelScope (网络下载)
         return self._ensure_model(cache_dir, filename)
 
     def _ensure_model(self, cache_dir: str, filename: str) -> str:
-        """Download model if not exists (Try HF first, then GitHub)."""
+        """Download model if not exists (Check Hugging Face network, try ModelScope if not accessible)."""
         if not os.path.exists(cache_dir):
             os.makedirs(cache_dir)
-            
+
         target_path = os.path.join(cache_dir, filename)
         if os.path.exists(target_path):
              print(f"Found existing local file: {target_path}")
              return target_path
 
         print(f"Checking for model '{filename}' in {cache_dir}...")
-        
-        # 1. Try Hugging Face
+
+        # Get file paths for different sources
+        model_info = MODELS_CONFIG[self.config_key]
+        filename_hf = model_info.get("filename_hf", filename)
+        filename_ms = model_info.get("filename_ms", filename)
+
+        # 1. 检测 Hugging Face 网络连通性
+        hf_accessible = False
         try:
-            print("Attempting download from Hugging Face...")
-            local_path = hf_hub_download(
-                repo_id=HF_REPO,
-                filename=filename,
-                local_dir=cache_dir,
+            import socket
+            # 尝试连接 huggingface.co 的 443 端口，超时 1 秒
+            socket.setdefaulttimeout(1.0)
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("huggingface.co", 443))
+            hf_accessible = True
+            print("Hugging Face network is accessible.")
+        except Exception:
+            print("Hugging Face network is not accessible, will use ModelScope.")
+        finally:
+            socket.setdefaulttimeout(None)
+
+        # 2. Try Hugging Face (仅在网络可访问时尝试)
+        if hf_accessible:
+            try:
+                print("Attempting download from Hugging Face...")
+                local_path = hf_hub_download(
+                    repo_id=HF_REPO,
+                    filename=filename_hf,
+                    local_dir=cache_dir,
+                )
+                # If downloaded to subfolder, move to cache_dir
+                if os.path.dirname(local_path) != cache_dir:
+                    import shutil
+                    final_path = os.path.join(cache_dir, filename)
+                    shutil.move(local_path, final_path)
+                    print(f"Model loaded from Hugging Face: {final_path}")
+                    return final_path
+                print(f"Model loaded from Hugging Face: {local_path}")
+                return local_path
+            except Exception as e:
+                print(f"Hugging Face download failed: {e}")
+
+        # 2. Try ModelScope (国内备用)
+        try:
+            print("Attempting download from ModelScope...")
+            # Try to import modelscope
+            try:
+                from modelscope.hub.file_download import model_file_download
+            except ImportError:
+                print("ModelScope not installed. Installing...")
+                os.system("pip install modelscope -q")
+                from modelscope.hub.file_download import model_file_download
+
+            # Download specific file from ModelScope
+            downloaded_file = model_file_download(
+                model_id=MODELSCOPE_REPO,
+                file_path=filename_ms,  # 带子文件夹的路径
+                cache_dir=cache_dir,
             )
-            print(f"Model loaded from {local_path}")
-            return local_path
-        except Exception as e:
-            print(f"Hugging Face download failed: {e}")
-        
-        # 2. Try GitHub Fallback
-        print("Attempting download from GitHub (Backup)...")
-        # Construct Raw GitHub URL
-        github_url = f"https://raw.githubusercontent.com/Chuan1937/SeisPolarity/main/pretrained_model/Ross/{filename}"
-        
-        try:
-            print(f"Downloading from {github_url}...")
-            with httpx.stream("GET", github_url, follow_redirects=True) as response:
-                response.raise_for_status()
-                with open(target_path, "wb") as f:
-                    for chunk in response.iter_bytes():
-                        f.write(chunk)
-            print(f"Model downloaded from GitHub: {target_path}")
-            return target_path
-        except Exception as e:
-            print(f"GitHub download failed: {e}")
-            
-            # Clean up partial file
-            if os.path.exists(target_path):
-                os.remove(target_path)
-                
-            raise RuntimeError(f"Could not download model from HF or GitHub. Please manually place '{filename}' in '{cache_dir}'.")
-            torch.hub.download_url_to_file(github_url, target_path)
-            if os.path.exists(target_path):
-                # Check if file is valid (sometimes raw links return 404 html text)
-                if os.path.getsize(target_path) < 1000: # suspiciously small
-                    os.remove(target_path)
-                    raise RuntimeError("Downloaded file is too small (likely 404 page).")
-                print(f"Model successfully downloaded from GitHub to {target_path}")
-                return target_path
+
+            if os.path.exists(downloaded_file):
+                print(f"Model loaded from ModelScope: {downloaded_file}")
+                return downloaded_file
             else:
-                 raise RuntimeError("Download completed but file not found.")
+                raise FileNotFoundError(f"Could not find downloaded file: {downloaded_file}")
+
         except Exception as e:
-            print(f"GitHub download also failed: {e}")
-            
-            # Final check just in case
-            if os.path.exists(target_path):
-                return target_path
-                
-            raise RuntimeError("Could not download model from either Hugging Face or GitHub.")
+            print(f"ModelScope download failed: {e}")
+
+        # 3. If all fails, raise error
+        raise RuntimeError(
+            f"Could not download model '{filename}' from Hugging Face or ModelScope.\n"
+            f"Please manually download it and place in '{cache_dir}' or specify model_path."
+        )
 
     def _load_weights(self, path: str):
         """Load weights safely handling different saving formats (state_dict vs full checkpoint)."""

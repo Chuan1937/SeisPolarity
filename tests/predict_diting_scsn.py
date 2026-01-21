@@ -19,13 +19,29 @@ from seispolarity.generate import (
 # 设备配置
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
-# 模型路径 - 使用训练好的模型
-LOCAL_MODEL_PATH = r"/home/yuan/code/SeisPolarity/pretrained_model/DiTingMotion/DiTingMotion_DitingScsn.pth"
+# ==================== 数据集路径配置 ====================
+# 方式1: 使用本地文件 (当前使用)
+# TEST_FILE = "/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
+#
+# 方式2: 使用自动下载 (取消注释下面的代码)
+# from seispolarity import get_dataset_path
+# TEST_FILE = get_dataset_path(
+#     dataset_name="SCSN",
+#     subset="test",  # 测试集
+#     cache_dir="./datasets_download",  # 自定义缓存目录
+#     use_hf=False  # 默认使用 ModelScope，设为 True 使用 Hugging Face
+# )
 
-# 测试数据路径
+# 当前使用本地文件路径
 TEST_FILE = "/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
 CROP_LEFT = 64  # p_pick左侧裁剪长度（p_pick=300, 开始点=236）
-CROP_RIGHT = 64  # p_pick右侧裁剪长度（结束点=364）   
+CROP_RIGHT = 64  # p_pick右侧裁剪长度（结束点=364）
+
+# 网络下载模型
+predictor = Predictor(model_name="DITINGMOTION_DITINGSCSN.pth",device=DEVICE)
+# 本地加载模型示例
+# predictor = Predictor(model_name="DITINGMOTION_DITINGSCSN.pth", model_path="/home/yuan/code/SeisPolarity/pretrained_model/DITINGMOTION/DITINGMOTION_DITINGSCSN.pth", device=DEVICE)
+
 
 # 数据增强（与训练时验证集一致）
 test_augmentations = [
@@ -37,8 +53,6 @@ test_augmentations = [
 
 # 强制输出U/D模式（不能有X）
 FORCE_UD = True
-
-predictor = Predictor(model_name="diting_motion", model_path=LOCAL_MODEL_PATH, device=DEVICE, force_ud=FORCE_UD)
 
 # 创建数据集（与训练时一致的处理）
 dataset = WaveformDataset(

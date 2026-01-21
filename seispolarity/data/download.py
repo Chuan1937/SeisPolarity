@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
+import socket
 from pathlib import Path
 from typing import Optional, Sequence
 
+import h5py
 import requests
-
 from seispolarity.config import settings
 
 _CHUNK_SIZE = 1024 * 1024  # 1MB
+
+# 数据集源配置
+HF_REPO = "HeXingChen/Seismic-AI-Data"
+# ModelScope 仓库 ID（用于数据集下载）
+MODELSCOPE_DATASET_REPO = "chuanjun/Seismic-AI-Data"
+# ModelScope 模型仓库 ID（用于模型下载）
+MODELSCOPE_MODEL_REPO = "chuanjun/HeXingChen"
 
 
 def _sha256(path: Path) -> str:
@@ -18,6 +27,28 @@ def _sha256(path: Path) -> str:
         for chunk in iter(lambda: f.read(_CHUNK_SIZE), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def _verify_hdf5_integrity(path: Path) -> bool:
+    """检查 HDF5 文件是否完整且可读。
+
+    参数
+    ----------
+    path：HDF5 文件的路径。
+
+    返回
+    -------
+    bool：如果文件完整且可读则返回 True，否则返回 False。
+    """
+    try:
+        # 尝试以只读模式打开文件
+        with h5py.File(path, 'r') as f:
+            # 尝试访问根组，如果文件损坏这里会抛出异常
+            _ = f.keys()
+        return True
+    except (OSError, KeyError) as e:
+        print(f"  HDF5 file integrity check failed: {e}")
+        return False
 
 
 def download_file(
@@ -49,12 +80,27 @@ def download_file(
         if expected_sha256 is None or _sha256(target) == expected_sha256:
             return target
 
+    # 获取文件总大小用于显示进度条
     with requests.get(url, stream=True, timeout=60) as r:
         r.raise_for_status()
-        with target.open("wb") as f:
-            for chunk in r.iter_content(chunk_size=_CHUNK_SIZE):
-                if chunk:
-                    f.write(chunk)
+        total_size = int(r.headers.get('content-length', 0))
+
+        # 如果有文件大小，显示进度条
+        if total_size > 0:
+            from tqdm import tqdm
+            progress_bar = tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Downloading {fname}")
+            with target.open("wb") as f:
+                for chunk in r.iter_content(chunk_size=_CHUNK_SIZE):
+                    if chunk:
+                        f.write(chunk)
+                        progress_bar.update(len(chunk))
+            progress_bar.close()
+        else:
+            # 没有文件大小信息，直接下载
+            with target.open("wb") as f:
+                for chunk in r.iter_content(chunk_size=_CHUNK_SIZE):
+                    if chunk:
+                        f.write(chunk)
 
     if expected_sha256 and _sha256(target) != expected_sha256:
         target.unlink(missing_ok=True)
@@ -168,7 +214,7 @@ def fetch_hf_file(
     Parameters
     ----------
     repo_id: owner/name, e.g. "chuanjun1978/Seismic-AI-Data".
-    repo_path: path to file inside the repo, e.g. "SCEDC/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5".
+    repo_path: path to file inside the repo, e.g. "SCSN/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5".
     revision: branch/tag/commit; default main.
     token: optional token for private repos.
     local_name: optional folder name under cache_datasets; default repo_id with slashes replaced.
@@ -180,7 +226,7 @@ def fetch_hf_file(
     参数
     ----------
     repo_id：所有者/名称，例如 "chuanjun1978/Seismic-AI-Data"。
-    repo_path：存储库内文件的路径，例如 "SCEDC/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5"。
+    repo_path：存储库内文件的路径，例如 "SCSN/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5"。
     revision：分支/标签/提交；默认 main。
     token：用于私有存储库的可选令牌。
     local_name：cache_datasets 下的可选文件夹名称；默认替换斜杠的 repo_id。
@@ -206,5 +252,746 @@ def fetch_hf_file(
         repo_type=repo_type,
     )
 
-    return Path(file_path)
+    downloaded_file = Path(file_path)
+
+    # Verify the downloaded file is complete (especially for HDF5 files)
+    filename = Path(repo_path).name
+    if filename.endswith('.hdf5') or filename.endswith('.h5'):
+        print("  Verifying downloaded HDF5 file integrity...")
+        if not _verify_hdf5_integrity(downloaded_file):
+            print("  ERROR: Downloaded HDF5 file is corrupted or incomplete!")
+            # Remove the corrupted file
+            if downloaded_file.exists():
+                downloaded_file.unlink()
+            raise RuntimeError(f"Downloaded HDF5 file is corrupted: {downloaded_file}")
+        print("  Downloaded HDF5 file is intact.")
+
+    return downloaded_file
+
+
+def fetch_modelscope_dataset(
+    repo_id: str,
+    subset_name: str = "default",
+    split: str = "train",
+    cache_dir: str | Path | None = None,
+) -> Path:
+    """Download a dataset from ModelScope using MsDataset.load API.
+
+    This is the preferred method for downloading datasets from ModelScope.
+    It uses MsDataset.load which handles dataset downloads differently from model downloads.
+
+    Parameters
+    ----------
+    repo_id: owner/name on ModelScope, e.g. "chuanjun/Seismic-AI-Data".
+    subset_name: dataset subset name, default 'default'.
+    split: dataset split, e.g. "train", "test". Default is "train".
+    cache_dir: directory to cache the downloaded dataset. If None, uses settings.cache_datasets.
+
+    Returns
+    -------
+    Path to the downloaded dataset directory.
+    """
+
+    """使用 MsDataset.load API 从 ModelScope 下载数据集。
+
+    这是从 ModelScope 下载数据集的首选方法。
+    它使用 MsDataset.load，该方法处理数据集下载的方式与模型下载不同。
+
+    参数
+    ----------
+    repo_id：ModelScope 上的所有者/名称，例如 "chuanjun/Seismic-AI-Data"。
+    subset_name：数据集子集名称，默认 'default'。
+    split：数据集分割，例如 "train"、"test"。默认为 "train"。
+    cache_dir：缓存下载的数据集的目录。如果为 None，则使用 settings.cache_datasets。
+
+    返回
+    -------
+    下载数据集目录的路径。
+    """
+
+    try:
+        from modelscope.msdatasets import MsDataset
+    except ImportError as exc:
+        raise ImportError("modelscope is required for fetch_modelscope_dataset; pip install modelscope") from exc
+
+    # Setup cache directory
+    if cache_dir is None:
+        cache_dir = settings.cache_datasets
+    cache_dir = Path(cache_dir).expanduser()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create a dataset-specific cache directory
+    target_dir = cache_dir / f"{repo_id.replace('/', '__')}__{subset_name}__{split}"
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    print(f"Downloading dataset from ModelScope using MsDataset.load...")
+    print(f"Repo ID: {repo_id}")
+    print(f"Subset: {subset_name}")
+    print(f"Split: {split}")
+    print(f"Cache directory: {target_dir}")
+
+    # Load the dataset using MsDataset.load
+    ds = MsDataset.load(
+        repo_id,
+        subset_name=subset_name,
+        split=split,
+        cache_dir=str(target_dir),
+    )
+
+    print(f"Dataset downloaded successfully!")
+    print(f"Dataset info: {ds}")
+
+    return target_dir
+
+
+def fetch_modelscope_file(
+    repo_id: str,
+    repo_path: str,
+    revision: str | None = None,
+    local_name: str | None = None,
+    subset_name: str | None = None,
+    split: str = "train",
+) -> Path:
+    """Download a single file from a ModelScope dataset repo into cache_datasets using model_file_download API.
+
+    Note: For datasets, prefer using fetch_modelscope_dataset instead.
+    This function is kept for backward compatibility and for downloading individual files.
+
+    Parameters
+    ----------
+    repo_id: owner/name on ModelScope, e.g. "chuanjun/Seismic-AI-Data".
+    repo_path: path to file inside the repo, e.g. "SCSN/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5".
+    revision: branch/tag/commit; default None means master.
+    local_name: optional folder name under cache_datasets; default repo_id with slashes replaced.
+    subset_name: dataset subset name, default None means 'default'. (Not used in model_file_download)
+    split: dataset split, e.g. "train", "test". Default is "train". (Not used in model_file_download)
+    """
+
+    """将 ModelScope 数据集存储库中的单个文件下载到 cache_datasets 中，使用 model_file_download API。
+    注意：对于数据集，优先使用 fetch_modelscope_dataset。
+    此函数保留用于向后兼容和下载单个文件。
+
+    参数
+    ----------
+    repo_id：ModelScope 上的所有者/名称，例如 "chuanjun/Seismic-AI-Data"。
+    repo_path：存储库内文件的路径，例如 "SCSN/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5"。
+    revision：分支/标签/提交；默认 None 表示 master。
+    local_name：cache_datasets 下的可选文件夹名称；默认替换斜杠的 repo_id。
+    subset_name：数据集子集名称，默认 None 表示 'default'。（在 model_file_download 中未使用）
+    split：数据集分割，例如 "train"、"test"。默认为 "train"。（在 model_file_download 中未使用）
+    """
+
+    try:
+        from modelscope.hub.file_download import model_file_download
+    except ImportError as exc:
+        raise ImportError("modelscope is required for fetch_modelscope_file; pip install modelscope") from exc
+
+    target_dir = settings.cache_datasets / (local_name or repo_id.replace("/", "__"))
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    filename = Path(repo_path).name
+    target_path = target_dir / filename
+
+    # Check if file already exists
+    if target_path.exists():
+        print(f"Found existing local file: {target_path}")
+        # Check if file is complete and readable
+        if filename.endswith('.hdf5') or filename.endswith('.h5'):
+            print("  Verifying HDF5 file integrity...")
+            if not _verify_hdf5_integrity(target_path):
+                print("  HDF5 file is corrupted or incomplete. Re-downloading...")
+                # Remove the corrupted file
+                target_path.unlink()
+            else:
+                print("  HDF5 file is intact.")
+                return target_path
+        else:
+            # For non-HDF5 files, just return if exists
+            return target_path
+
+    print(f"Downloading file from ModelScope using model_file_download...")
+    print(f"Repo ID: {repo_id}")
+    print(f"File path: {repo_path}")
+
+    # Use ModelScope's model_file_download API to download the file
+    file_path = model_file_download(
+        model_id=repo_id,
+        file_path=repo_path,
+        revision=revision,
+        local_dir=str(target_dir),
+    )
+
+    # Copy the file to target_path if it's not already there
+    downloaded_file = Path(file_path)
+    if downloaded_file != target_path:
+        shutil.copy2(downloaded_file, target_path)
+        print(f"Copied to: {target_path}")
+
+    # Verify the downloaded file is complete (especially for HDF5 files)
+    if filename.endswith('.hdf5') or filename.endswith('.h5'):
+        print("  Verifying downloaded HDF5 file integrity...")
+        if not _verify_hdf5_integrity(target_path):
+            print("  ERROR: Downloaded HDF5 file is corrupted or incomplete!")
+            # Remove the corrupted file
+            if target_path.exists():
+                target_path.unlink()
+            raise RuntimeError(f"Downloaded HDF5 file is corrupted: {target_path}")
+        print("  Downloaded HDF5 file is intact.")
+
+    print(f"Downloaded to: {target_path}")
+    return target_path
+
+
+def _check_hf_network_access(timeout: float = 1.0) -> bool:
+    """Check if Hugging Face is accessible.
+
+    Parameters
+    ----------
+    timeout: timeout in seconds for the connection test.
+
+    Returns
+    -------
+    True if huggingface.co is accessible, False otherwise.
+    """
+    try:
+        socket.setdefaulttimeout(timeout)
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("huggingface.co", 443))
+        return True
+    except Exception:
+        return False
+    finally:
+        socket.setdefaulttimeout(None)
+
+
+def fetch_dataset_from_remote(
+    dataset_name: str,
+    repo_path: str,
+    hf_repo_id: str = HF_REPO,
+    modelscope_repo_id: str = MODELSCOPE_DATASET_REPO,
+    cache_dir: str | Path | None = None,
+    force_download: bool = False,
+    revision: str | None = None,
+    use_hf: bool = False,
+) -> Path:
+    """Download a dataset file from ModelScope or Hugging Face.
+
+    Priority: ModelScope (default) > Hugging Face (if use_hf=True).
+
+    Parameters
+    ----------
+    dataset_name: name of the dataset (e.g., "SCSN", "TXED", "PNW").
+    repo_path: path to file inside the repo (e.g., "SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5").
+    hf_repo_id: Hugging Face repository ID (default: HeXingChen/Seismic-AI-Data).
+    modelscope_repo_id: ModelScope repository ID (default: chuanjun/Seismic-AI-Data).
+    cache_dir: directory to cache the downloaded files. If None, uses settings.cache_datasets.
+    force_download: if True, force re-download even if file exists.
+    use_hf: if True, use Hugging Face instead of ModelScope.
+
+    Returns
+    -------
+    Path to the downloaded file.
+
+    Examples
+    --------
+    >>> # Download SCSN training data from ModelScope (default)
+    >>> path = fetch_dataset_from_remote(
+    ...     dataset_name="SCSN",
+    ...     repo_path="SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5"
+    ... )
+    >>> # Use in WaveformDataset
+    >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
+    """
+
+    """从 ModelScope 或 Hugging Face 下载数据集文件。
+
+    优先级：ModelScope（默认）> Hugging Face（当 use_hf=True 时）。
+
+    参数
+    ----------
+    dataset_name：数据集名称（例如 "SCSN"、"TXED"、"PNW"）。
+    repo_path：存储库内文件的路径（例如 "SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5"）。
+    hf_repo_id：Hugging Face 存储库 ID（默认：HeXingChen/Seismic-AI-Data）。
+    modelscope_repo_id：ModelScope 存储库 ID（默认：chuanjun/Seismic-AI-Data）。
+    cache_dir：缓存下载文件的目录。如果为 None，则使用 settings.cache_datasets。
+    force_download：如果为 True，则即使文件存在也强制重新下载。
+    use_hf：如果为 True，则使用 Hugging Face 而不是 ModelScope。
+
+    返回
+    -------
+    下载文件的路径。
+
+    示例
+    --------
+    >>> # 从 ModelScope 下载 SCSN 训练数据（默认）
+    >>> path = fetch_dataset_from_remote(
+    ...     dataset_name="SCSN",
+    ...     repo_path="SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5"
+    ... )
+    >>> # 在 WaveformDataset 中使用
+    >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
+    """
+
+    # Setup cache directory
+    if cache_dir is None:
+        cache_dir = settings.cache_datasets
+    cache_dir = Path(cache_dir).expanduser()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # Determine target file path
+    filename = Path(repo_path).name
+    target_path = cache_dir / filename
+
+    # Check if file already exists
+    if target_path.exists() and not force_download:
+        print(f"Found existing local file: {target_path}", flush=True)
+        # Check if file is complete and readable
+        if filename.endswith('.hdf5') or filename.endswith('.h5'):
+            print("  Verifying HDF5 file integrity...", flush=True)
+            if not _verify_hdf5_integrity(target_path):
+                print("  HDF5 file is corrupted or incomplete. Re-downloading...", flush=True)
+                # Remove the corrupted file
+                target_path.unlink()
+            else:
+                print("  HDF5 file is intact.", flush=True)
+                return target_path
+        else:
+            # For non-HDF5 files, just return if exists
+            return target_path
+
+    print(f"Downloading dataset '{dataset_name}' from {'Hugging Face' if use_hf else 'ModelScope'}...", flush=True)
+    print(f"Target file: {filename}", flush=True)
+
+    if use_hf:
+        # Try Hugging Face if network is accessible
+        if _check_hf_network_access():
+            try:
+                print("Hugging Face network is accessible. Attempting download from Hugging Face...")
+                file_path = fetch_hf_file(
+                    repo_id=hf_repo_id,
+                    repo_path=repo_path,
+                    local_name=dataset_name,
+                )
+                print(f"Dataset downloaded from Hugging Face: {file_path}")
+                return file_path
+            except Exception as e:
+                error_msg = (
+                    f"\n{'='*60}\n"
+                    f"Failed to download dataset from Hugging Face.\n"
+                    f"{'='*60}\n"
+                    f"Dataset: {dataset_name}\n"
+                    f"File: {filename}\n"
+                    f"Hugging Face: {hf_repo_id}/{repo_path}\n\n"
+                    f"Error: {e}\n\n"
+                    f"Solutions:\n"
+                    f"1. Check your network connection (huggingface.co)\n"
+                    f"2. Manually download from Hugging Face:\n"
+                    f"   https://huggingface.co/datasets/{hf_repo_id}/tree/main\n"
+                    f"3. Use ModelScope instead (set use_hf=False)\n"
+                    f"4. Specify local path manually in WaveformDataset\n"
+                    f"5. Use VPN if Hugging Face is blocked in your region\n"
+                    f"{'='*60}"
+                )
+                raise RuntimeError(error_msg) from e
+        else:
+            error_msg = (
+                f"\n{'='*60}\n"
+                f"Cannot access Hugging Face network.\n"
+                f"{'='*60}\n"
+                f"Dataset: {dataset_name}\n"
+                f"File: {filename}\n"
+                f"Hugging Face: {hf_repo_id}/{repo_path}\n\n"
+                f"Solutions:\n"
+                f"1. Check your network connection (huggingface.co)\n"
+                f"2. Manually download from Hugging Face:\n"
+                f"   https://huggingface.co/datasets/{hf_repo_id}/tree/main\n"
+                f"3. Use ModelScope instead (set use_hf=False)\n"
+                f"4. Specify local path manually in WaveformDataset\n"
+                f"5. Use VPN if Hugging Face is blocked in your region\n"
+                f"{'='*60}"
+            )
+            raise RuntimeError(error_msg)
+    else:
+        # Try ModelScope (default)
+        try:
+            from modelscope.hub.file_download import dataset_file_download
+
+            print(f"Attempting download from ModelScope: {modelscope_repo_id}...")
+            file_path = dataset_file_download(
+                dataset_id=modelscope_repo_id,
+                file_path=repo_path,
+                cache_dir=str(cache_dir)
+            )
+            print(f"Dataset downloaded from ModelScope: {file_path}")
+            return Path(file_path)
+        except ImportError as exc:
+            error_msg = (
+                f"\n{'='*60}\n"
+                f"ModelScope not installed.\n"
+                f"{'='*60}\n"
+                f"Please install modelscope:\n"
+                f"  pip install modelscope\n"
+                f"Or use Hugging Face instead (set use_hf=True)\n"
+                f"{'='*60}"
+            )
+            raise RuntimeError(error_msg) from exc
+        except Exception as e:
+            error_msg = (
+                f"\n{'='*60}\n"
+                f"Failed to download dataset from ModelScope.\n"
+                f"{'='*60}\n"
+                f"Dataset: {dataset_name}\n"
+                f"File: {filename}\n"
+                f"ModelScope: {modelscope_repo_id}/{repo_path}\n\n"
+                f"Error: {e}\n\n"
+                f"Solutions:\n"
+                f"1. Check your network connection (modelscope.cn)\n"
+                f"2. Manually download from ModelScope:\n"
+                f"   https://www.modelscope.cn/datasets/{modelscope_repo_id}/tree/master\n"
+                f"3. Use Hugging Face instead (set use_hf=True)\n"
+                f"4. Specify local path manually in WaveformDataset\n"
+                f"{'='*60}"
+            )
+            raise RuntimeError(error_msg) from e
+
+
+def fetch_dataset_folder(
+    dataset_name: str,
+    folder_path: str,
+    hf_repo_id: str = HF_REPO,
+    modelscope_repo_id: str = MODELSCOPE_DATASET_REPO,
+    cache_dir: str | Path | None = None,
+    force_download: bool = False,
+    revision: str | None = None,
+    use_hf: bool = False,
+) -> Path:
+    """Download an entire dataset folder from ModelScope or Hugging Face.
+
+    Parameters
+    ----------
+    dataset_name: name of the dataset (e.g., "SCSN", "TXED", "PNW").
+    folder_path: path to folder inside the repo (e.g., "SCSN/", "TXED/").
+    hf_repo_id: Hugging Face repository ID (default: HeXingChen/Seismic-AI-Data).
+    modelscope_repo_id: ModelScope repository ID (default: chuanjun/Seismic-AI-Data).
+    cache_dir: directory to cache the downloaded files. If None, uses settings.cache_datasets.
+    force_download: if True, force re-download even if files exist.
+    use_hf: if True, use Hugging Face instead of ModelScope.
+
+    Returns
+    -------
+    Path to the downloaded dataset folder.
+    """
+    """从 ModelScope 或 Hugging Face 下载数据集文件夹。
+
+    参数
+    ----------
+    dataset_name：数据集名称（例如 "SCSN"、"TXED"、"PNW"）。
+    folder_path：存储库内文件夹的路径（例如 "SCSN/", "TXED/"）。
+    hf_repo_id：Hugging Face 存储库 ID（默认：HeXingChen/Seismic-AI-Data）。
+    modelscope_repo_id：ModelScope 存储库 ID（默认：chuanjun/Seismic-AI-Data）。
+    cache_dir：缓存下载文件的目录。如果为 None，则使用 settings.cache_datasets。
+    force_download：如果为 True，则即使文件存在也强制重新下载。
+    use_hf：如果为 True，则使用 Hugging Face 而不是 ModelScope。
+
+    返回
+    -------
+    下载数据集文件夹的路径。
+    """
+    # Setup cache directory
+    if cache_dir is None:
+        cache_dir = settings.cache_datasets
+    cache_dir = Path(cache_dir).expanduser()
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # Remove trailing slash from folder_path
+    folder_name = folder_path.rstrip('/')
+    target_dir = cache_dir / folder_name
+
+    # Check if folder already exists and is not empty
+    if target_dir.exists() and not force_download:
+        files = list(target_dir.iterdir())
+        if files:
+            print(f"Found existing dataset folder: {target_dir}", flush=True)
+            print(f"  Folder contains {len(files)} files/directories.", flush=True)
+            return target_dir
+
+    print(f"Downloading dataset folder '{dataset_name}' from {'Hugging Face' if use_hf else 'ModelScope'}...", flush=True)
+    print(f"Target folder: {folder_name}", flush=True)
+
+    if use_hf:
+        # Try Hugging Face if network is accessible
+        if _check_hf_network_access():
+            try:
+                print("Hugging Face network is accessible. Attempting download from Hugging Face...")
+                # Use allow_patterns to download only the specified folder
+                target_dir = fetch_hf_dataset(
+                    repo_id=hf_repo_id,
+                    allow_patterns=[f"{folder_name}/*"],
+                    local_name=folder_name,
+                )
+                print(f"Dataset folder downloaded from Hugging Face: {target_dir}")
+                return target_dir
+            except Exception as e:
+                error_msg = (
+                    f"\n{'='*60}\n"
+                    f"Failed to download dataset from Hugging Face.\n"
+                    f"{'='*60}\n"
+                    f"Dataset: {dataset_name}\n"
+                    f"Folder: {folder_name}\n"
+                    f"Hugging Face: {hf_repo_id}/{folder_name}\n\n"
+                    f"Error: {e}\n\n"
+                    f"Solutions:\n"
+                    f"1. Check your network connection (huggingface.co)\n"
+                    f"2. Manually download from Hugging Face:\n"
+                    f"   https://huggingface.co/datasets/{hf_repo_id}/tree/main\n"
+                    f"3. Use ModelScope instead (set use_hf=False)\n"
+                    f"4. Specify local path manually in WaveformDataset\n"
+                    f"5. Use VPN if Hugging Face is blocked in your region\n"
+                    f"{'='*60}"
+                )
+                raise RuntimeError(error_msg) from e
+        else:
+            error_msg = (
+                f"\n{'='*60}\n"
+                f"Cannot access Hugging Face network.\n"
+                f"{'='*60}\n"
+                f"Dataset: {dataset_name}\n"
+                f"Folder: {folder_name}\n"
+                f"Hugging Face: {hf_repo_id}/{folder_name}\n\n"
+                f"Solutions:\n"
+                f"1. Check your network connection (huggingface.co)\n"
+                f"2. Manually download from Hugging Face:\n"
+                f"   https://huggingface.co/datasets/{hf_repo_id}/tree/main\n"
+                f"3. Use ModelScope instead (set use_hf=False)\n"
+                f"4. Specify local path manually in WaveformDataset\n"
+                f"5. Use VPN if Hugging Face is blocked in your region\n"
+                f"{'='*60}"
+            )
+            raise RuntimeError(error_msg)
+    else:
+        # Try ModelScope (default)
+        try:
+            from modelscope.hub.file_download import dataset_file_download
+
+            print(f"Attempting download from ModelScope: {modelscope_repo_id}...")
+            print(f"Note: Downloading files one by one from the folder...", flush=True)
+            
+            target_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Known files for each dataset folder
+            folder_files_map = {
+                "SCSN": [
+                    "SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5",
+                    "SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TEST.hdf5",
+                ],
+                "TXED": [
+                    "TXED/TXED.hdf5",
+                    "TXED/TXED.csv",
+                ],
+                "PNW": [
+                    "PNW/PNW.hdf5",
+                    "PNW/PNW.csv",
+                ],
+                "DiTing": [
+                    "DiTing/DiTing_augmented_merge.hdf5",
+                ],
+                "Instance": [
+                    "Instance/Instance_polarity.hdf5",
+                ],
+            }
+            
+            files_to_download = folder_files_map.get(folder_name, [])
+            if not files_to_download:
+                print(f"Warning: No known files for folder '{folder_name}'", flush=True)
+                print(f"Trying to discover files in the folder...", flush=True)
+                # For unknown folders, we'll need to use a different approach
+                # For now, just return the empty directory
+                return target_dir
+            
+            downloaded_files = []
+            for file_path in files_to_download:
+                try:
+                    print(f"  Downloading: {file_path}...", flush=True)
+                    local_file = dataset_file_download(
+                        dataset_id=modelscope_repo_id,
+                        file_path=file_path,
+                        cache_dir=str(target_dir)
+                    )
+                    downloaded_files.append(Path(local_file))
+                    print(f"    ✓ Downloaded: {Path(local_file).name}", flush=True)
+                except Exception as e:
+                    print(f"    ✗ Failed to download {file_path}: {e}", flush=True)
+                    # Continue with other files
+                    continue
+            
+            if downloaded_files:
+                print(f"\nDataset folder downloaded from ModelScope: {target_dir}", flush=True)
+                print(f"  Downloaded {len(downloaded_files)} files.", flush=True)
+            else:
+                print(f"\nWarning: No files were downloaded!", flush=True)
+            
+            return target_dir
+        except ImportError as exc:
+            error_msg = (
+                f"\n{'='*60}\n"
+                f"ModelScope not installed.\n"
+                f"{'='*60}\n"
+                f"Please install modelscope:\n"
+                f"  pip install modelscope\n"
+                f"Or use Hugging Face instead (set use_hf=True)\n"
+                f"{'='*60}"
+            )
+            raise RuntimeError(error_msg) from exc
+        except Exception as e:
+            error_msg = (
+                f"\n{'='*60}\n"
+                f"Failed to download dataset from ModelScope.\n"
+                f"{'='*60}\n"
+                f"Dataset: {dataset_name}\n"
+                f"Folder: {folder_name}\n"
+                f"ModelScope: {modelscope_repo_id}/{folder_name}\n\n"
+                f"Error: {e}\n\n"
+                f"Solutions:\n"
+                f"1. Check your network connection (modelscope.cn)\n"
+                f"2. Manually download from ModelScope:\n"
+                f"   https://www.modelscope.cn/datasets/{modelscope_repo_id}/tree/master\n"
+                f"3. Use Hugging Face instead (set use_hf=True)\n"
+                f"4. Specify local path manually in WaveformDataset\n"
+                f"{'='*60}"
+            )
+            raise RuntimeError(error_msg) from e
+
+
+# Dataset configuration registry for easy access
+DATASET_REGISTRY = {
+    "SCSN": {
+        "train": {
+            "repo_path": "SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5",
+        },
+        "test": {
+            "repo_path": "SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TEST.hdf5",
+        },
+        "default": {
+            "repo_path": "SCSN/",  # Download entire SCSN folder
+        },
+    },
+    "TXED": {
+        "hdf5": {
+            "repo_path": "TXED/TXED.hdf5",
+        },
+        "csv": {
+            "repo_path": "TXED/TXED.csv",
+        },
+        "default": {
+            "repo_path": "TXED/",  # Download entire TXED folder
+        },
+    },
+    "PNW": {
+        "hdf5": {
+            "repo_path": "PNW/PNW.hdf5",
+        },
+        "csv": {
+            "repo_path": "PNW/PNW.csv",
+        },
+        "default": {
+            "repo_path": "PNW/",  # Download entire PNW folder
+        },
+    },
+}
+
+
+def get_dataset_path(
+    dataset_name: str,
+    subset: str = "train",
+    cache_dir: str | Path | None = None,
+    force_download: bool = False,
+    use_hf: bool = False,
+) -> Path:
+    """Get the path to a dataset file, downloading it if necessary.
+
+    This is a convenience wrapper around fetch_dataset_from_remote that uses
+    the predefined DATASET_REGISTRY to look up dataset paths.
+
+    Parameters
+    ----------
+    dataset_name: name of the dataset (e.g., "SCSN", "TXED", "PNW").
+    subset: which subset to download. For SCSN: "train" or "test".
+             For TXED/PNW: "hdf5" or "csv" or "default".
+             Defaults to "train" for SCSN, "default" for others.
+    cache_dir: directory to cache the downloaded files. If None, uses settings.cache_datasets.
+    force_download: if True, force re-download even if file exists.
+    use_hf: if True, use Hugging Face instead of ModelScope.
+
+    Returns
+    -------
+    Path to the dataset file.
+
+    Examples
+    --------
+    >>> # Get SCSN training dataset path from ModelScope (default)
+    >>> path = get_dataset_path("SCSN", subset="train")
+    >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
+    >>> # Get SCSN training dataset path from Hugging Face
+    >>> path = get_dataset_path("SCSN", subset="train", use_hf=True)
+    >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
+    >>> # Get TXED HDF5 dataset path
+    >>> path = get_dataset_path("TXED", subset="hdf5")
+    """
+
+    """获取数据集文件的路径，必要时下载它。
+
+    这是 fetch_dataset_from_remote 的便捷包装器，使用预定义的 DATASET_REGISTRY 查找数据集路径。
+
+    参数
+    ----------
+    dataset_name：数据集名称（例如 "SCSN"、"TXED"、"PNW"）。
+    subset：要下载的子集。对于SCSN："train"或"test"。
+            对于TXED/PNW："hdf5"、"csv"或"default"。
+            默认：SCSN为"train"，其他为"default"。
+    cache_dir：缓存下载文件的目录。如果为 None，则使用 settings.cache_datasets。
+    force_download：如果为 True，则即使文件存在也强制重新下载。
+    use_hf：如果为 True，则使用 Hugging Face 而不是 ModelScope。
+
+    返回
+    -------
+    数据集文件的路径。
+
+    示例
+    --------
+    >>> # 从 ModelScope 获取 SCSN 训练数据集路径（默认）
+    >>> path = get_dataset_path("SCSN", subset="train")
+    >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
+    >>> # 从 Hugging Face 获取 SCSN 训练数据集路径
+    >>> path = get_dataset_path("SCSN", subset="train", use_hf=True)
+    >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
+    >>> # 获取 TXED HDF5 数据集路径
+    >>> path = get_dataset_path("TXED", subset="hdf5")
+    """
+
+    dataset_name = dataset_name.upper()
+    if dataset_name not in DATASET_REGISTRY:
+        raise ValueError(f"Unknown dataset '{dataset_name}'. Available: {list(DATASET_REGISTRY.keys())}")
+
+    if subset not in DATASET_REGISTRY[dataset_name]:
+        raise ValueError(f"Unknown subset '{subset}' for dataset '{dataset_name}'. Available: {list(DATASET_REGISTRY[dataset_name].keys())}")
+
+    subset_config = DATASET_REGISTRY[dataset_name][subset]
+    repo_path = subset_config["repo_path"]
+
+    # If repo_path ends with '/', download entire folder
+    if repo_path.endswith('/'):
+        return fetch_dataset_folder(
+            dataset_name=dataset_name,
+            folder_path=repo_path,
+            cache_dir=cache_dir,
+            force_download=force_download,
+            use_hf=use_hf,
+        )
+    else:
+        return fetch_dataset_from_remote(
+            dataset_name=dataset_name,
+            repo_path=repo_path,
+            cache_dir=cache_dir,
+            force_download=force_download,
+            use_hf=use_hf,
+        )
 
