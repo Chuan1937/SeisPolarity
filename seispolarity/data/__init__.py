@@ -11,10 +11,19 @@ from .download import (
     get_dataset_path,
     DATASET_REGISTRY,
 )
+from .txed import TXED
+from .instance import Instance
+from .diting import DiTing
+from .pnw import PNW
 
 __all__ = [
     "WaveformDataset",
     "MultiWaveformDataset",
+    # Data processors
+    "TXED",
+    "Instance",
+    "DiTing",
+    "PNW",
     # Download functions
     "download_file",
     "maybe_extract",

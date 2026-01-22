@@ -2,31 +2,28 @@ import sys
 from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 import torch
-import numpy as np
-from seispolarity import WaveformDataset, Demean, Normalize, RandomTimeShift,PolarityInversion
+from seispolarity.data.base import WaveformDataset
 from seispolarity.models.scsn import SCSN
 from seispolarity.training import Trainer, TrainingConfig
-
+from seispolarity import WaveformDataset, Demean, Normalize, RandomTimeShift,PolarityInversion
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 # 配置
 
 # ==================== 数据集路径配置 ====================
 # 方式1: 使用本地文件 (当前使用)
-# DATA_PATH = r"/home/yuan/code/SeisPolarity/datasets/PNW/pnw_polarity.hdf5"
+DATA_PATH = r"/home/yuan/code/SeisPolarity/datasets/Txed/txed_polarity.hdf5"
 #
 # 方式2: 使用自动下载 (取消注释下面的代码)
 # from seispolarity import get_dataset_path
 # DATA_PATH = get_dataset_path(
-#     dataset_name="PNW",
-#     subset="hdf5",  # HDF5 格式文件
+#     dataset_name="TXED",
+#     subset="default",  # 训练集
 #     cache_dir="./datasets_download",  # 自定义缓存目录
 #     use_hf=False  # 默认使用 ModelScope，设为 True 使用 Hugging Face
 # )
 
-# 当前使用本地文件路径
-DATA_PATH = r"/home/yuan/code/SeisPolarity/datasets/PNW/pnw_polarity.hdf5"
-OUT_DIR = "./checkpoints_ross_pnw"
+OUT_DIR = "./checkpoints_ross_txed"
 
 # 训练参数
 EPOCHS = 50
@@ -37,9 +34,8 @@ NUM_WORKERS = 4
 # 数据参数
 PRELOAD = True
 ALLOWED_LABELS = [0, 1, 2]
-CROP_LEFT = 200  # p_pick左侧裁剪200个样本点（2秒）
-CROP_RIGHT = 200  # p_pick右侧裁剪200个样本点（2秒）
-
+CROP_LEFT = 200  # p_pick左侧裁剪长度（p_pick=300, 开始点=100）
+CROP_RIGHT = 200  # p_pick右侧裁剪长度（结束点=500）
 
 # 数据增强流水线（与其他训练文件格式一致）
 train_augmentations = [
@@ -48,25 +44,23 @@ train_augmentations = [
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
 ]
 
-# 创建原始数据集（与其他训练文件格式一致）
+# 创建数据集
 dataset = WaveformDataset(
     path=DATA_PATH,
-    name="PNW_Train",
+    name="TXED",
     preload=PRELOAD,
     allowed_labels=ALLOWED_LABELS,
     data_key="X",
     label_key="Y",
     clarity_key=None,
-    pick_key="p_pick",  # 使用p_pick作为P波到达点
-    pick_position=None,
+    pick_key='p_pick',  
     metadata_keys=[],
+    p_pick_position=None,      # SCSN数据集的固定P波位置（第300个样本点）
     crop_left=CROP_LEFT,      # p_pick左侧裁剪长度
-    crop_right=CROP_RIGHT,    # p_pick右侧裁剪长度
+    crop_right=CROP_RIGHT,     # p_pick右侧裁剪长度
     random_seed=36
 )
 
-dataset.add_augmentations(train_augmentations)
-# 添加极性反转增强到数据集
 polarity_inversion = PolarityInversion(key="X", label_key="label", label_map={'U': 1, 'D': 1, 'X': 1})
 dataset.add_augmentation(polarity_inversion)
 
@@ -83,7 +77,7 @@ config = TrainingConfig(
     val_split=0.1,        # 验证集比例
     test_split=0.1,       # 测试集比例
     patience=5,
-    random_seed=36
+    random_seed=36  # 设置随机种子以确保可复现性
 )
 
 # 创建输出目录
@@ -99,7 +93,6 @@ best_val_acc, final_test_acc = trainer.train()
 # 保存最终模型
 final_model_path = Path(OUT_DIR) / "final_model.pth"
 torch.save(model.state_dict(), final_model_path)
-print(f"\n模型已保存到: {final_model_path}")
 
 # 清理
 if not PRELOAD and hasattr(dataset, 'dataset') and hasattr(dataset.dataset, 'close'):
