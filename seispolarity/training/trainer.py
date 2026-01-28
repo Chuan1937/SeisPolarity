@@ -789,6 +789,6 @@ class Trainer:
 
     def _save_checkpoint(self, epoch: int, best: bool = False):
         tag = "best" if best else f"epoch_{epoch}"
-        path = f"{self.config.checkpoint_dir}/scsn_{tag}.pth"
+        path = f"{self.config.checkpoint_dir}/datasets_{tag}.pth"
         torch.save(self.model.state_dict(), path)
         print(f"Saved checkpoint to {path}")

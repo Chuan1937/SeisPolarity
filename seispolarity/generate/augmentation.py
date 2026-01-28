@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from scipy import signal
 
 # ==============================================================================
 # Signal Processing Augmentations (信号处理增强)
@@ -36,6 +37,78 @@ class Demean:
                 state_dict[self.key] = (x, meta)
             else:
                 state_dict[self.key] = x
+
+class BandpassFilter:
+    """Apply bandpass filter to the waveform.
+    
+    使用巴特沃斯带通滤波器对波形进行滤波。
+    
+    Args:
+        key: 状态字典中的键
+        lowcut: 低截止频率
+        highcut: 高截止频率
+        fs: 采样率，如果为None则从metadata中读取
+        order: 滤波器阶数
+        zerophase: 是否使用零相位滤波
+    """
+    def __init__(self, key="X", lowcut=1.0, highcut=20.0, fs=None, order=4, zerophase=True):
+        self.key = key
+        self.lowcut = lowcut
+        self.highcut = highcut
+        self.fs = fs
+        self.order = order
+        self.zerophase = zerophase
+    
+    def __call__(self, state_dict):
+        if self.key in state_dict:
+            value = state_dict[self.key]
+            
+            # 处理元组情况：当value是(waveform, metadata)元组时
+            if isinstance(value, tuple) and len(value) == 2:
+                x, meta = value
+                is_tuple = True
+            else:
+                x = value
+                meta = None
+                is_tuple = False
+            
+            # 确定采样率
+            if self.fs is None and meta is not None and 'sampling_rate' in meta:
+                fs = meta['sampling_rate']
+            elif self.fs is not None:
+                fs = self.fs
+            else:
+                raise ValueError("Sampling rate must be provided either directly or in metadata")
+            
+            # 确保x至少是2D数组
+            if x.ndim == 1:
+                x = x.reshape(1, -1)
+            
+            # 设计带通滤波器
+            nyquist = 0.5 * fs
+            low = self.lowcut / nyquist
+            high = self.highcut / nyquist
+            
+            # 检查频率范围是否有效
+            if low >= 1.0 or high >= 1.0 or low >= high:
+                raise ValueError(f"Invalid frequency range: [{self.lowcut}, {self.highcut}] Hz for sampling rate {fs} Hz")
+            
+            # 设计巴特沃斯滤波器
+            sos = signal.butter(self.order, [low, high], btype='band', output='sos')
+            
+            # 对每个通道应用滤波
+            filtered_data = np.zeros_like(x)
+            for i in range(x.shape[0]):
+                if self.zerophase:
+                    filtered_data[i] = signal.sosfiltfilt(sos, x[i])
+                else:
+                    filtered_data[i] = signal.sosfilt(sos, x[i])
+            
+            # 根据原始类型返回
+            if is_tuple:
+                state_dict[self.key] = (filtered_data, meta)
+            else:
+                state_dict[self.key] = filtered_data
 
 class Normalize:
     """Normalize the waveform amplitude."""

@@ -1,4 +1,5 @@
 from .augmentation import (
+    BandpassFilter,
     ChangeDtype,
     ChannelDropout,
     Copy,
@@ -17,6 +18,7 @@ from .generator import GenericGenerator, GroupGenerator, SteeredGenerator, Balan
 
 
 __all__ = [
+    "BandpassFilter",
     "ChangeDtype",
     "ChannelDropout",
     "Copy",

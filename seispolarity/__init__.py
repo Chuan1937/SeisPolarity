@@ -60,6 +60,9 @@ def __getattr__(name):
     elif name == "RandomTimeShift":
         from .generate.augmentation import RandomTimeShift
         return RandomTimeShift
+    elif name == "BandpassFilter":
+        from .generate.augmentation import BandpassFilter
+        return BandpassFilter
     elif name == "get_dataset_path":
         from .data.download import get_dataset_path
         return get_dataset_path
