@@ -61,7 +61,7 @@ datasets = train_dataset + test_dataset
 
 # 训练配置
 config = TrainingConfig(
-    batch_size=128,  # RPNet 较大，调小一些 batch_size 避免 OOM
+    batch_size=256,  # RPNet 较大，调小一些 batch_size 避免 OOM
     epochs=50,
     learning_rate=1e-4, # RPNet 这种深层网络建议小学习率
     num_workers=4,
