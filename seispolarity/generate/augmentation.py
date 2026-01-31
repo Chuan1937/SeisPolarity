@@ -205,22 +205,32 @@ class DifferentialFeatures:
                 state_dict[self.key + "_diff_sign"] = sign_diff
 
 class RandomTimeShift:
-    """对时间窗进行随机平移。
+    """对 P 波到时标签进行随机扰动。
     
-    对时间窗的中心进行±max_shift范围内的均匀随机平移。
-    假设数据形状为 (C, N) 或 (N,)，其中N是时间点数量。
+    对 metadata 中的 p_pick 进行±max_shift范围内的均匀随机平移。
+    这样可以模拟真实情况中 P 波到时拾取的不确定性，使模型对 P 波对齐误差具有鲁棒性。
     
-    例如：采样率50Hz，±0.5s对应±25个采样点。
+    注意：这个增强不会改变波形数据，只修改 metadata 中的 p_pick 标签。
+    波形的裁剪会在后续的 WaveformDataset 中根据扰动后的 p_pick 进行。
+    
+    例如：采样率100Hz，±0.5s对应±50个采样点。
+    
+    Args:
+        key: 状态字典中的键（用于获取 waveform 和 metadata）
+        max_shift: 最大平移量
+        shift_unit: 平移单位，'samples'（采样点）或 'seconds'（秒）
+        sampling_rate: 采样率，当 shift_unit='seconds' 时使用
+        p_pick_key: metadata 中 p_pick 的键名
+        fixed_p_pick: 固定的 P 波到时（采样点数），当 metadata 中没有 p_pick_key 时使用
+                      例如 SCSN 数据的 P 波固定在某个位置
     """
-    def __init__(self, key="X", max_shift=25, mode="reflect"):
-        """
-        :param key: 状态字典中的键
-        :param max_shift: 最大平移量（采样点）
-        :param mode: 填充模式，可选 'constant', 'edge', 'reflect', 'symmetric'
-        """
+    def __init__(self, key="X", max_shift=5, shift_unit="samples", sampling_rate=100, p_pick_key="p_pick", fixed_p_pick=None):
         self.key = key
         self.max_shift = max_shift
-        self.mode = mode
+        self.shift_unit = shift_unit
+        self.sampling_rate = sampling_rate
+        self.p_pick_key = p_pick_key
+        self.fixed_p_pick = fixed_p_pick
     
     def __call__(self, state_dict):
         if self.key in state_dict:
@@ -235,47 +245,41 @@ class RandomTimeShift:
                 meta = None
                 is_tuple = False
             
-            # 确保x至少是2D数组
-            if x.ndim == 1:
-                x = x.reshape(1, -1)
-            
-            # 生成随机平移量（包括0）
-            shift = np.random.randint(-self.max_shift, self.max_shift + 1)
-            
-            if shift == 0:
-                # 不进行平移
-                return
-            
-            # 获取数据形状
-            n_channels, n_time = x.shape[0], x.shape[-1]
-            
-            if shift > 0:
-                # 向右平移（时间向前）
-                # 左侧填充，右侧截断
-                pad_width = [(0, 0)] * x.ndim
-                pad_width[-1] = (shift, 0)  # 在时间轴左侧填充
+            # 只修改metadata中的p_pick
+            if meta is not None:
+                # 获取 P 波到时：优先从 metadata 中读取，否则使用 fixed_p_pick
+                if self.p_pick_key in meta:
+                    p_pick = meta[self.p_pick_key]
+                    has_p_pick_key = True
+                elif self.fixed_p_pick is not None:
+                    p_pick = self.fixed_p_pick
+                    has_p_pick_key = False
+                else:
+                    # 既没有 p_pick_key 也没有 fixed_p_pick，不做任何操作
+                    pass
                 
-                # 使用填充
-                x_padded = np.pad(x, pad_width, mode=self.mode)
-                # 截取原始长度
-                x_shifted = x_padded[:, :n_time]
-            else:
-                # 向左平移（时间向后）
-                shift = abs(shift)
-                # 右侧填充，左侧截断
-                pad_width = [(0, 0)] * x.ndim
-                pad_width[-1] = (0, shift)  # 在时间轴右侧填充
-                
-                # 使用填充
-                x_padded = np.pad(x, pad_width, mode=self.mode)
-                # 截取原始长度
-                x_shifted = x_padded[:, shift:shift + n_time]
+                # 应用平移
+                if has_p_pick_key or (self.fixed_p_pick is not None):
+                    # 根据shift_unit计算随机平移量
+                    if self.shift_unit == "seconds":
+                        shift_seconds = np.random.uniform(-self.max_shift, self.max_shift)
+                        shift_samples = int(shift_seconds * self.sampling_rate)
+                    else:  # samples
+                        shift_samples = np.random.randint(-self.max_shift, self.max_shift + 1)
+                    
+                    # 应用平移
+                    if has_p_pick_key:
+                        # 更新 metadata 中的 p_pick
+                        meta[self.p_pick_key] = p_pick + shift_samples
+                    else:
+                        # 使用 fixed_p_pick，创建或更新 metadata 中的 p_pick
+                        meta[self.p_pick_key] = p_pick + shift_samples
             
             # 根据原始类型返回
             if is_tuple:
-                state_dict[self.key] = (x_shifted, meta)
+                state_dict[self.key] = (x, meta)
             else:
-                state_dict[self.key] = x_shifted
+                state_dict[self.key] = x
 
 # ==============================================================================
 # Data Type and Format Augmentations (数据类型和格式增强)

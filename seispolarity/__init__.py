@@ -57,6 +57,9 @@ def __getattr__(name):
     elif name == "Normalize":
         from .generate.augmentation import Normalize
         return Normalize
+    elif name == "RandomPPickShift":
+        from .generate.augmentation import RandomPPickShift
+        return RandomPPickShift
     elif name == "RandomTimeShift":
         from .generate.augmentation import RandomTimeShift
         return RandomTimeShift

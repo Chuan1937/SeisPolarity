@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from tkinter import N
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 import torch
 import torch.nn as nn
@@ -34,7 +35,8 @@ datasets = WaveformDataset(
     allowed_labels=[0, 1],
     data_key="X",
     label_key="Y",
-    p_pick_position=300,
+    pick_key="p_pick",  # 使用p_pick作为P波到达点
+    p_pick_position=None,
     crop_left=300,
     crop_right=300
 )
