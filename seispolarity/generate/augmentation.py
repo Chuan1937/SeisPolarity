@@ -38,15 +38,186 @@ class Demean:
             else:
                 state_dict[self.key] = x
 
-class BandpassFilter:
-    """Apply bandpass filter to the waveform.
+class Detrend:
+    """Remove the linear trend from the waveform.
     
-    使用巴特沃斯带通滤波器对波形进行滤波。
+    对于地震波形数据，通常沿时间轴（axis=-1）去除线性趋势。
+    使用 scipy.signal.detrend 函数去除线性趋势。
+    
+    Args:
+        key: 状态字典中的键
+        axis: 去趋势的轴，通常为 -1（时间轴）
+        type: 去趋势类型，'linear' 或 'constant'
+    """
+    def __init__(self, key="X", axis=-1, type="linear"):
+        self.key = key
+        self.axis = axis
+        self.type = type
+    def __call__(self, state_dict):
+        if self.key in state_dict:
+            value = state_dict[self.key]
+            
+            # 处理元组情况：当value是(waveform, metadata)元组时
+            if isinstance(value, tuple) and len(value) == 2:
+                x, meta = value
+                is_tuple = True
+            else:
+                x = value
+                meta = None
+                is_tuple = False
+            
+            x = signal.detrend(x, axis=self.axis, type=self.type)
+            
+            # 根据原始类型返回
+            if is_tuple:
+                state_dict[self.key] = (x, meta)
+            else:
+                state_dict[self.key] = x
+
+class Stretching:
+    """Stretch the waveform by upsampling and cropping.
+    
+    通过上采样和截取实现数据拉伸，模拟低频信号。
+    原始数据频率 5-15 Hz，拉伸 2-3 倍后频率约为 2-5 Hz。
+    
+    处理流程：
+    1. 从原始采样率上采样到更高的采样率（如 100 Hz -> 200 Hz 或 300 Hz）
+    2. 截取包含 P 波的固定长度采样点（默认 400 个采样点）
+    
+    Args:
+        key: 状态字典中的键
+        original_fs: 原始采样率，默认 100 Hz
+        stretch_factors: 拉伸因子列表，如 [2, 3] 表示随机选择 2 倍或 3 倍拉伸
+        target_samples: 截取的采样点数，默认 400
+        p_pick_key: metadata 中 P 波到时的键名
+        crop_left: P 波左侧截取的采样点数
+        crop_right: P 波右侧截取的采样点数
+    """
+    def __init__(self, key="X", original_fs=100, stretch_factors=[2, 3], 
+                 target_samples=400, p_pick_key="p_pick", crop_left=None, crop_right=None):
+        self.key = key
+        self.original_fs = original_fs
+        self.stretch_factors = stretch_factors
+        self.target_samples = target_samples
+        self.p_pick_key = p_pick_key
+        self.crop_left = crop_left
+        self.crop_right = crop_right
+    
+    def __call__(self, state_dict):
+        if self.key in state_dict:
+            value = state_dict[self.key]
+            
+            # 处理元组情况：当value是(waveform, metadata)元组时
+            if isinstance(value, tuple) and len(value) == 2:
+                x, meta = value
+                is_tuple = True
+            else:
+                x = value
+                meta = None
+                is_tuple = False
+            
+            # 确保x至少是2D数组
+            if x.ndim == 1:
+                x = x.reshape(1, -1)
+            
+            # 随机选择拉伸因子
+            stretch_factor = np.random.choice(self.stretch_factors)
+            
+            # 计算目标采样率
+            target_fs = self.original_fs * stretch_factor
+            
+            # 获取原始长度（时间点数）
+            original_length = x.shape[-1]
+            
+            # 上采样到目标采样率
+            original_time = np.linspace(0, original_length / self.original_fs, original_length)
+            target_length = int(original_length * stretch_factor)
+            target_time = np.linspace(0, original_length / self.original_fs, target_length)
+            
+            # 对每个通道进行插值
+            stretched_data = np.zeros((x.shape[0], target_length))
+            for i in range(x.shape[0]):
+                stretched_data[i] = np.interp(target_time, original_time, x[i])
+            
+            # 截取包含 P 波的区域
+            if meta is not None and self.p_pick_key in meta:
+                p_pick = meta[self.p_pick_key]
+                # 将原始采样点位置映射到拉伸后的位置
+                p_pick_stretched = int(p_pick * stretch_factor)
+                
+                # 计算 crop_left 和 crop_right
+                if self.crop_left is None:
+                    crop_left = self.target_samples // 2
+                else:
+                    crop_left = int(self.crop_left * stretch_factor)
+                
+                if self.crop_right is None:
+                    crop_right = self.target_samples // 2
+                else:
+                    crop_right = int(self.crop_right * stretch_factor)
+                
+                # 计算截取范围
+                start_idx = p_pick_stretched - crop_left
+                end_idx = p_pick_stretched + crop_right
+                
+                # 确保索引在有效范围内
+                if start_idx < 0:
+                    start_idx = 0
+                    end_idx = min(target_length, self.target_samples)
+                elif end_idx > target_length:
+                    end_idx = target_length
+                    start_idx = max(0, end_idx - self.target_samples)
+                
+                # 截取数据
+                cropped_data = stretched_data[:, start_idx:end_idx]
+                
+                # 如果截取长度不足，进行填充
+                if cropped_data.shape[-1] < self.target_samples:
+                    pad_length = self.target_samples - cropped_data.shape[-1]
+                    pad_left = pad_length // 2
+                    pad_right = pad_length - pad_left
+                    cropped_data = np.pad(cropped_data, 
+                                          ((0, 0), (pad_left, pad_right)), 
+                                          mode='constant')
+                
+                # 更新 metadata 中的采样率和 P 波到时
+                meta['sampling_rate'] = target_fs
+                meta[self.p_pick_key] = self.target_samples // 2  # 将 P 波设置在中间
+                
+                x = cropped_data
+            else:
+                # 如果没有 P 波信息，直接截取中间区域
+                start_idx = (target_length - self.target_samples) // 2
+                end_idx = start_idx + self.target_samples
+                if start_idx < 0:
+                    start_idx = 0
+                    end_idx = min(target_length, self.target_samples)
+                elif end_idx > target_length:
+                    end_idx = target_length
+                    start_idx = max(0, end_idx - self.target_samples)
+                
+                x = stretched_data[:, start_idx:end_idx]
+                
+                # 更新采样率
+                if meta is not None:
+                    meta['sampling_rate'] = target_fs
+            
+            # 根据原始类型返回
+            if is_tuple:
+                state_dict[self.key] = (x, meta)
+            else:
+                state_dict[self.key] = x
+
+class BandpassFilter:
+    """Apply bandpass or highpass filter to the waveform.
+    
+    使用巴特沃斯滤波器对波形进行滤波。
+    当 highcut 为 None 时，实现高通滤波；否则实现带通滤波。
     
     Args:
         key: 状态字典中的键
         lowcut: 低截止频率
-        highcut: 高截止频率
+        highcut: 高截止频率，如果为None则实现高通滤波
         fs: 采样率，如果为None则从metadata中读取
         order: 滤波器阶数
         zerophase: 是否使用零相位滤波
@@ -84,17 +255,22 @@ class BandpassFilter:
             if x.ndim == 1:
                 x = x.reshape(1, -1)
             
-            # 设计带通滤波器
+            # 设计滤波器
             nyquist = 0.5 * fs
-            low = self.lowcut / nyquist
-            high = self.highcut / nyquist
             
-            # 检查频率范围是否有效
-            if low >= 1.0 or high >= 1.0 or low >= high:
-                raise ValueError(f"Invalid frequency range: [{self.lowcut}, {self.highcut}] Hz for sampling rate {fs} Hz")
-            
-            # 设计巴特沃斯滤波器
-            sos = signal.butter(self.order, [low, high], btype='band', output='sos')
+            if self.highcut is None:
+                # 高通滤波
+                high = self.lowcut / nyquist
+                if high >= 1.0:
+                    raise ValueError(f"Invalid cutoff frequency: {self.lowcut} Hz for sampling rate {fs} Hz")
+                sos = signal.butter(self.order, high, btype='high', output='sos')
+            else:
+                # 带通滤波
+                low = self.lowcut / nyquist
+                high = self.highcut / nyquist
+                if low >= 1.0 or high >= 1.0 or low >= high:
+                    raise ValueError(f"Invalid frequency range: [{self.lowcut}, {self.highcut}] Hz for sampling rate {fs} Hz")
+                sos = signal.butter(self.order, [low, high], btype='band', output='sos')
             
             # 对每个通道应用滤波
             filtered_data = np.zeros_like(x)

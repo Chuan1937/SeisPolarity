@@ -487,6 +487,10 @@ class Trainer:
                         curr_labels = curr_labels.float()
                         if curr_labels.ndim == 1:
                             curr_labels = curr_labels.unsqueeze(1)
+                    elif isinstance(criterion, nn.CrossEntropyLoss):
+                        # CrossEntropyLoss 期望标签是 (batch,)，如果是 (batch, 1) 需要压缩
+                        if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
+                            curr_labels = curr_labels.squeeze(1).long()
                 
                 # 计算损失，考虑是否需要传递原始输入
                 if self._loss_takes_inputs:
@@ -562,6 +566,10 @@ class Trainer:
                             curr_labels = curr_labels.float()
                             if curr_labels.ndim == 1:
                                 curr_labels = curr_labels.unsqueeze(1)
+                        elif isinstance(criterion, nn.CrossEntropyLoss):
+                            # CrossEntropyLoss 期望标签是 (batch,)，如果是 (batch, 1) 需要压缩
+                            if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
+                                curr_labels = curr_labels.squeeze(1).long()
                     
                     # 计算损失
                     if self._loss_takes_inputs:
@@ -631,6 +639,10 @@ class Trainer:
                                 curr_labels = curr_labels.float()
                                 if curr_labels.ndim == 1:
                                     curr_labels = curr_labels.unsqueeze(1)
+                            elif isinstance(criterion, nn.CrossEntropyLoss):
+                                # CrossEntropyLoss 期望标签是 (batch,)，如果是 (batch, 1) 需要压缩
+                                if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
+                                    curr_labels = curr_labels.squeeze(1).long()
                         
                         # 计算损失
                         if self._loss_takes_inputs:
@@ -756,6 +768,10 @@ class Trainer:
                         curr_labels = curr_labels.float()
                         if curr_labels.ndim == 1:
                             curr_labels = curr_labels.unsqueeze(1)
+                    elif isinstance(criterion, nn.CrossEntropyLoss):
+                        # CrossEntropyLoss 期望标签是 (batch,)，如果是 (batch, 1) 需要压缩
+                        if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
+                            curr_labels = curr_labels.squeeze(1).long()
                 
                 # 计算损失
                 if self._loss_takes_inputs:
