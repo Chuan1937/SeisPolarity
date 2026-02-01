@@ -7,8 +7,7 @@ from seispolarity.data.base import WaveformDataset
 from seispolarity.models.scsn import SCSN
 from seispolarity.training import Trainer, TrainingConfig
 from seispolarity import BandpassFilter, Normalize,RandomTimeShift
-# DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
-DEVICE = "cpu"
+DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 crop_left = 200
 crop_right = 200

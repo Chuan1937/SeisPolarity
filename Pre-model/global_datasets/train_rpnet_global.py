@@ -37,7 +37,7 @@ txed_datasets_augmentations = [
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
 ]
 
-txed_datasets.add_augmentations(txed_datasets_augmentations)    
+# txed_datasets.add_augmentations(txed_datasets_augmentations)    
 
 # SCSN Datasets
 scsn_train_path = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
@@ -90,7 +90,7 @@ instance_datasets_augmentations = [
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
 ]
 
-instance_datasets.add_augmentations(instance_datasets_augmentations)  
+# instance_datasets.add_augmentations(instance_datasets_augmentations)  
 
 # PNW Datasets
 pnw_datasets = r"/home/yuan/code/SeisPolarity/datasets/PNW/pnw_polarity.hdf5"
@@ -113,7 +113,7 @@ pnw_datasets_augmentations = [
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
 ]
 
-pnw_datasets.add_augmentations(pnw_datasets_augmentations)  
+# pnw_datasets.add_augmentations(pnw_datasets_augmentations)  
 
 # DiTing Datasets
 diting_dataset = r"/home/yuan/code/SeisPolarity/datasets/DiTing/DiTing_polarity.hdf5"
@@ -136,15 +136,15 @@ diting_datasets_augmentations = [
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
 ]
 
-diting_datasets.add_augmentations(diting_datasets_augmentations)  
+# diting_datasets.add_augmentations(diting_datasets_augmentations)  
 
 datasets = txed_datasets + scsn_datasets + instance_datasets + pnw_datasets + diting_datasets
 
 # 训练配置
 config = TrainingConfig(
-    batch_size=256,
+    batch_size=512,
     epochs=100,
-    learning_rate=1e-3,
+    learning_rate=1e-4,
     num_workers=4,
     device=DEVICE,
     checkpoint_dir="./checkpoints_rpnet_global",
