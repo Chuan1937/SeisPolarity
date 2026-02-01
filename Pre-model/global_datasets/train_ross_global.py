@@ -36,7 +36,7 @@ txed_datasets_augmentations = [
     BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
     RandomTimeShift(key="X", max_shift=5, shift_unit="samples",p_pick_key="p_pick"),
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 1, 'D': 1, 'X': 1})  
+    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})  
 ]
 
 txed_datasets.add_augmentations(txed_datasets_augmentations)    
@@ -90,7 +90,7 @@ instance_datasets_augmentations = [
     BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
     RandomTimeShift(key="X", max_shift=5, shift_unit="samples",p_pick_key="p_pick"),
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 1, 'D': 1, 'X': 1})  
+    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})  
 ]
 
 instance_datasets.add_augmentations(instance_datasets_augmentations)  
@@ -114,7 +114,7 @@ pnw_datasets_augmentations = [
     BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
     RandomTimeShift(key="X", max_shift=5, shift_unit="samples",p_pick_key="p_pick"),
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 1, 'D': 1, 'X': 1})  
+    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})  
 ]
 
 pnw_datasets.add_augmentations(pnw_datasets_augmentations)  
@@ -138,7 +138,7 @@ diting_datasets_augmentations = [
     BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
     RandomTimeShift(key="X", max_shift=5, shift_unit="samples",p_pick_key="p_pick"),
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 1, 'D': 1, 'X': 1})  
+    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})  
 ]
 
 diting_datasets.add_augmentations(diting_datasets_augmentations)  
