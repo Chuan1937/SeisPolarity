@@ -44,20 +44,17 @@ class Instance:
     - Y: Polarity labels (0=positive, 1=negative, 2=undecidable)
     - p_pick: P-wave arrival sample indices
     
-    Note: Original paper uses:
-    - positive = 1
-    - negative = 0
-    - undecidable = 2
-    
-    This is converted to SeisPolarity convention:
-    - 0 = positive (from paper's positive=1)
-    - 1 = negative (from paper's negative=0)
-    - 2 = undecidable (unchanged)
+    Note: Label mapping (SeisPolarity convention):
+    - 0 = positive
+    - 1 = negative
+    - 2 = undecidable
     
     Label sampling strategy (matching notebook processing):
     - Select all positive samples
     - Select all negative samples
-    - Select undecidable = (positive + negative) * 2
+    - Apply polarity inversion to both positive and negative to achieve 1:1 balance
+    - Select undecidable = positive + negative (after inversion, each category has same count)
+    - Final distribution: positive:negative:undecidable = 1:1:1
     
     Example:
         processor = Instance(
@@ -206,8 +203,9 @@ class Instance:
     
     def sample_by_strategy(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Apply paper-based sampling strategy to balance labels.
-        Paper convention: positive + negative * 2 = undecidable target.
+        Apply sampling strategy to balance labels with polarity inversion.
+        After inversion, positive and negative each have (positive + negative) samples.
+        Undecidable is sampled to match this count for 1:1:1 balance.
         
         Args:
             df: Input DataFrame with polarity labels
@@ -217,27 +215,29 @@ class Instance:
         """
         df = df.copy()
         
-        # Notebook/paper convention: (positive + negative) * 2 = undecidable target
-        # Use the data as described in the Instance notebook processing
+        # Count samples by polarity
         pos_count = len(df[df['trace_polarity'] == 'positive'])
         neg_count = len(df[df['trace_polarity'] == 'negative'])
-        undec_target = (pos_count + neg_count) * 2
         undec_count = len(df[df['trace_polarity'] == 'undecidable'])
         
-        logger.info(f"Paper balance strategy:")
+        # After polarity inversion, each of positive and negative will have this count
+        total_polarized = pos_count + neg_count
+        
+        logger.info(f"Balance strategy (with polarity inversion):")
         logger.info(f"  Positive: {pos_count}")
         logger.info(f"  Negative: {neg_count}")
-        logger.info(f"  Undecidable target: {undec_target}")
+        logger.info(f"  After inversion - positive: {total_polarized}, negative: {total_polarized}")
+        logger.info(f"  Undecidable target: {total_polarized}")
         logger.info(f"  Undecidable available: {undec_count}")
         
-        # Sample undecidable to match target if available
-        if undec_count >= undec_target:
+        # Sample undecidable to match total_polarized count
+        if undec_count >= total_polarized:
             undec_sample = df[df['trace_polarity'] == 'undecidable'].sample(
-                undec_target, random_state=42
+                total_polarized, random_state=42
             )
         else:
             undec_sample = df[df['trace_polarity'] == 'undecidable']
-            logger.warning(f"Undecidable samples ({undec_count}) less than target ({undec_target})")
+            logger.warning(f"Undecidable samples ({undec_count}) less than target ({total_polarized})")
         
         result = pd.concat([
             df[df['trace_polarity'] == 'positive'],
@@ -245,7 +245,8 @@ class Instance:
             undec_sample
         ]).reset_index(drop=True)
         
-        logger.info(f"  Total samples after balancing: {len(result)}")
+        logger.info(f"  Total samples (before inversion): {len(result)}")
+        logger.info(f"  Expected after inversion: positive={total_polarized}, negative={total_polarized}, undecidable={len(undec_sample)}")
         return result
     
     def extract_waveform(self, hdf5_file: h5py.File, trace_name: str) -> Optional[np.ndarray]:
@@ -300,23 +301,16 @@ class Instance:
         logger.info(f"Opening HDF5 file: {self.hdf5_path}")
         hdf5_file = h5py.File(self.hdf5_path, 'r')
         
-        # Extract waveforms and labels
+        # Extract waveforms and labels with polarity inversion
         waveforms = []
         labels = []
         p_picks = []
         
-        logger.info("Extracting waveforms and labels...")
+        logger.info("Extracting waveforms and labels with polarity inversion...")
         for idx, row in tqdm(df.iterrows(), total=len(df), desc="Processing"):
             trace_name = row['trace_name_original']
             polarity = row['trace_polarity']
             p_arrival = int(row['trace_P_arrival_sample'])
-            
-            # Map polarity label (convert from paper convention)
-            if polarity in self._label_map:
-                label = self._label_map[polarity]
-            else:
-                logger.warning(f"Unknown polarity: {polarity}")
-                continue
             
             # Extract waveform
             waveform = self.extract_waveform(hdf5_file, trace_name)
@@ -335,13 +329,36 @@ class Instance:
             if p_arrival >= self.waveform_length:
                 p_arrival = self.waveform_length - 1
             
-            waveforms.append(waveform)
-            labels.append(label)
-            p_picks.append(p_arrival)
+            # Apply polarity inversion to achieve 1:1 balance
+            if polarity == 'positive':
+                # Positive: keep as is (label 0) and inverted (label 1)
+                waveforms.append(waveform)
+                labels.append(self._label_map['positive'])  # 0
+                p_picks.append(p_arrival)
+                
+                waveforms.append(-waveform)  # Inverted
+                labels.append(self._label_map['negative'])  # 1
+                p_picks.append(p_arrival)
+                
+            elif polarity == 'negative':
+                # Negative: keep as is (label 1) and inverted (label 0)
+                waveforms.append(waveform)
+                labels.append(self._label_map['negative'])  # 1
+                p_picks.append(p_arrival)
+                
+                waveforms.append(-waveform)  # Inverted
+                labels.append(self._label_map['positive'])  # 0
+                p_picks.append(p_arrival)
+                
+            else:  # undecidable
+                # Undecidable: keep as is (label 2)
+                waveforms.append(waveform)
+                labels.append(self._label_map['undecidable'])  # 2
+                p_picks.append(p_arrival)
         
         hdf5_file.close()
         
-        logger.info(f"Successfully extracted {len(waveforms)} samples")
+        logger.info(f"Successfully extracted {len(waveforms)} samples (with polarity inversion)")
         
         # Convert to arrays
         X = np.array(waveforms, dtype=np.float32)
@@ -380,7 +397,7 @@ class Instance:
             f.attrs['sampling_rate'] = self.sampling_rate
             f.attrs['component'] = self.component
             f.attrs['num_samples'] = len(X)
-            f.attrs['sampling_strategy'] = 'notebook_undec_2x_posneg'
+            f.attrs['sampling_strategy'] = 'polarity_inversion_1to1to1'
             f.attrs['label_map'] = str(self._label_map)
         
         logger.info(f"Processed data saved successfully!")

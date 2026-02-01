@@ -8,10 +8,12 @@ Data Format:
 - CSV: Contains metadata (trace_name, trace_polarity, trace_p_arrival_sample)
 - HDF5: Contains waveform data in bucket structure (shape: n_samples, 3, 6000)
 
-Label sampling strategy (matching notebook processing):
+Label sampling strategy (polarity inversion for 1:1:1 balance):
 - Select all up samples
 - Select all down samples
-- Select unknown = 2 * (up_count + down_count)
+- Apply polarity inversion to both up and down to achieve 1:1 balance
+- Select unknown = up + down (after inversion, each category has same count)
+- Final distribution: up:down:unknown = 1:1:1
 
 Usage:
     processor = TXED(
@@ -44,10 +46,12 @@ class TXED:
     - Y: Polarity labels (0=U/up, 1=D/down, 2=K/X/unknown)
     - p_pick: P-wave arrival sample indices
     
-    Label sampling strategy (matching notebook processing):
+    Label sampling strategy (polarity inversion for 1:1:1 balance):
     - Select all up samples
     - Select all down samples
-    - Select unknown = 2 * (up_count + down_count)
+    - Apply polarity inversion to both up and down to achieve 1:1 balance
+    - Select unknown = up + down (after inversion, each category has same count)
+    - Final distribution: up:down:unknown = 1:1:1
     
     Example:
         processor = TXED(
@@ -195,7 +199,9 @@ class TXED:
     
     def sample_by_strategy(self, df: pd.DataFrame) -> pd.DataFrame:
         """
-        Apply notebook-based sampling strategy: unknown = 2 * (U + D).
+        Apply sampling strategy to balance labels with polarity inversion.
+        After inversion, up and down each have (up + down) samples.
+        Unknown is sampled to match this count for 1:1:1 balance.
         
         Args:
             df: Input DataFrame with polarity labels
@@ -217,29 +223,32 @@ class TXED:
         d_count = counts.get('D', 0)
         unknown_count = counts.get('unknown', 0)
         
-        logger.info(f"Label counts - U: {u_count}, D: {d_count}, unknown: {unknown_count}")
+        # After polarity inversion, each of up and down will have this count
+        total_polarized = u_count + d_count
         
-        total_ud = u_count + d_count
-        target_unknown = 2 * total_ud
-        
-        logger.info(f"Notebook strategy: select all U and D, unknown = 2 * (U + D)")
-        logger.info(f"  Target unknown count: {target_unknown}")
+        logger.info(f"Balance strategy (with polarity inversion):")
+        logger.info(f"  Up: {u_count}")
+        logger.info(f"  Down: {d_count}")
+        logger.info(f"  After inversion - up: {total_polarized}, down: {total_polarized}")
+        logger.info(f"  Unknown target: {total_polarized}")
+        logger.info(f"  Unknown available: {unknown_count}")
         
         # Select all U and D samples
         sampled_ud = df[df['_label_category'].isin(['U', 'D'])]
         
-        # Select target number of unknown samples
+        # Sample unknown to match total_polarized count
         unknown_pool = df[df['_label_category'] == 'unknown']
-        if len(unknown_pool) >= target_unknown:
-            sampled_unknown = unknown_pool.sample(target_unknown, random_state=42)
-            logger.info(f"  Sampled {target_unknown} unknown from {len(unknown_pool)} available")
+        if len(unknown_pool) >= total_polarized:
+            sampled_unknown = unknown_pool.sample(total_polarized, random_state=42)
+            logger.info(f"  Sampled {total_polarized} unknown from {len(unknown_pool)} available")
         else:
             sampled_unknown = unknown_pool
-            logger.warning(f"  Unknown samples ({len(unknown_pool)}) less than target ({target_unknown}), using all available")
+            logger.warning(f"  Unknown samples ({len(unknown_pool)}) less than target ({total_polarized})")
         
         result = pd.concat([sampled_ud, sampled_unknown])
         
-        logger.info(f"Sampled {len(result)} samples")
+        logger.info(f"  Total samples (before inversion): {len(result)}")
+        logger.info(f"  Expected after inversion: up={total_polarized}, down={total_polarized}, unknown={len(sampled_unknown)}")
         return result.reset_index(drop=True)
     
     def extract_waveform(self, hdf5_file: h5py.File, trace_name: str) -> Optional[np.ndarray]:
@@ -300,18 +309,11 @@ class TXED:
         labels = []
         p_picks = []
         
-        logger.info("Extracting waveforms and labels...")
+        logger.info("Extracting waveforms and labels with polarity inversion...")
         for idx, row in tqdm(df.iterrows(), total=len(df), desc="Processing"):
             trace_name = row['trace_name']
             polarity = row['trace_polarity']
             p_arrival = int(row['trace_p_arrival_sample'])
-            
-            # Map polarity label
-            if polarity in self._label_map:
-                label = self._label_map[polarity]
-            else:
-                logger.warning(f"Unknown polarity: {polarity}")
-                continue
             
             # Extract waveform
             waveform = self.extract_waveform(hdf5_file, trace_name)
@@ -330,9 +332,32 @@ class TXED:
             if p_arrival >= self.waveform_length:
                 p_arrival = self.waveform_length - 1
             
-            waveforms.append(waveform)
-            labels.append(label)
-            p_picks.append(p_arrival)
+            # Apply polarity inversion to achieve 1:1 balance
+            if polarity == 'U':
+                # Up: keep as is (label 0) and inverted (label 1)
+                waveforms.append(waveform)
+                labels.append(self._label_map['U'])  # 0
+                p_picks.append(p_arrival)
+                
+                waveforms.append(-waveform)  # Inverted
+                labels.append(self._label_map['D'])  # 1
+                p_picks.append(p_arrival)
+                
+            elif polarity == 'D':
+                # Down: keep as is (label 1) and inverted (label 0)
+                waveforms.append(waveform)
+                labels.append(self._label_map['D'])  # 1
+                p_picks.append(p_arrival)
+                
+                waveforms.append(-waveform)  # Inverted
+                labels.append(self._label_map['U'])  # 0
+                p_picks.append(p_arrival)
+                
+            else:  # unknown
+                # Unknown: keep as is (label 2)
+                waveforms.append(waveform)
+                labels.append(self._label_map['unknown'])  # 2
+                p_picks.append(p_arrival)
         
         hdf5_file.close()
         
@@ -377,7 +402,7 @@ class TXED:
             f.attrs['sampling_rate'] = self.sampling_rate
             f.attrs['component'] = self.component
             f.attrs['num_samples'] = len(X)
-            f.attrs['sampling_strategy'] = 'notebook_unknown_2x_UD'
+            f.attrs['sampling_strategy'] = 'polarity_inversion_1to1to1'
             f.attrs['label_map'] = str(self._label_map)
         
         logger.info(f"Processed data saved successfully!")

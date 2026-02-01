@@ -26,7 +26,7 @@ DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is
 # processor.process()
 
 # 导入数据
-txed_path = r"/home/yuan/code/SeisPolarity/datasets/Txed/txed_polarity.hdf5"
+txed_path = r"/home/yuan/code/SeisPolarity/datasets/Txed/Txed_polarity.hdf5"
 
 datasets = WaveformDataset(
     path=txed_path,

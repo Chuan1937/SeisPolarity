@@ -6,14 +6,14 @@ import torch.nn as nn
 from seispolarity.data.base import WaveformDataset
 from seispolarity.models.eqpolarity import EQPolarityCCT
 from seispolarity.training import Trainer, TrainingConfig
-from seispolarity import BandpassFilter, Normalize,PolarityInversion
+from seispolarity import BandpassFilter, Normalize
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 crop_left = 300
 crop_right = 300
 ALLOWED_LABELS = [0,1]
 # Txed Datasets
-txed_path = r"/home/yuan/code/SeisPolarity/datasets/Txed/txed_polarity.hdf5"
+txed_path = r"/home/yuan/code/SeisPolarity/datasets/Txed/Txed_polarity.hdf5"
 
 txed_datasets = WaveformDataset(
     path=txed_path,
@@ -33,8 +33,7 @@ txed_datasets = WaveformDataset(
 # 归一化处理
 txed_datasets_augmentations = [
     BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
-    Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})  
+    Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"), 
 ]
 
 txed_datasets.add_augmentations(txed_datasets_augmentations)    
@@ -86,8 +85,7 @@ instance_datasets = WaveformDataset(
 
 instance_datasets_augmentations = [
     BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
-    Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})  
+    Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),  
 ]
 
 instance_datasets.add_augmentations(instance_datasets_augmentations)  
@@ -110,7 +108,6 @@ pnw_datasets = WaveformDataset(
 pnw_datasets_augmentations = [
     BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})  
 ]
 
 pnw_datasets.add_augmentations(pnw_datasets_augmentations)  
@@ -132,8 +129,7 @@ diting_datasets = WaveformDataset(
 
 diting_datasets_augmentations = [
     BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
-    Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})  
+    Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"), 
 ]
 
 diting_datasets.add_augmentations(diting_datasets_augmentations)  

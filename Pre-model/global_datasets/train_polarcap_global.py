@@ -6,14 +6,14 @@ import torch.nn as nn
 from seispolarity.data.base import WaveformDataset
 from seispolarity.models.polarCAP import PolarCAP, PolarCAPLoss
 from seispolarity.training import Trainer, TrainingConfig
-from seispolarity import BandpassFilter, Normalize, PolarityInversion, RandomTimeShift, Demean, Detrend, Stretching
+from seispolarity import Normalize, RandomTimeShift
 DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is_available() else "cpu"
 
 crop_left = 32
 crop_right = 32
 ALLOWED_LABELS = [0, 1]
 # Txed Datasets
-txed_path = r"/home/yuan/code/SeisPolarity/datasets/Txed/txed_polarity.hdf5"
+txed_path = r"/home/yuan/code/SeisPolarity/datasets/Txed/Txed_polarity.hdf5"
 
 txed_datasets = WaveformDataset(
     path=txed_path,
@@ -32,14 +32,8 @@ txed_datasets = WaveformDataset(
 # 1-20hz 带通滤波
 # 归一化处理
 txed_datasets_augmentations = [
-    # Demean(key="X", axis=-1),
-    # Detrend(key="X", axis=-1, type="linear"),
-    # BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
-    # Stretching(key="X", original_fs=100, stretch_factors=[2, 3], 
-    #            target_samples=400, p_pick_key="p_pick", crop_left=crop_left, crop_right=crop_right),
     RandomTimeShift(key="X", max_shift=10, shift_unit="samples",p_pick_key="p_pick"),
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})
 ]
 
 txed_datasets.add_augmentations(txed_datasets_augmentations)    
@@ -90,14 +84,8 @@ instance_datasets = WaveformDataset(
 )
 
 instance_datasets_augmentations = [
-    # Demean(key="X", axis=-1),
-    # Detrend(key="X", axis=-1, type="linear"),
-    # BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
-    # Stretching(key="X", original_fs=100, stretch_factors=[2, 3], 
-    #            target_samples=400, p_pick_key="p_pick", crop_left=crop_left, crop_right=crop_right),
     RandomTimeShift(key="X", max_shift=10, shift_unit="samples",p_pick_key="p_pick"),
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})
 ]
 
 instance_datasets.add_augmentations(instance_datasets_augmentations)  
@@ -118,14 +106,8 @@ pnw_datasets = WaveformDataset(
 )
 
 pnw_datasets_augmentations = [
-    # Demean(key="X", axis=-1),
-    # Detrend(key="X", axis=-1, type="linear"),
-    # BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
-    # Stretching(key="X", original_fs=100, stretch_factors=[2, 3], 
-    #            target_samples=400, p_pick_key="p_pick", crop_left=crop_left, crop_right=crop_right),
     RandomTimeShift(key="X", max_shift=10, shift_unit="samples",p_pick_key="p_pick"),
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})
 ]
 
 pnw_datasets.add_augmentations(pnw_datasets_augmentations)  
@@ -146,14 +128,8 @@ diting_datasets = WaveformDataset(
 )
 
 diting_datasets_augmentations = [
-    # Demean(key="X", axis=-1),
-    # Detrend(key="X", axis=-1, type="linear"),
-    # BandpassFilter(key="X", lowcut=1, highcut=20, fs=100, order=4),
-    # Stretching(key="X", original_fs=100, stretch_factors=[2, 3], 
-    #            target_samples=400, p_pick_key="p_pick", crop_left=crop_left, crop_right=crop_right),
     RandomTimeShift(key="X", max_shift=10, shift_unit="samples",p_pick_key="p_pick"),
     Normalize(key="X", amp_norm_axis=-1, amp_norm_type="std"),
-    PolarityInversion(key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2})
 ]
 
 diting_datasets.add_augmentations(diting_datasets_augmentations)  
