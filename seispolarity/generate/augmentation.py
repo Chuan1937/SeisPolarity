@@ -424,15 +424,15 @@ class RandomTimeShift:
             # 只修改metadata中的p_pick
             if meta is not None:
                 # 获取 P 波到时：优先从 metadata 中读取，否则使用 fixed_p_pick
+                has_p_pick_key = False
+                p_pick = None
+                
                 if self.p_pick_key in meta:
                     p_pick = meta[self.p_pick_key]
                     has_p_pick_key = True
                 elif self.fixed_p_pick is not None:
                     p_pick = self.fixed_p_pick
                     has_p_pick_key = False
-                else:
-                    # 既没有 p_pick_key 也没有 fixed_p_pick，不做任何操作
-                    pass
                 
                 # 应用平移
                 if has_p_pick_key or (self.fixed_p_pick is not None):
@@ -703,16 +703,17 @@ class DitingMotionLoss(nn.Module):
         self.clarity_weights = clarity_weights or [1.0, 1.0, 1.0, 1.0]
         self.has_clarity_labels = has_clarity_labels
         
-    def forward(self, inputs, targets):
+    def forward(self, outputs, targets, **kwargs):
         """
         Args:
-            inputs: 模型输出，应该是8个张量的元组/列表
+            outputs: 模型输出，应该是8个张量的元组/列表
             targets: 目标标签，可以是：
                 - 单个张量：只有polarity标签
                 - 元组/列表：(polarity_targets, clarity_targets)
+            **kwargs: 额外参数（用于接收 inputs 关键字参数）
         """
-        if not isinstance(inputs, (tuple, list)) or len(inputs) != 8:
-            raise ValueError(f"DitingMotionLoss expects 8 outputs, got {len(inputs) if isinstance(inputs, (tuple, list)) else 1}")
+        if not isinstance(outputs, (tuple, list)) or len(outputs) != 8:
+            raise ValueError(f"DitingMotionLoss expects 8 outputs, got {len(outputs) if isinstance(outputs, (tuple, list)) else 1}")
         
         # 处理目标标签
         if isinstance(targets, (tuple, list)) and len(targets) == 2:
@@ -727,13 +728,13 @@ class DitingMotionLoss(nn.Module):
         
         # 计算polarity损失（前4个输出）
         for i in range(4):
-            loss = self.focal_loss(inputs[i], polarity_targets)
+            loss = self.focal_loss(outputs[i], polarity_targets)
             total_loss += self.polarity_weights[i] * loss
         
         # 计算clarity损失（后4个输出），如果有clarity标签
         if self.has_clarity_labels and has_clarity and clarity_targets is not None:
             for i in range(4):
-                loss = self.focal_loss(inputs[i+4], clarity_targets)
+                loss = self.focal_loss(outputs[i+4], clarity_targets)
                 total_loss += self.clarity_weights[i] * loss
         
         return total_loss

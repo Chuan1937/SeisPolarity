@@ -69,6 +69,15 @@ def __getattr__(name):
     elif name == "RandomTimeShift":
         from .generate.augmentation import RandomTimeShift
         return RandomTimeShift
+    elif name == "DifferentialFeatures":
+        from .generate.augmentation import DifferentialFeatures
+        return DifferentialFeatures
+    elif name == "ChangeDtype":
+        from .generate.augmentation import ChangeDtype
+        return ChangeDtype
+    elif name == "DitingMotionLoss":
+        from .generate.augmentation import DitingMotionLoss
+        return DitingMotionLoss
     elif name == "Stretching":
         from .generate.augmentation import Stretching
         return Stretching
