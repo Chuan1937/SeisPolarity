@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent)) # Add project root to sys.path
 
-from seispolarity.models import SCSN, EQPolarityCCT, DitingMotion
+from seispolarity.models import SCSN, EQPolarityCCT, DitingMotion, PPNet, PolarCAP, CFM, RPNet
 
 # Constants
 HF_REPO = "HeXingChen/SeisPolarity-Model"
@@ -26,30 +26,153 @@ MODELSCOPE_REPO = "chuanjun/HeXingChen"
 MODELS_CONFIG = {
     "ross": {
         "filename": "ROSS_SCSN.pth",
-        "filename_hf": "ROSS/ROSS_SCSN.pth",  # Hugging Face路径（带子文件夹）
-        "filename_ms": "ROSS/ROSS_SCSN.pth",  # ModelScope路径（带子文件夹）
+        "filename_hf": "ROSS/ROSS_SCSN.pth",
+        "filename_ms": "ROSS/ROSS_SCSN.pth",
         "model_class": SCSN,
         "input_len": 400,
         "num_classes": 3,
-        "class_map": {0: "Up", 1: "Down", 2: "Unknown"}
+        "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
+        "output_index": None
+    },
+    "ross_global": {
+        "filename": "ROSS_GLOBAL.pth",
+        "filename_hf": "ROSS/ROSS_GLOBAL.pth",
+        "filename_ms": "ROSS/ROSS_GLOBAL.pth",
+        "model_class": SCSN,
+        "input_len": 400,
+        "num_classes": 3,
+        "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
+        "output_index": None
     },
     "eqpolarity": {
         "filename": "EQPOLARITY_SCSN.pth",
-        "filename_hf": "EQPOLARITY/EQPOLARITY_SCSN.pth",  # Hugging Face路径（带子文件夹）
-        "filename_ms": "EQPOLARITY/EQPOLARITY_SCSN.pth",  # ModelScope路径（带子文件夹）
+        "filename_hf": "EQPOLARITY/EQPOLARITY_SCSN.pth",
+        "filename_ms": "EQPOLARITY/EQPOLARITY_SCSN.pth",
         "model_class": EQPolarityCCT,
         "input_len": 600,
         "num_classes": 2,
-        "class_map": {0: "Up", 1: "Down"}
+        "class_map": {0: "Up", 1: "Down"},
+        "output_index": None
+    },
+    "eqpolarity_txed": {
+        "filename": "EQPOLARITY_TXED.pth",
+        "filename_hf": "EQPOLARITY/EQPOLARITY_TXED.pth",
+        "filename_ms": "EQPOLARITY/EQPOLARITY_TXED.pth",
+        "model_class": EQPolarityCCT,
+        "input_len": 600,
+        "num_classes": 2,
+        "class_map": {0: "Up", 1: "Down"},
+        "output_index": None
+    },
+    "eqpolarity_global": {
+        "filename": "EQPOLARITY_GLOBAL.pth",
+        "filename_hf": "EQPOLARITY/EQPOLARITY_GLOBAL.pth",
+        "filename_ms": "EQPOLARITY/EQPOLARITY_GLOBAL.pth",
+        "model_class": EQPolarityCCT,
+        "input_len": 600,
+        "num_classes": 2,
+        "class_map": {0: "Up", 1: "Down"},
+        "output_index": None
     },
     "diting_motion": {
         "filename": "DITINGMOTION_DITINGSCSN.pth",
-        "filename_hf": "DITINGMOTION/DITINGMOTION_DITINGSCSN.pth",  # Hugging Face路径（带子文件夹）
-        "filename_ms": "DITINGMOTION/DITINGMOTION_DITINGSCSN.pth",  # ModelScope路径（带子文件夹）
+        "filename_hf": "DITINGMOTION/DITINGMOTION_DITINGSCSN.pth",
+        "filename_ms": "DITINGMOTION/DITINGMOTION_DITINGSCSN.pth",
         "model_class": DitingMotion,
         "input_len": 128,
         "num_classes": 3,
-        "class_map": {0: "Up", 1: "Down", 2: "Unknown"}
+        "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
+        "output_index": 3
+    },
+    "diting_global": {
+        "filename": "DITING_GLOBAL.pth",
+        "filename_hf": "DITINGMOTION/DITING_GLOBAL.pth",
+        "filename_ms": "DITINGMOTION/DITING_GLOBAL.pth",
+        "model_class": DitingMotion,
+        "input_len": 128,
+        "num_classes": 3,
+        "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
+        "output_index": 3
+    },
+    "app": {
+        "filename": "APP_SCSN.pth",
+        "filename_hf": "APP/APP_SCSN.pth",
+        "filename_ms": "APP/APP_SCSN.pth",
+        "model_class": PPNet,
+        "input_len": 400,
+        "num_classes": 3,
+        "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
+        "output_index": 1
+    },
+    "app_global": {
+        "filename": "APP_GLOBAL.pth",
+        "filename_hf": "APP/APP_GLOBAL.pth",
+        "filename_ms": "APP/APP_GLOBAL.pth",
+        "model_class": PPNet,
+        "input_len": 400,
+        "num_classes": 3,
+        "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
+        "output_index": 1
+    },
+    "cfm": {
+        "filename": "CFM_SCSN.pth",
+        "filename_hf": "CFM/CFM_SCSN.pth",
+        "filename_ms": "CFM/CFM_SCSN.pth",
+        "model_class": CFM,
+        "input_len": 160,
+        "num_classes": 2,
+        "class_map": {0: "Up", 1: "Down"},
+        "output_index": None
+    },
+    "cfm_global": {
+        "filename": "CFM_GLOBAL.pth",
+        "filename_hf": "CFM/CFM_GLOBAL.pth",
+        "filename_ms": "CFM/CFM_GLOBAL.pth",
+        "model_class": CFM,
+        "input_len": 160,
+        "num_classes": 2,
+        "class_map": {0: "Up", 1: "Down"},
+        "output_index": None
+    },
+    "polarcap": {
+        "filename": "POLARCAP_SCSN.pth",
+        "filename_hf": "POLARCAP/POLARCAP_SCSN.pth",
+        "filename_ms": "POLARCAP/POLARCAP_SCSN.pth",
+        "model_class": PolarCAP,
+        "input_len": 64,
+        "num_classes": 2,
+        "class_map": {0: "Up", 1: "Down"},
+        "output_index": 1
+    },
+    "polarcap_global": {
+        "filename": "POLARCAP_GLOBAL.pth",
+        "filename_hf": "POLARCAP/POLARCAP_GLOBAL.pth",
+        "filename_ms": "POLARCAP/POLARCAP_GLOBAL.pth",
+        "model_class": PolarCAP,
+        "input_len": 64,
+        "num_classes": 2,
+        "class_map": {0: "Up", 1: "Down"},
+        "output_index": 1
+    },
+    "rpnet": {
+        "filename": "RPNET_SCSN.pth",
+        "filename_hf": "RPNET/RPNET_SCSN.pth",
+        "filename_ms": "RPNET/RPNET_SCSN.pth",
+        "model_class": RPNet,
+        "input_len": 400,
+        "num_classes": 2,
+        "class_map": {0: "Up", 1: "Down"},
+        "output_index": None
+    },
+    "rpnet_global": {
+        "filename": "RPNET_GLOBAL.pth",
+        "filename_hf": "RPNET/RPNET_GLOBAL.pth",
+        "filename_ms": "RPNET/RPNET_GLOBAL.pth",
+        "model_class": RPNet,
+        "input_len": 400,
+        "num_classes": 2,
+        "class_map": {0: "Up", 1: "Down"},
+        "output_index": None
     }
 }
 
@@ -85,18 +208,18 @@ class Predictor:
             print(f"  - {config['filename']}: {name}")
         print("=" * 60)
 
-        # model_name 必须是完整的文件名，如 "Ross_SCSN"
+        # model_name 可以是配置键（如 "ross"）或完整文件名（如 "ROSS_SCSN.pth"）
         # 在 MODELS_CONFIG 中查找匹配的配置
         self.model_filename = model_name
         found_config = None
         for name, config in MODELS_CONFIG.items():
-            if model_name == config['filename'] or model_name == config['filename_hf'] or model_name == config['filename_ms'].split('/')[-1]:
+            if model_name == name or model_name == config['filename'] or model_name == config['filename_hf'] or model_name == config['filename_ms'].split('/')[-1]:
                 found_config = config
                 self.config_key = name
                 break
 
         if found_config is None:
-            raise ValueError(f"Unknown model '{model_name}'. Available filenames: {[config['filename'] for config in MODELS_CONFIG.values()]}")
+            raise ValueError(f"Unknown model '{model_name}'. Available names: {list(MODELS_CONFIG.keys())}")
 
         print(f"Using model: {self.model_filename} ({self.config_key})")
 
@@ -112,15 +235,30 @@ class Predictor:
         
         # 2. Initialize Model
         # 根据模型类型使用不同的初始化参数
-        if self.config_key == "eqpolarity":
+        if self.config_key in ["eqpolarity", "eqpolarity_txed", "eqpolarity_global"]:
             # EQPolarityCCT 需要 input_length 参数
-            # 先创建模型但不立即加载权重
             self.model = self.config["model_class"](input_length=self.config["input_len"])
-        elif self.config_key == "diting_motion":
+        elif self.config_key in ["diting_motion", "diting_global"]:
             # DitingMotion 需要 input_channels 参数
             self.model = self.config["model_class"](input_channels=2)
+        elif self.config_key in ["app", "app_global"]:
+            # PPNet 需要 input_len, input_channels, num_classes 参数
+            self.model = self.config["model_class"](
+                input_len=self.config["input_len"],
+                input_channels=1,
+                num_classes=self.config["num_classes"]
+            )
+        elif self.config_key in ["polarcap", "polarcap_global"]:
+            # PolarCAP 需要 drop_rate 参数
+            self.model = self.config["model_class"](drop_rate=0.3)
+        elif self.config_key in ["cfm", "cfm_global"]:
+            # CFM 需要 sample_rate 参数
+            self.model = self.config["model_class"](sample_rate=100.0)
+        elif self.config_key in ["rpnet", "rpnet_global"]:
+            # RPNet 需要 sample_rate 参数
+            self.model = self.config["model_class"](sample_rate=100.0)
         else:
-            # 其他模型使用 num_fm_classes 参数
+            # 其他模型（ross, ross_global）使用 num_fm_classes 参数
             self.model = self.config["model_class"](num_fm_classes=self.config["num_classes"])
         
         # 3. 加载权重（这会处理输出层形状不匹配的问题）
@@ -366,11 +504,25 @@ class Predictor:
                 logits = self.model(batch)
                 
                 # 处理不同形状的输出
-                # DitingMotion模型返回8个输出，我们需要使用第4个输出（索引3）即融合输出
-                if isinstance(logits, (tuple, list)) and len(logits) == 8:
-                    # DitingMotion模型：使用融合输出（索引3）
-                    fuse_output = logits[3]
-                    probs = torch.softmax(fuse_output, dim=1)
+                output_index = self.config.get("output_index", None)
+                
+                if isinstance(logits, (tuple, list)):
+                    # 多输出模型
+                    if len(logits) == 8:
+                        # DitingMotion模型：使用融合输出（索引3）
+                        fuse_output = logits[3]
+                        probs = torch.softmax(fuse_output, dim=1)
+                    elif len(logits) == 2:
+                        # PPNet 或 PolarCAP：使用 output_index 指定的输出
+                        if output_index is not None:
+                            selected_output = logits[output_index]
+                            probs = torch.softmax(selected_output, dim=1)
+                        else:
+                            # 默认使用第二个输出（分类输出）
+                            probs = torch.softmax(logits[1], dim=1)
+                    else:
+                        # 其他多输出情况，使用最后一个输出
+                        probs = torch.softmax(logits[-1], dim=1)
                 elif logits.shape[1] == 1:
                     # 二分类的 sigmoid 输出 (batch, 1)
                     probs = torch.sigmoid(logits)
@@ -456,11 +608,25 @@ class Predictor:
                 logits = self.model(x)
                 
                 # 处理不同形状的输出
-                # DitingMotion模型返回8个输出，我们需要使用第4个输出（索引3）即融合输出
-                if isinstance(logits, (tuple, list)) and len(logits) == 8:
-                    # DitingMotion模型：使用融合输出（索引3）
-                    fuse_output = logits[3]
-                    probs = torch.softmax(fuse_output, dim=1)
+                output_index = self.config.get("output_index", None)
+                
+                if isinstance(logits, (tuple, list)):
+                    # 多输出模型
+                    if len(logits) == 8:
+                        # DitingMotion模型：使用融合输出（索引3）
+                        fuse_output = logits[3]
+                        probs = torch.softmax(fuse_output, dim=1)
+                    elif len(logits) == 2:
+                        # PPNet 或 PolarCAP：使用 output_index 指定的输出
+                        if output_index is not None:
+                            selected_output = logits[output_index]
+                            probs = torch.softmax(selected_output, dim=1)
+                        else:
+                            # 默认使用第二个输出（分类输出）
+                            probs = torch.softmax(logits[1], dim=1)
+                    else:
+                        # 其他多输出情况，使用最后一个输出
+                        probs = torch.softmax(logits[-1], dim=1)
                 elif logits.shape[1] == 1:
                     # 二分类的 sigmoid 输出 (batch, 1)
                     probs = torch.sigmoid(logits)
