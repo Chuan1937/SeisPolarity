@@ -1,6 +1,5 @@
 """
 Unified Inference Interface for SeisPolarity models.
-seispolarity 模型的统一推断接口。
 """
 
 import os
@@ -32,7 +31,8 @@ MODELS_CONFIG = {
         "input_len": 400,
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
-        "output_index": None
+        "output_index": None,
+        "description": "ROSS model: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. Trained on SCSN dataset. 3-class classification (Up, Down, Unknown). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "ROSS_GLOBAL": {
         "filename": "ROSS_GLOBAL.pth",
@@ -42,7 +42,8 @@ MODELS_CONFIG = {
         "input_len": 400,
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
-        "output_index": None
+        "output_index": None,
+        "description": "ROSS model: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. Trained on global datasets: SCSN [13], INSTANCE: Michelini, A. et al. INSTANCE-the Italian seismic dataset for machine learning. Earth System Science Data 13, 5509-5544 (2021) [12], PNW: Ni, Y. et al. Curated Pacific Northwest AI-ready seismic dataset. https://eartharxiv.org/repository/view/5049/ (2023) [6], TXED: Chen, Y. et al. TXED: The Texas Earthquake Dataset for AI. Seismological Research Letters 95, 2013-2022 (2024) [21], DiTing. 3-class classification (Up, Down, Unknown). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "EQPOLARITY_SCSN": {
         "filename": "EQPOLARITY_SCSN.pth",
@@ -52,7 +53,8 @@ MODELS_CONFIG = {
         "input_len": 600,
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
-        "output_index": None
+        "output_index": None,
+        "description": "EQPolarity CCT model: Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion. IEEE Transactions on Geoscience and Remote Sensing (2024) [7]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. 2-class classification (Up, Down). Input length: 600 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "EQPOLARITY_TXED": {
         "filename": "EQPOLARITY_TXED.pth",
@@ -62,7 +64,8 @@ MODELS_CONFIG = {
         "input_len": 600,
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
-        "output_index": None
+        "output_index": None,
+        "description": "EQPolarity CCT model: Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion. IEEE Transactions on Geoscience and Remote Sensing (2024) [7]. Trained on TXED dataset: Chen, Y. et al. TXED: The Texas Earthquake Dataset for AI. Seismological Research Letters 95, 2013-2022 (2024) [21]. 2-class classification (Up, Down). Input length: 600 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "EQPOLARITY_GLOBAL": {
         "filename": "EQPOLARITY_GLOBAL.pth",
@@ -72,7 +75,8 @@ MODELS_CONFIG = {
         "input_len": 600,
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
-        "output_index": None
+        "output_index": None,
+        "description": "EQPolarity CCT model: Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion. IEEE Transactions on Geoscience and Remote Sensing (2024) [7]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. 2-class classification (Up, Down). Input length: 600 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "DITINGMOTION_DITINGSCSN": {
         "filename": "DITINGMOTION_DITINGSCSN.pth",
@@ -82,7 +86,8 @@ MODELS_CONFIG = {
         "input_len": 128,
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
-        "output_index": 3
+        "output_index": 3,
+        "description": "DiTingMotion model: Zhao, M. et al. DiTingMotion: A deep-learning first-motion-polarity classifier and its application to focal mechanism inversion. Frontiers in Earth Science 11, 1103914 (2023) [9]. Trained on DiTing dataset. Multi-output model for polarity and clarity prediction. 3-class classification (Up, Down, Unknown). Input length: 128 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "DITING_GLOBAL": {
         "filename": "DITING_GLOBAL.pth",
@@ -92,7 +97,8 @@ MODELS_CONFIG = {
         "input_len": 128,
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
-        "output_index": 3
+        "output_index": 3,
+        "description": "DiTingMotion model: Zhao, M. et al. DiTingMotion: A deep-learning first-motion-polarity classifier and its application to focal mechanism inversion. Frontiers in Earth Science 11, 1103914 (2023) [9]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. Multi-output model for polarity and clarity prediction. 3-class classification (Up, Down, Unknown). Input length: 128 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "APP_SCSN": {
         "filename": "APP_SCSN.pth",
@@ -102,7 +108,8 @@ MODELS_CONFIG = {
         "input_len": 400,
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
-        "output_index": 1
+        "output_index": 1,
+        "description": "APP (PPNet) model: Song, J., Zhu, W., Zi, J., Yang, H. & Chu, R. An Enhanced Focal Mechanism Catalog of Induced Earthquakes in Weiyuan, Sichuan, from Dense Array Data and a Multitask Deep Learning Model. The Seismic Record 5, 175-184 (2025) [2]; Zhu, W., Tai, K. S., Mousavi, S. M., Bailis, P. & Beroza, G. C. An End-to-End Earthquake Detection Method for Joint Phase Picking and Association using Deep Learning. JGR Solid Earth 127, e2021JB023283 (2022) [1]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. U-Net + LSTM + attention architecture. Multi-output model. 3-class classification (Up, Down, Unknown). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "APP_GLOBAL": {
         "filename": "APP_GLOBAL.pth",
@@ -112,7 +119,8 @@ MODELS_CONFIG = {
         "input_len": 400,
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
-        "output_index": 1
+        "output_index": 1,
+        "description": "APP (PPNet) model: Song, J., Zhu, W., Zi, J., Yang, H. & Chu, R. An Enhanced Focal Mechanism Catalog of Induced Earthquakes in Weiyuan, Sichuan, from Dense Array Data and a Multitask Deep Learning Model. The Seismic Record 5, 175-184 (2025) [2]; Zhu, W., Tai, K. S., Mousavi, S. M., Bailis, P. & Beroza, G. C. An End-to-End Earthquake Detection Method for Joint Phase Picking and Association using Deep Learning. JGR Solid Earth 127, e2021JB023283 (2022) [1]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. U-Net + LSTM + attention architecture. Multi-output model. 3-class classification (Up, Down, Unknown). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "CFM_SCSN": {
         "filename": "CFM_SCSN.pth",
@@ -122,7 +130,8 @@ MODELS_CONFIG = {
         "input_len": 160,
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
-        "output_index": None
+        "output_index": None,
+        "description": "CFM model: Messuti, G. et al. CFM: a convolutional neural network for first-motion polarity classification of seismic records in volcanic and tectonic areas. Frontiers in Earth Science 11, 1223686 (2023) [5]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. Multi-layer Conv1D + dense heads architecture. 2-class classification (Up, Down). Input length: 160 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "CFM_GLOBAL": {
         "filename": "CFM_GLOBAL.pth",
@@ -132,7 +141,8 @@ MODELS_CONFIG = {
         "input_len": 160,
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
-        "output_index": None
+        "output_index": None,
+        "description": "CFM model: Messuti, G. et al. CFM: a convolutional neural network for first-motion polarity classification of seismic records in volcanic and tectonic areas. Frontiers in Earth Science 11, 1223686 (2023) [5]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. Multi-layer Conv1D + dense heads architecture. 2-class classification (Up, Down). Input length: 160 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "POLARCAP_SCSN": {
         "filename": "POLARCAP_SCSN.pth",
@@ -142,7 +152,8 @@ MODELS_CONFIG = {
         "input_len": 64,
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
-        "output_index": 1
+        "output_index": 1,
+        "description": "PolarCAP model: Chakraborty, M. et al. PolarCAP-A deep learning approach for first motion polarity classification of earthquake waveforms. Artificial Intelligence in Geosciences 3, 46-52 (2022) [16]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. Encoder-decoder + classification head architecture. Multi-output model. 2-class classification (Up, Down). Input length: 64 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "POLARCAP_GLOBAL": {
         "filename": "POLARCAP_GLOBAL.pth",
@@ -152,7 +163,8 @@ MODELS_CONFIG = {
         "input_len": 64,
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
-        "output_index": 1
+        "output_index": 1,
+        "description": "PolarCAP model: Chakraborty, M. et al. PolarCAP-A deep learning approach for first motion polarity classification of earthquake waveforms. Artificial Intelligence in Geosciences 3, 46-52 (2022) [16]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. Encoder-decoder + classification head architecture. Multi-output model. 2-class classification (Up, Down). Input length: 64 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "RPNET_SCSN": {
         "filename": "RPNET_SCSN.pth",
@@ -162,7 +174,8 @@ MODELS_CONFIG = {
         "input_len": 400,
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
-        "output_index": None
+        "output_index": None,
+        "description": "RPNet model: Han, J., Kim, S. & Sheen, D.-H. RPNet: Robust P-Wave First-motion polarity determination using deep learning. Seismological Research Letters (2025) [17]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. ResNet-based architecture for polarity prediction. 2-class classification (Up, Down). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     },
     "RPNET_GLOBAL": {
         "filename": "RPNET_GLOBAL.pth",
@@ -172,63 +185,76 @@ MODELS_CONFIG = {
         "input_len": 400,
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
-        "output_index": None
+        "output_index": None,
+        "description": "RPNet model: Han, J., Kim, S. & Sheen, D.-H. RPNet: Robust P-Wave First-motion polarity determination using deep learning. Seismological Research Letters (2025) [17]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. ResNet-based architecture for polarity prediction. 2-class classification (Up, Down). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
     }
 }
 
 class Predictor:
     """
     High-level interface for polarity prediction.
-    极性预测的高级接口。
     
     Usage:
         >>> from seispolarity.inference import Predictor
+        >>> Predictor.list_pretrained(details=True)
         >>> model = Predictor("ROSS_GLOBAL")
         >>> preds = model.predict(waveforms)
     
-    Available Models (可使用模型):
-        - ROSS_SCSN: ROSS_SCSN.pth (3 classes: Up, Down, Unknown)
-        - ROSS_GLOBAL: ROSS_GLOBAL.pth (3 classes: Up, Down, Unknown)
-        - EQPOLARITY_SCSN: EQPOLARITY_SCSN.pth (2 classes: Up, Down)
-        - EQPOLARITY_TXED: EQPOLARITY_TXED.pth (2 classes: Up, Down)
-        - EQPOLARITY_GLOBAL: EQPOLARITY_GLOBAL.pth (2 classes: Up, Down)
-        - DITINGMOTION_DITINGSCSN: DITINGMOTION_DITINGSCSN.pth (3 classes: Up, Down, Unknown)
-        - DITING_GLOBAL: DITING_GLOBAL.pth (3 classes: Up, Down, Unknown)
-        - APP_SCSN: APP_SCSN.pth (3 classes: Up, Down, Unknown)
-        - APP_GLOBAL: APP_GLOBAL.pth (3 classes: Up, Down, Unknown)
-        - CFM_SCSN: CFM_SCSN.pth (2 classes: Up, Down)
-        - CFM_GLOBAL: CFM_GLOBAL.pth (2 classes: Up, Down)
-        - POLARCAP_SCSN: POLARCAP_SCSN.pth (2 classes: Up, Down)
-        - POLARCAP_GLOBAL: POLARCAP_GLOBAL.pth (2 classes: Up, Down)
-        - RPNET_SCSN: RPNET_SCSN.pth (2 classes: Up, Down)
-        - RPNET_GLOBAL: RPNET_GLOBAL.pth (2 classes: Up, Down)
+    Available Models:
+        Use Predictor.list_pretrained(details=True) to see all available models and their descriptions.
     
     Note: Use the full model name (e.g., "ROSS_SCSN", "ROSS_GLOBAL") to initialize the predictor.
-          使用完整模型名字初始化预测器（如 "ROSS_SCSN", "ROSS_GLOBAL"）。
     """
+    
+    @staticmethod
+    def list_pretrained(details: bool = True) -> dict:
+        """
+        List all available pretrained models.
+        
+        Args:
+            details (bool): If True, return model descriptions. If False, return only model names.
+        
+        Returns:
+            dict: Dictionary mapping model names to model configurations.
+        
+        Example:
+            >>> from seispolarity.inference import Predictor
+            >>> models = Predictor.list_pretrained(details=True)
+            >>> for name, config in models.items():
+            ...     print(f"{name}: {config['filename']}")
+        """
+        if details:
+            print("Available pretrained models:\n")
+            for name, config in MODELS_CONFIG.items():
+                print(f"{name}:")
+                print(f"  Filename: {config['filename']}")
+                print(f"  Input Length: {config['input_len']}")
+                print(f"  Classes: {config['num_classes']} ({', '.join([config['class_map'][i] for i in range(config['num_classes'])])})")
+                print(f"  Description: {config['description']}")
+                print("-" * 55)
+                print()
+        return MODELS_CONFIG
     
     def __init__(self, model_name: str = "ROSS_SCSN", device: Optional[str] = None, cache_dir: str = "./checkpoints_download", model_path: Optional[str] = None, force_ud: bool = False):
         """
         Initialize the predictor.
-        初始化预测器。
 
         Args:
             model_name (str): Name of the model to use (default: "ROSS_SCSN").
                              Must be one of the available model names (e.g., "ROSS_SCSN", "ROSS_GLOBAL", "APP_GLOBAL").
-                             必须使用完整模型名字（如 "ROSS_SCSN", "ROSS_GLOBAL", "APP_GLOBAL"）。
+                             Must use full model names (e.g., "ROSS_SCSN", "ROSS_GLOBAL", "APP_GLOBAL").
             device (str, optional): "cuda" or "cpu". If None, auto-detect.
             cache_dir (str): Directory to store downloaded models (default: "./checkpoints_download").
             model_path (str, optional): Manually specified path to the model file. If provided, skips download.
-            force_ud (bool): 是否强制输出U/D（不输出X）。对于DiTingMotion模型，如果为True，则当模型预测为X时，
-                             会选择U和D中概率较高的那个作为最终预测。
+            force_ud (bool): Force output to U/D only (no X). For DiTingMotion model, if True, when model predicts X,
+                             select the one with higher probability between U and D as final prediction.
 
         Raises:
             ValueError: If model_name is not found in available models.
-                       如果模型名称不在可用模型列表中，抛出异常。
         """
 
-        # model_name 可以是配置键（如 "ross"）或完整文件名（如 "ROSS_SCSN.pth"）
-        # 在 MODELS_CONFIG 中查找匹配的配置
+        # model_name can be config key (e.g., "ross") or full filename (e.g., "ROSS_SCSN.pth")
+        # Find matching config in MODELS_CONFIG
         self.model_filename = model_name
         found_config = None
         for name, config in MODELS_CONFIG.items():
@@ -247,40 +273,40 @@ class Predictor:
         self.force_ud = force_ud
         print(f"Using device: {self.device}")
         if force_ud and "DITING" in self.config_key:
-            print("启用强制输出U/D模式：当预测为X时，选择U/D中概率较高的那个")
+            print("Force U/D mode enabled: When prediction is X, select the one with higher probability between U and D")
         
         # 1. Download/Load Checkpoint
         self.checkpoint_path = self._resolve_model_path(cache_dir, self.config["filename"], model_path)
         
         # 2. Initialize Model
-        # 根据模型类型使用不同的初始化参数
+        # Use different initialization parameters based on model type
         if self.config_key in ["EQPOLARITY_SCSN", "EQPOLARITY_TXED", "EQPOLARITY_GLOBAL"]:
-            # EQPolarityCCT 需要 input_length 参数
+            # EQPolarityCCT requires input_length parameter
             self.model = self.config["model_class"](input_length=self.config["input_len"])
         elif self.config_key in ["DITINGMOTION_DITINGSCSN", "DITING_GLOBAL"]:
-            # DitingMotion 需要 input_channels 参数
+            # DitingMotion requires input_channels parameter
             self.model = self.config["model_class"](input_channels=2)
         elif self.config_key in ["APP_SCSN", "APP_GLOBAL"]:
-            # PPNet 需要 input_len, input_channels, num_classes 参数
+            # PPNet requires input_len, input_channels, num_classes parameters
             self.model = self.config["model_class"](
                 input_len=self.config["input_len"],
                 input_channels=1,
                 num_classes=self.config["num_classes"]
             )
         elif self.config_key in ["POLARCAP_SCSN", "POLARCAP_GLOBAL"]:
-            # PolarCAP 需要 drop_rate 参数
+            # PolarCAP requires drop_rate parameter
             self.model = self.config["model_class"](drop_rate=0.3)
         elif self.config_key in ["CFM_SCSN", "CFM_GLOBAL"]:
-            # CFM 需要 sample_rate 参数
+            # CFM requires sample_rate parameter
             self.model = self.config["model_class"](sample_rate=100.0)
         elif self.config_key in ["RPNET_SCSN", "RPNET_GLOBAL"]:
-            # RPNet 需要 sample_rate 参数
+            # RPNet requires sample_rate parameter
             self.model = self.config["model_class"](sample_rate=100.0)
         else:
-            # 其他模型（ross_scsn, ross_global）使用 num_fm_classes 参数
+            # Other models (ross_scsn, ross_global) use num_fm_classes parameter
             self.model = self.config["model_class"](num_fm_classes=self.config["num_classes"])
         
-        # 3. 加载权重（这会处理输出层形状不匹配的问题）
+        # 3. Load weights (handles output layer shape mismatch)
         self._load_weights(self.checkpoint_path)
         self.model.to(self.device)
         self.model.eval()
@@ -289,11 +315,11 @@ class Predictor:
         """
         Resolve model path:
         1. User specified path (if provided, use it directly)
-        2. Hugging Face (优先)
-        3. ModelScope (国内备用)
-        如果都失败，直接报错
+        2. Hugging Face (priority)
+        3. ModelScope (backup for domestic users)
+        If all fail, raise error
         """
-        # A. Check User Specified Path (最高优先级)
+        # A. Check User Specified Path (highest priority)
         if user_path:
             if os.path.exists(user_path):
                 print(f"Using manually specified model: {user_path}")
@@ -301,7 +327,7 @@ class Predictor:
             else:
                 raise FileNotFoundError(f"Model path not found: {user_path}")
 
-        # B. Try Hugging Face and ModelScope (网络下载)
+        # B. Try Hugging Face and ModelScope (network download)
         return self._ensure_model(cache_dir, filename)
 
     def _ensure_model(self, cache_dir: str, filename: str) -> str:
@@ -321,11 +347,11 @@ class Predictor:
         filename_hf = model_info.get("filename_hf", filename)
         filename_ms = model_info.get("filename_ms", filename)
 
-        # 1. 检测 Hugging Face 网络连通性
+        # 1. Check Hugging Face network connectivity
         hf_accessible = False
         try:
             import socket
-            # 尝试连接 huggingface.co 的 443 端口，超时 1 秒
+            # Try to connect to huggingface.co port 443, timeout 1 second
             socket.setdefaulttimeout(1.0)
             socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect(("huggingface.co", 443))
             hf_accessible = True
@@ -335,7 +361,7 @@ class Predictor:
         finally:
             socket.setdefaulttimeout(None)
 
-        # 2. Try Hugging Face (仅在网络可访问时尝试)
+        # 2. Try Hugging Face (only try when network is accessible)
         if hf_accessible:
             try:
                 print("Attempting download from Hugging Face...")
@@ -356,7 +382,7 @@ class Predictor:
             except Exception as e:
                 print(f"Hugging Face download failed: {e}")
 
-        # 2. Try ModelScope (国内备用)
+        # 2. Try ModelScope (backup for domestic users)
         try:
             print("Attempting download from ModelScope...")
             # Try to import modelscope
@@ -370,7 +396,7 @@ class Predictor:
             # Download specific file from ModelScope
             downloaded_file = model_file_download(
                 model_id=MODELSCOPE_REPO,
-                file_path=filename_ms,  # 带子文件夹的路径
+                file_path=filename_ms,  # Path with subfolder
                 cache_dir=cache_dir,
             )
 
@@ -408,41 +434,41 @@ class Predictor:
                 name = k.replace("module.", "") if k.startswith("module.") else k
                 new_state_dict[name] = v
             
-            # 尝试加载权重
+            # Try to load weights
             try:
                 self.model.load_state_dict(new_state_dict, strict=True)
                 print("Weights loaded successfully (strict mode).")
             except RuntimeError as e:
-                # 如果严格模式失败，检查是否是输出层形状不匹配
+                # If strict mode fails, check if it's output layer shape mismatch
                 if "output_layer" in str(e) and "size mismatch" in str(e):
                     print("Output layer size mismatch detected. Adapting model...")
                     
-                    # 对于 EQPolarity 模型，动态调整输出层
+                    # For EQPolarity model, dynamically adjust output layer
                     if hasattr(self.model, 'output_layer'):
-                        # 获取检查点中输出层的形状
+                        # Get output layer shape from checkpoint
                         checkpoint_output_weight = new_state_dict.get('output_layer.weight')
                         checkpoint_output_bias = new_state_dict.get('output_layer.bias')
                         
                         if checkpoint_output_weight is not None:
-                            # 获取输出类别数
+                            # Get number of output classes
                             num_classes = checkpoint_output_weight.shape[0]
                             in_features = checkpoint_output_weight.shape[1]
                             
-                            # 动态创建新的输出层
+                            # Dynamically create new output layer
                             import torch.nn as nn
                             self.model.output_layer = nn.Linear(in_features, num_classes)
                             
-                            # 重新尝试加载（非严格模式）
+                            # Retry loading (non-strict mode)
                             self.model.load_state_dict(new_state_dict, strict=False)
                             print(f"Weights loaded successfully (adapted output layer to {num_classes} classes).")
                         else:
                             raise RuntimeError("Cannot adapt output layer: weight not found in checkpoint")
                     else:
-                        # 非严格模式加载（跳过不匹配的层）
+                        # Non-strict mode loading (skip mismatched layers)
                         self.model.load_state_dict(new_state_dict, strict=False)
                         print("Weights loaded successfully (non-strict mode).")
                 else:
-                    # 其他错误，重新抛出
+                    # Other errors, re-raise
                     raise e
                 
         except Exception as e:
@@ -491,20 +517,17 @@ class Predictor:
     def predict(self, waveforms: Union[np.ndarray, List[np.ndarray]], return_probs: bool = False, batch_size: int = 2048, force_ud: Optional[bool] = None):
         """
         Run inference.
-        执行推理。
         
         Args:
-            waveforms: Input data. 输入数据。
+            waveforms: Input data.
             return_probs: If True, return probabilities instead of class indices.
-                         如果为True，返回概率值而不是类别索引。
             batch_size: Batch size for inference to avoid OOM.
-                       批处理大小，避免内存溢出。
-            force_ud: 是否强制输出U/D（不输出X）。如果为None，则使用初始化时的设置。
-                     对于DiTingMotion模型，如果为True，则当模型预测为X时，
-                     会选择U和D中概率较高的那个作为最终预测。
+            force_ud: Force output to U/D only (no X). If None, use initialization setting.
+                     For DiTingMotion model, if True, when model predicts X,
+                     select the one with higher probability between U and D as final prediction.
             
         Returns:
-            np.ndarray: Predicted classes (or probabilities). 预测的类别（或概率值）。
+            np.ndarray: Predicted classes (or probabilities).
             
         Example:
             >>> from seispolarity.inference import Predictor
@@ -523,7 +546,7 @@ class Predictor:
         
         results = []
         
-        # 确定是否使用force_ud
+        # Determine whether to use force_ud
         use_force_ud = force_ud if force_ud is not None else self.force_ud
         
         with torch.no_grad():
@@ -531,45 +554,45 @@ class Predictor:
                 batch = input_tensor[i : i + batch_size].to(self.device)
                 logits = self.model(batch)
                 
-                # 处理不同形状的输出
+                # Handle different output shapes
                 output_index = self.config.get("output_index", None)
                 
                 if isinstance(logits, (tuple, list)):
-                    # 多输出模型
+                    # Multi-output model
                     if len(logits) == 8:
-                        # DitingMotion模型：使用融合输出（索引3）
+                        # DitingMotion model: use fused output (index 3)
                         fuse_output = logits[3]
                         probs = torch.softmax(fuse_output, dim=1)
                     elif len(logits) == 2:
-                        # PPNet 或 PolarCAP：使用 output_index 指定的输出
+                        # PPNet or PolarCAP: use output specified by output_index
                         if output_index is not None:
                             selected_output = logits[output_index]
                             probs = torch.softmax(selected_output, dim=1)
                         else:
-                            # 默认使用第二个输出（分类输出）
+                            # Default to second output (classification output)
                             probs = torch.softmax(logits[1], dim=1)
                     else:
-                        # 其他多输出情况，使用最后一个输出
+                        # Other multi-output cases, use last output
                         probs = torch.softmax(logits[-1], dim=1)
                 elif logits.shape[1] == 1:
-                    # 二分类的 sigmoid 输出 (batch, 1)
+                    # Binary classification sigmoid output (batch, 1)
                     probs = torch.sigmoid(logits)
-                    # 转换为两类的概率分布
+                    # Convert to two-class probability distribution
                     probs = torch.cat([1 - probs, probs], dim=1)
                 else:
-                    # 多分类的 softmax 输出 (batch, num_classes)
+                    # Multi-class softmax output (batch, num_classes)
                     probs = torch.softmax(logits, dim=1)
                 
-                # 处理force_ud（强制输出U/D）
+                # Handle force_ud (force output U/D)
                 if use_force_ud and probs.shape[1] == 3:
-                    # 对于三分类（U, D, X），强制输出U/D
-                    # 如果预测为X（索引2），则选择U和D中概率较高的那个
+                    # For three-class (U, D, X), force output U/D
+                    # If prediction is X (index 2), select the one with higher probability between U and D
                     preds = torch.argmax(probs, dim=1)
-                    x_mask = preds == 2  # 找到预测为X的样本
+                    x_mask = preds == 2  # Find samples predicted as X
                     
                     if x_mask.any():
-                        # 对于预测为X的样本，选择U(0)和D(1)中概率较高的那个
-                        ud_probs = probs[x_mask, :2]  # 只取U和D的概率
+                        # For samples predicted as X, select the one with higher probability between U(0) and D(1)
+                        ud_probs = probs[x_mask, :2]  # Only get U and D probabilities
                         ud_preds = torch.argmax(ud_probs, dim=1)
                         preds[x_mask] = ud_preds
                 else:
@@ -585,21 +608,18 @@ class Predictor:
     def predict_from_loader(self, loader: torch.utils.data.DataLoader, return_probs: bool = False, force_ud: Optional[bool] = None):
         """
         Run inference on a DataLoader.
-        在DataLoader上执行推理。
         
         Args:
             loader: PyTorch DataLoader yielding (waveforms, labels) or waveforms.
-                   PyTorch DataLoader，输出 (waveforms, labels) 或仅 waveforms。
             return_probs: If True, return probabilities.
-                         如果为True，返回概率值。
-            force_ud: 是否强制输出U/D（不输出X）。如果为None，则使用初始化时的设置。
-                     对于DiTingMotion模型，如果为True，则当模型预测为X时，
-                     会选择U和D中概率较高的那个作为最终预测。
+            force_ud: Force output to U/D only (no X). If None, use initialization setting.
+                     For DiTingMotion model, if True, when model predicts X,
+                     select the one with higher probability between U and D as final prediction.
             
         Returns:
             (predictions, labels): 
-                - predictions: (N,) indices or (N, C) probabilities. 预测的类别索引或概率值。
-                - labels: (N,) ground truth labels if available, else None. 真实标签（如果可用），否则为None。
+                - predictions: (N,) indices or (N, C) probabilities.
+                - labels: (N,) ground truth labels if available, else None.
                 
         Example:
             >>> from seispolarity.inference import Predictor
@@ -612,7 +632,7 @@ class Predictor:
         
         device = self.device
         
-        # 确定是否使用force_ud
+        # Determine whether to use force_ud
         use_force_ud = force_ud if force_ud is not None else self.force_ud
         
         # Iterate through loader
@@ -643,45 +663,45 @@ class Predictor:
                 # 3. Model Inference
                 logits = self.model(x)
                 
-                # 处理不同形状的输出
+                # Handle different output shapes
                 output_index = self.config.get("output_index", None)
                 
                 if isinstance(logits, (tuple, list)):
-                    # 多输出模型
+                    # Multi-output model
                     if len(logits) == 8:
-                        # DitingMotion模型：使用融合输出（索引3）
+                        # DitingMotion model: use fused output (index 3)
                         fuse_output = logits[3]
                         probs = torch.softmax(fuse_output, dim=1)
                     elif len(logits) == 2:
-                        # PPNet 或 PolarCAP：使用 output_index 指定的输出
+                        # PPNet or PolarCAP: use output specified by output_index
                         if output_index is not None:
                             selected_output = logits[output_index]
                             probs = torch.softmax(selected_output, dim=1)
                         else:
-                            # 默认使用第二个输出（分类输出）
+                            # Default to second output (classification output)
                             probs = torch.softmax(logits[1], dim=1)
                     else:
-                        # 其他多输出情况，使用最后一个输出
+                        # Other multi-output cases, use last output
                         probs = torch.softmax(logits[-1], dim=1)
                 elif logits.shape[1] == 1:
-                    # 二分类的 sigmoid 输出 (batch, 1)
+                    # Binary classification sigmoid output (batch, 1)
                     probs = torch.sigmoid(logits)
-                    # 转换为两类的概率分布
+                    # Convert to two-class probability distribution
                     probs = torch.cat([1 - probs, probs], dim=1)
                 else:
-                    # 多分类的 softmax 输出 (batch, num_classes)
+                    # Multi-class softmax output (batch, num_classes)
                     probs = torch.softmax(logits, dim=1)
                 
-                # 4. 处理force_ud（强制输出U/D）
+                # 4. Handle force_ud (force output U/D)
                 if use_force_ud and probs.shape[1] == 3:
-                    # 对于三分类（U, D, X），强制输出U/D
-                    # 如果预测为X（索引2），则选择U和D中概率较高的那个
+                    # For three-class (U, D, X), force output U/D
+                    # If prediction is X (index 2), select the one with higher probability between U and D
                     preds = torch.argmax(probs, dim=1)
-                    x_mask = preds == 2  # 找到预测为X的样本
+                    x_mask = preds == 2  # Find samples predicted as X
                     
                     if x_mask.any():
-                        # 对于预测为X的样本，选择U(0)和D(1)中概率较高的那个
-                        ud_probs = probs[x_mask, :2]  # 只取U和D的概率
+                        # For samples predicted as X, select the one with higher probability between U(0) and D(1)
+                        ud_probs = probs[x_mask, :2]  # Only get U and D probabilities
                         ud_preds = torch.argmax(ud_probs, dim=1)
                         preds[x_mask] = ud_preds
                 else:
