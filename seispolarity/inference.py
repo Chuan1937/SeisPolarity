@@ -24,7 +24,7 @@ HF_REPO = "HeXingChen/SeisPolarity-Model"
 MODELSCOPE_REPO = "chuanjun/HeXingChen"
 
 MODELS_CONFIG = {
-    "ross": {
+    "ROSS_SCSN": {
         "filename": "ROSS_SCSN.pth",
         "filename_hf": "ROSS/ROSS_SCSN.pth",
         "filename_ms": "ROSS/ROSS_SCSN.pth",
@@ -34,7 +34,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": None
     },
-    "ross_global": {
+    "ROSS_GLOBAL": {
         "filename": "ROSS_GLOBAL.pth",
         "filename_hf": "ROSS/ROSS_GLOBAL.pth",
         "filename_ms": "ROSS/ROSS_GLOBAL.pth",
@@ -44,7 +44,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": None
     },
-    "eqpolarity": {
+    "EQPOLARITY_SCSN": {
         "filename": "EQPOLARITY_SCSN.pth",
         "filename_hf": "EQPOLARITY/EQPOLARITY_SCSN.pth",
         "filename_ms": "EQPOLARITY/EQPOLARITY_SCSN.pth",
@@ -54,7 +54,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None
     },
-    "eqpolarity_txed": {
+    "EQPOLARITY_TXED": {
         "filename": "EQPOLARITY_TXED.pth",
         "filename_hf": "EQPOLARITY/EQPOLARITY_TXED.pth",
         "filename_ms": "EQPOLARITY/EQPOLARITY_TXED.pth",
@@ -64,7 +64,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None
     },
-    "eqpolarity_global": {
+    "EQPOLARITY_GLOBAL": {
         "filename": "EQPOLARITY_GLOBAL.pth",
         "filename_hf": "EQPOLARITY/EQPOLARITY_GLOBAL.pth",
         "filename_ms": "EQPOLARITY/EQPOLARITY_GLOBAL.pth",
@@ -74,7 +74,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None
     },
-    "diting_motion": {
+    "DITINGMOTION_DITINGSCSN": {
         "filename": "DITINGMOTION_DITINGSCSN.pth",
         "filename_hf": "DITINGMOTION/DITINGMOTION_DITINGSCSN.pth",
         "filename_ms": "DITINGMOTION/DITINGMOTION_DITINGSCSN.pth",
@@ -84,7 +84,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": 3
     },
-    "diting_global": {
+    "DITING_GLOBAL": {
         "filename": "DITING_GLOBAL.pth",
         "filename_hf": "DITINGMOTION/DITING_GLOBAL.pth",
         "filename_ms": "DITINGMOTION/DITING_GLOBAL.pth",
@@ -94,7 +94,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": 3
     },
-    "app": {
+    "APP_SCSN": {
         "filename": "APP_SCSN.pth",
         "filename_hf": "APP/APP_SCSN.pth",
         "filename_ms": "APP/APP_SCSN.pth",
@@ -104,7 +104,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": 1
     },
-    "app_global": {
+    "APP_GLOBAL": {
         "filename": "APP_GLOBAL.pth",
         "filename_hf": "APP/APP_GLOBAL.pth",
         "filename_ms": "APP/APP_GLOBAL.pth",
@@ -114,7 +114,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": 1
     },
-    "cfm": {
+    "CFM_SCSN": {
         "filename": "CFM_SCSN.pth",
         "filename_hf": "CFM/CFM_SCSN.pth",
         "filename_ms": "CFM/CFM_SCSN.pth",
@@ -124,7 +124,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None
     },
-    "cfm_global": {
+    "CFM_GLOBAL": {
         "filename": "CFM_GLOBAL.pth",
         "filename_hf": "CFM/CFM_GLOBAL.pth",
         "filename_ms": "CFM/CFM_GLOBAL.pth",
@@ -134,7 +134,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None
     },
-    "polarcap": {
+    "POLARCAP_SCSN": {
         "filename": "POLARCAP_SCSN.pth",
         "filename_hf": "POLARCAP/POLARCAP_SCSN.pth",
         "filename_ms": "POLARCAP/POLARCAP_SCSN.pth",
@@ -144,7 +144,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down"},
         "output_index": 1
     },
-    "polarcap_global": {
+    "POLARCAP_GLOBAL": {
         "filename": "POLARCAP_GLOBAL.pth",
         "filename_hf": "POLARCAP/POLARCAP_GLOBAL.pth",
         "filename_ms": "POLARCAP/POLARCAP_GLOBAL.pth",
@@ -154,7 +154,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down"},
         "output_index": 1
     },
-    "rpnet": {
+    "RPNET_SCSN": {
         "filename": "RPNET_SCSN.pth",
         "filename_hf": "RPNET/RPNET_SCSN.pth",
         "filename_ms": "RPNET/RPNET_SCSN.pth",
@@ -164,7 +164,7 @@ MODELS_CONFIG = {
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None
     },
-    "rpnet_global": {
+    "RPNET_GLOBAL": {
         "filename": "RPNET_GLOBAL.pth",
         "filename_hf": "RPNET/RPNET_GLOBAL.pth",
         "filename_ms": "RPNET/RPNET_GLOBAL.pth",
@@ -183,30 +183,49 @@ class Predictor:
     
     Usage:
         >>> from seispolarity.inference import Predictor
-        >>> model = Predictor("ross")
+        >>> model = Predictor("ROSS_GLOBAL")
         >>> preds = model.predict(waveforms)
+    
+    Available Models (可使用模型):
+        - ROSS_SCSN: ROSS_SCSN.pth (3 classes: Up, Down, Unknown)
+        - ROSS_GLOBAL: ROSS_GLOBAL.pth (3 classes: Up, Down, Unknown)
+        - EQPOLARITY_SCSN: EQPOLARITY_SCSN.pth (2 classes: Up, Down)
+        - EQPOLARITY_TXED: EQPOLARITY_TXED.pth (2 classes: Up, Down)
+        - EQPOLARITY_GLOBAL: EQPOLARITY_GLOBAL.pth (2 classes: Up, Down)
+        - DITINGMOTION_DITINGSCSN: DITINGMOTION_DITINGSCSN.pth (3 classes: Up, Down, Unknown)
+        - DITING_GLOBAL: DITING_GLOBAL.pth (3 classes: Up, Down, Unknown)
+        - APP_SCSN: APP_SCSN.pth (3 classes: Up, Down, Unknown)
+        - APP_GLOBAL: APP_GLOBAL.pth (3 classes: Up, Down, Unknown)
+        - CFM_SCSN: CFM_SCSN.pth (2 classes: Up, Down)
+        - CFM_GLOBAL: CFM_GLOBAL.pth (2 classes: Up, Down)
+        - POLARCAP_SCSN: POLARCAP_SCSN.pth (2 classes: Up, Down)
+        - POLARCAP_GLOBAL: POLARCAP_GLOBAL.pth (2 classes: Up, Down)
+        - RPNET_SCSN: RPNET_SCSN.pth (2 classes: Up, Down)
+        - RPNET_GLOBAL: RPNET_GLOBAL.pth (2 classes: Up, Down)
+    
+    Note: Use the full model name (e.g., "ROSS_SCSN", "ROSS_GLOBAL") to initialize the predictor.
+          使用完整模型名字初始化预测器（如 "ROSS_SCSN", "ROSS_GLOBAL"）。
     """
     
-    def __init__(self, model_name: str = "ross", device: Optional[str] = None, cache_dir: str = "./checkpoints_download", model_path: Optional[str] = None, force_ud: bool = False):
+    def __init__(self, model_name: str = "ROSS_SCSN", device: Optional[str] = None, cache_dir: str = "./checkpoints_download", model_path: Optional[str] = None, force_ud: bool = False):
         """
         Initialize the predictor.
         初始化预测器。
 
         Args:
-            model_name (str): Name of the model to use (default: "ross"). 可以使用简写如 "ross" 或完整文件名如 "Ross_SCSN"。
+            model_name (str): Name of the model to use (default: "ROSS_SCSN").
+                             Must be one of the available model names (e.g., "ROSS_SCSN", "ROSS_GLOBAL", "APP_GLOBAL").
+                             必须使用完整模型名字（如 "ROSS_SCSN", "ROSS_GLOBAL", "APP_GLOBAL"）。
             device (str, optional): "cuda" or "cpu". If None, auto-detect.
             cache_dir (str): Directory to store downloaded models (default: "./checkpoints_download").
             model_path (str, optional): Manually specified path to the model file. If provided, skips download.
             force_ud (bool): 是否强制输出U/D（不输出X）。对于DiTingMotion模型，如果为True，则当模型预测为X时，
                              会选择U和D中概率较高的那个作为最终预测。
+
+        Raises:
+            ValueError: If model_name is not found in available models.
+                       如果模型名称不在可用模型列表中，抛出异常。
         """
-        # Print all available models
-        print("=" * 60)
-        print("Available models / 可用模型:")
-        print("-" * 60)
-        for name, config in MODELS_CONFIG.items():
-            print(f"  - {config['filename']}: {name}")
-        print("=" * 60)
 
         # model_name 可以是配置键（如 "ross"）或完整文件名（如 "ROSS_SCSN.pth"）
         # 在 MODELS_CONFIG 中查找匹配的配置
@@ -227,7 +246,7 @@ class Predictor:
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.force_ud = force_ud
         print(f"Using device: {self.device}")
-        if force_ud and model_name == "diting_motion":
+        if force_ud and "DITING" in self.config_key:
             print("启用强制输出U/D模式：当预测为X时，选择U/D中概率较高的那个")
         
         # 1. Download/Load Checkpoint
@@ -235,30 +254,30 @@ class Predictor:
         
         # 2. Initialize Model
         # 根据模型类型使用不同的初始化参数
-        if self.config_key in ["eqpolarity", "eqpolarity_txed", "eqpolarity_global"]:
+        if self.config_key in ["EQPOLARITY_SCSN", "EQPOLARITY_TXED", "EQPOLARITY_GLOBAL"]:
             # EQPolarityCCT 需要 input_length 参数
             self.model = self.config["model_class"](input_length=self.config["input_len"])
-        elif self.config_key in ["diting_motion", "diting_global"]:
+        elif self.config_key in ["DITINGMOTION_DITINGSCSN", "DITING_GLOBAL"]:
             # DitingMotion 需要 input_channels 参数
             self.model = self.config["model_class"](input_channels=2)
-        elif self.config_key in ["app", "app_global"]:
+        elif self.config_key in ["APP_SCSN", "APP_GLOBAL"]:
             # PPNet 需要 input_len, input_channels, num_classes 参数
             self.model = self.config["model_class"](
                 input_len=self.config["input_len"],
                 input_channels=1,
                 num_classes=self.config["num_classes"]
             )
-        elif self.config_key in ["polarcap", "polarcap_global"]:
+        elif self.config_key in ["POLARCAP_SCSN", "POLARCAP_GLOBAL"]:
             # PolarCAP 需要 drop_rate 参数
             self.model = self.config["model_class"](drop_rate=0.3)
-        elif self.config_key in ["cfm", "cfm_global"]:
+        elif self.config_key in ["CFM_SCSN", "CFM_GLOBAL"]:
             # CFM 需要 sample_rate 参数
             self.model = self.config["model_class"](sample_rate=100.0)
-        elif self.config_key in ["rpnet", "rpnet_global"]:
+        elif self.config_key in ["RPNET_SCSN", "RPNET_GLOBAL"]:
             # RPNet 需要 sample_rate 参数
             self.model = self.config["model_class"](sample_rate=100.0)
         else:
-            # 其他模型（ross, ross_global）使用 num_fm_classes 参数
+            # 其他模型（ross_scsn, ross_global）使用 num_fm_classes 参数
             self.model = self.config["model_class"](num_fm_classes=self.config["num_classes"])
         
         # 3. 加载权重（这会处理输出层形状不匹配的问题）
@@ -472,17 +491,26 @@ class Predictor:
     def predict(self, waveforms: Union[np.ndarray, List[np.ndarray]], return_probs: bool = False, batch_size: int = 2048, force_ud: Optional[bool] = None):
         """
         Run inference.
+        执行推理。
         
         Args:
-            waveforms: Input data.
+            waveforms: Input data. 输入数据。
             return_probs: If True, return probabilities instead of class indices.
+                         如果为True，返回概率值而不是类别索引。
             batch_size: Batch size for inference to avoid OOM.
+                       批处理大小，避免内存溢出。
             force_ud: 是否强制输出U/D（不输出X）。如果为None，则使用初始化时的设置。
                      对于DiTingMotion模型，如果为True，则当模型预测为X时，
                      会选择U和D中概率较高的那个作为最终预测。
             
         Returns:
-            np.ndarray: Predicted classes (or probabilities).
+            np.ndarray: Predicted classes (or probabilities). 预测的类别（或概率值）。
+            
+        Example:
+            >>> from seispolarity.inference import Predictor
+            >>> predictor = Predictor("ROSS_GLOBAL")
+            >>> waveforms = np.random.randn(10, 1, 400).astype(np.float32)
+            >>> predictions = predictor.predict(waveforms)
         """
         if isinstance(waveforms, torch.Tensor):
              waveforms = waveforms.cpu().numpy()
@@ -557,18 +585,26 @@ class Predictor:
     def predict_from_loader(self, loader: torch.utils.data.DataLoader, return_probs: bool = False, force_ud: Optional[bool] = None):
         """
         Run inference on a DataLoader.
+        在DataLoader上执行推理。
         
         Args:
             loader: PyTorch DataLoader yielding (waveforms, labels) or waveforms.
+                   PyTorch DataLoader，输出 (waveforms, labels) 或仅 waveforms。
             return_probs: If True, return probabilities.
+                         如果为True，返回概率值。
             force_ud: 是否强制输出U/D（不输出X）。如果为None，则使用初始化时的设置。
                      对于DiTingMotion模型，如果为True，则当模型预测为X时，
                      会选择U和D中概率较高的那个作为最终预测。
             
         Returns:
             (predictions, labels): 
-                - predictions: (N,) indices or (N, C) probabilities.
-                - labels: (N,) ground truth labels if available, else None.
+                - predictions: (N,) indices or (N, C) probabilities. 预测的类别索引或概率值。
+                - labels: (N,) ground truth labels if available, else None. 真实标签（如果可用），否则为None。
+                
+        Example:
+            >>> from seispolarity.inference import Predictor
+            >>> predictor = Predictor("ROSS_GLOBAL")
+            >>> predictions, labels = predictor.predict_from_loader(dataloader)
         """
         self.model.eval()
         results = []
