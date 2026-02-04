@@ -5,7 +5,6 @@ from seispolarity.models.diting_motion import DitingMotion
 from seispolarity.models.eqpolarity import EQPolarityCCT
 from seispolarity.models.cfm import CFM
 from seispolarity.models.rpnet import RPNet, rpnet
-from seispolarity.models.polarCAP import PolarCAP
 
 __all__ = [
     "BasePolarityModel",
@@ -17,5 +16,4 @@ __all__ = [
     "CFM",
     "RPNet",
     "rpnet",
-    "PolarCAP",
 ]
