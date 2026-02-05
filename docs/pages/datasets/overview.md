@@ -18,7 +18,10 @@ SeisPolarity 提供统一的接口来访问和处理多个地震极性数据集�
 
 南加州地震网络（SCSN）数据集包含来自南加州地震网络的带极性标签的地震波形。该数据集涵盖 2000-2020 年期间的地震事件，是经过人工标注的高质量数据集。
 
-![SCSN](../datasets/SCSN.png)
+```{image} ../datasets/SCSN.png
+:alt: SCSN
+:align: center
+```
 
 #### 警告
 
@@ -37,9 +40,10 @@ Ross, Z. E., Meier, M.-A., Hauksson, E. (2018). P wave arrival picking and first
 
 德克萨斯地震数据集（TXED）是一个来自德克萨斯州的本地地震信号基准数据集。该数据集包含大量地震事件和噪声波形，是机器学习在地震学研究中的重要数据资源。
 
-<div align="center">
-  <img src="../datasets/TXED.png" alt="Txed"/>
-</div>
+```{image} ../datasets/TXED.png
+:alt: Txed
+:align: center
+```
 
 #### 警告
 
@@ -55,9 +59,10 @@ Chen, Y., Savvaidis, A., Saad, O. M., Huang, G.-C. D., Siervo, D., O'Sullivan, V
 
 DiTing 数据集是一个大规模中国地震基准数据集，专门用于人工智能地震学研究。该数据集包含超过 64 万个高质量的 P 波初动极性标签，覆盖中国各地 1300 多个宽带和短周期地震台站。
 
-<div align="center">
-  <img src="../datasets/DITING.jpg" alt="Diting"/>
-</div>
+```{image} ../datasets/DITING.jpg
+:alt: Diting
+:align: center
+```
 
 #### 引用
 
@@ -73,9 +78,10 @@ Zhao, M., Xiao, Z., Chen, S., & Fang, L. (2023). DiTing: A large-scale Chinese s
 
 INSTANCE 数据集是意大利国家地球物理和火山学研究所（INGV）整理的意大利地震波形数据集，专为机器学习应用设计。该数据集包含近 120 万个三分量波形迹线，是地震学研究的重要资源。
 
-<div align="center">
-  <img src="../datasets/INSTANCE.png" alt="Instance"/>
-</div>
+```{image} ../datasets/INSTANCE.png
+:alt: Instance
+:align: center
+```
 
 #### 警告
 
@@ -93,9 +99,10 @@ Michelini, A., Cianetti, S., Gaviano, S., Giunchi, C., Jozinović, D., & Laucian
 
 太平洋西北地区（PNW）数据集是一个机器学习就绪的精选数据集，包含来自太平洋西北地区的多种地震信号。该数据集由太平洋西北地震网络整理，涵盖地震、爆炸、噪声等多种地震事件类型。
 
-<div align="center">
-  <img src="../datasets/PNW.png" alt="PNW"/>
-</div>
+```{image} ../datasets/PNW.png
+:alt: PNW
+:align: center
+```
 
 #### 引用
 
