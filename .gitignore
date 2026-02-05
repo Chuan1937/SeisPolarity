@@ -8,7 +8,7 @@ __pycache__/
 *.pytest_cache/
 /checkpoints_*/
 Update_model.ipynb
-datasets/
+/datasets/
 pretrained_model/
 /Model_Tensorflow_Hdf5/
 /checkpoints*/

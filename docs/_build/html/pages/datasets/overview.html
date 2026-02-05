@@ -1,0 +1,449 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>数据集概述 &mdash; SeisPolarity</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=5af64b9e" />
+
+  
+    <link rel="shortcut icon" href="../../_static/seispolarity_logo.svg"/>
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=3ce10a4d"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/custom.js?v=13dabb7d"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="模型概述" href="../models/overview.html" />
+    <link rel="prev" title="安装与配置" href="../installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html">
+            
+              <img src="../../_static/seispolarity_logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">文档目录</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">安装与配置</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">数据集概述</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id2">可用数据集</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">加载数据集</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id4">自动下载</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">从本地文件加载</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#api">数据集 API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#waveformdataset">WaveformDataset</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id6">数据格式</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id7">标签编码</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#dataloader">DataLoader</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id8">数据检查</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id9">基本统计</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id10">多数据集训练</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id11">平衡采样</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id12">数据集</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#scsn">SCSN</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id13">警告</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id14">引用</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#txed">Txed</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id15">警告</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id16">引用</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#diting">DiTing</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id17">引用</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id18">数据下载</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#instance">Instance</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id19">警告</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#id20">引用</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#pnw">PNW</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#id21">引用</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#id22">下载位置</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../models/overview.html">模型概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../training/overview.html">训练概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../augmentation/overview.html">数据增强概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/overview.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">SeisPolarity</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">数据集概述</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/pages/datasets/overview.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+<div class="document-wrapper" style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px; border-left: 4px solid #2980b9;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 14px; color: #555;">
+            <strong>Author:</strong> He XingChen
+        </div>
+        <div style="font-size: 14px; color: #555;">
+            <strong>Date:</strong> <span id="gregorian-date"></span> | <span id="lunar-date"></span>
+        </div>
+    </div>
+</div>
+
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="id1">
+<h1>数据集概述<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
+<p>SeisPolarity 提供统一的接口来访问和处理多个地震极性数据集。所有数据集都以 HDF5 格式存储，以实现高效的存储和流式传输。</p>
+<section id="id2">
+<h2>可用数据集<a class="headerlink" href="#id2" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>数据集</p></th>
+<th class="head"><p>来源</p></th>
+<th class="head"><p>大小</p></th>
+<th class="head"><p>类别</p></th>
+<th class="head"><p>格式</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>SCSN</p></td>
+<td><p>南加州地震网络</p></td>
+<td><p>大</p></td>
+<td><p>U/D/N</p></td>
+<td><p>HDF5</p></td>
+</tr>
+<tr class="row-odd"><td><p>Txed</p></td>
+<td><p>德克萨斯地震数据集</p></td>
+<td><p>中</p></td>
+<td><p>U/D</p></td>
+<td><p>HDF5</p></td>
+</tr>
+<tr class="row-even"><td><p>DiTing</p></td>
+<td><p>中国地震台网</p></td>
+<td><p>中</p></td>
+<td><p>U/D/N</p></td>
+<td><p>HDF5</p></td>
+</tr>
+<tr class="row-odd"><td><p>Instance</p></td>
+<td><p>全球地震数据</p></td>
+<td><p>中</p></td>
+<td><p>U/D/N</p></td>
+<td><p>HDF5</p></td>
+</tr>
+<tr class="row-even"><td><p>PNW</p></td>
+<td><p>太平洋西北地区</p></td>
+<td><p>大</p></td>
+<td><p>U/D/N</p></td>
+<td><p>HDF5</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="id3">
+<h2>加载数据集<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<section id="id4">
+<h3>自动下载<a class="headerlink" href="#id4" title="Link to this heading"></a></h3>
+<p>SeisPolarity 可以自动下载数据集：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">from</span><span class="w"> </span><span class="nn">seispolarity</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset_path</span><span class="p">,</span> <span class="n">WaveformDataset</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="c1"># 从 Hugging Face 下载（默认）</span>
+<span class="linenos">4</span><span class="n">data_path</span> <span class="o">=</span> <span class="n">get_dataset_path</span><span class="p">(</span><span class="s2">&quot;SCSN&quot;</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">cache_dir</span><span class="o">=</span><span class="s2">&quot;./datasets&quot;</span><span class="p">)</span>
+<span class="linenos">5</span>
+<span class="linenos">6</span><span class="c1"># 或使用 ModelScope（推荐中国用户使用）</span>
+<span class="linenos">7</span><span class="n">data_path</span> <span class="o">=</span> <span class="n">get_dataset_path</span><span class="p">(</span><span class="s2">&quot;SCSN&quot;</span><span class="p">,</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">use_hf</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id5">
+<h3>从本地文件加载<a class="headerlink" href="#id5" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">from</span><span class="w"> </span><span class="nn">seispolarity</span><span class="w"> </span><span class="kn">import</span> <span class="n">WaveformDataset</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span><span class="c1"># 磁盘流式传输（适用于大型数据集）</span>
+<span class="linenos"> 4</span><span class="n">dataset</span> <span class="o">=</span> <span class="n">WaveformDataset</span><span class="p">(</span>
+<span class="linenos"> 5</span>    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;data/scsn_train.hdf5&quot;</span><span class="p">,</span>
+<span class="linenos"> 6</span>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SCSN_Train&quot;</span><span class="p">,</span>
+<span class="linenos"> 7</span>    <span class="n">preload</span><span class="o">=</span><span class="kc">False</span>
+<span class="linenos"> 8</span><span class="p">)</span>
+<span class="linenos"> 9</span>
+<span class="linenos">10</span><span class="c1"># RAM 预加载（适用于小型数据集）</span>
+<span class="linenos">11</span><span class="n">dataset</span> <span class="o">=</span> <span class="n">WaveformDataset</span><span class="p">(</span>
+<span class="linenos">12</span>    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;data/scsn_train.hdf5&quot;</span><span class="p">,</span>
+<span class="linenos">13</span>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SCSN_Train&quot;</span><span class="p">,</span>
+<span class="linenos">14</span>    <span class="n">preload</span><span class="o">=</span><span class="kc">True</span>
+<span class="linenos">15</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="api">
+<h2>数据集 API<a class="headerlink" href="#api" title="Link to this heading"></a></h2>
+<section id="waveformdataset">
+<h3>WaveformDataset<a class="headerlink" href="#waveformdataset" title="Link to this heading"></a></h3>
+<p>加载波形数据的主要类。</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos"> 1</span><span class="kn">from</span><span class="w"> </span><span class="nn">seispolarity</span><span class="w"> </span><span class="kn">import</span> <span class="n">WaveformDataset</span>
+<span class="linenos"> 2</span>
+<span class="linenos"> 3</span><span class="n">dataset</span> <span class="o">=</span> <span class="n">WaveformDataset</span><span class="p">(</span>
+<span class="linenos"> 4</span>    <span class="n">path</span><span class="o">=</span><span class="s2">&quot;data.hdf5&quot;</span><span class="p">,</span>          <span class="c1"># HDF5 文件路径</span>
+<span class="linenos"> 5</span>    <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SCSN&quot;</span><span class="p">,</span>               <span class="c1"># 数据集名称</span>
+<span class="linenos"> 6</span>    <span class="n">preload</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>             <span class="c1"># 是否预加载到 RAM</span>
+<span class="linenos"> 7</span>    <span class="n">data_key</span><span class="o">=</span><span class="s2">&quot;X&quot;</span><span class="p">,</span>              <span class="c1"># 波形的 HDF5 键</span>
+<span class="linenos"> 8</span>    <span class="n">label_key</span><span class="o">=</span><span class="s2">&quot;Y&quot;</span><span class="p">,</span>             <span class="c1"># 标签的 HDF5 键</span>
+<span class="linenos"> 9</span>    <span class="n">p_pick_position</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>      <span class="c1"># P 波到达位置</span>
+<span class="linenos">10</span>    <span class="n">pick_key</span><span class="o">=</span><span class="s2">&quot;p_pick&quot;</span><span class="p">,</span>        <span class="c1"># 使用p_pick作为P波到达点</span>
+<span class="linenos">11</span>    <span class="n">crop_left</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>             <span class="c1"># P-pick 之前的采样点</span>
+<span class="linenos">12</span>    <span class="n">crop_right</span><span class="o">=</span><span class="mi">200</span><span class="p">,</span>            <span class="c1"># P-pick 之后的采样点</span>
+<span class="linenos">13</span>    <span class="n">allowed_labels</span><span class="o">=</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">]</span>   <span class="c1"># 允许的标签（0: Up, 1: Down, 2: Unknown）</span>
+<span class="linenos">14</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id6">
+<h3>数据格式<a class="headerlink" href="#id6" title="Link to this heading"></a></h3>
+<p>波形以以下结构存储在 HDF5 文件中：</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>waveforms.hdf5
+├── X                # 波形数据 (N_samples, N_channels)
+├── Y                # P值标签 (N_samples,)
+├── Z                # 清晰度clarity (只有ditingmotion需要)   
+├── metadata         # 附加元数据（可选）
+└── ...
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3>标签编码<a class="headerlink" href="#id7" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>0</strong>: Up（正极性）</p></li>
+<li><p><strong>1</strong>: Down（负极性）</p></li>
+<li><p><strong>2</strong>: Unknown</p></li>
+</ul>
+</section>
+<section id="dataloader">
+<h3>DataLoader<a class="headerlink" href="#dataloader" title="Link to this heading"></a></h3>
+<p>创建用于训练的 PyTorch DataLoader：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="n">loader</span> <span class="o">=</span> <span class="n">dataset</span><span class="o">.</span><span class="n">get_dataloader</span><span class="p">(</span>
+<span class="linenos">2</span>    <span class="n">batch_size</span><span class="o">=</span><span class="mi">1024</span><span class="p">,</span>
+<span class="linenos">3</span>    <span class="n">num_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span>
+<span class="linenos">4</span>    <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+<span class="linenos">5</span>    <span class="n">pin_memory</span><span class="o">=</span><span class="kc">True</span>
+<span class="linenos">6</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="id8">
+<h2>数据检查<a class="headerlink" href="#id8" title="Link to this heading"></a></h2>
+<section id="id9">
+<h3>基本统计<a class="headerlink" href="#id9" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">from</span><span class="w"> </span><span class="nn">seispolarity</span><span class="w"> </span><span class="kn">import</span> <span class="n">WaveformDataset</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="n">dataset</span> <span class="o">=</span> <span class="n">WaveformDataset</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;data.hdf5&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SCSN&quot;</span><span class="p">)</span>
+<span class="linenos">4</span>
+<span class="linenos">5</span><span class="c1"># 获取数据集统计信息</span>
+<span class="linenos">6</span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;总样本数: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">dataset</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="linenos">7</span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;标签分布: </span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">label_distribution</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="linenos">8</span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;波形形状: </span><span class="si">{</span><span class="n">dataset</span><span class="o">.</span><span class="n">waveform_shape</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="id10">
+<h2>多数据集训练<a class="headerlink" href="#id10" title="Link to this heading"></a></h2>
+<p>组合多个数据集：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">from</span><span class="w"> </span><span class="nn">seispolarity</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiWaveformDataset</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="c1"># 创建多个数据集</span>
+<span class="linenos">4</span><span class="n">dataset1</span> <span class="o">=</span> <span class="n">WaveformDataset</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;scsn.hdf5&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SCSN&quot;</span><span class="p">)</span>
+<span class="linenos">5</span><span class="n">dataset2</span> <span class="o">=</span> <span class="n">WaveformDataset</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="s2">&quot;txed.hdf5&quot;</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Txed&quot;</span><span class="p">)</span>
+<span class="linenos">6</span>
+<span class="linenos">7</span><span class="c1"># 组合它们</span>
+<span class="linenos">8</span><span class="n">combined</span> <span class="o">=</span> <span class="n">MultiWaveformDataset</span><span class="p">([</span><span class="n">dataset1</span><span class="p">,</span> <span class="n">dataset2</span><span class="p">])</span>
+</pre></div>
+</div>
+</section>
+<section id="id11">
+<h2>平衡采样<a class="headerlink" href="#id11" title="Link to this heading"></a></h2>
+<p>对于标签不平衡的数据集，使用平衡采样：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">from</span><span class="w"> </span><span class="nn">seispolarity</span><span class="w"> </span><span class="kn">import</span> <span class="n">BalancedPolarityGenerator</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="n">generator</span> <span class="o">=</span> <span class="n">BalancedPolarityGenerator</span><span class="p">(</span>
+<span class="linenos">4</span>    <span class="n">dataset</span><span class="p">,</span>
+<span class="linenos">5</span>    <span class="n">strategy</span><span class="o">=</span><span class="s2">&quot;polarity_inversion&quot;</span>  <span class="c1"># 或 &quot;min_based&quot;</span>
+<span class="linenos">6</span><span class="p">)</span>
+<span class="linenos">7</span><span class="n">loader</span> <span class="o">=</span> <span class="n">generator</span><span class="o">.</span><span class="n">get_dataloader</span><span class="p">(</span><span class="n">batch_size</span><span class="o">=</span><span class="mi">256</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="id12">
+<h2>数据集<a class="headerlink" href="#id12" title="Link to this heading"></a></h2>
+<section id="scsn">
+<h3>SCSN<a class="headerlink" href="#scsn" title="Link to this heading"></a></h3>
+<p>南加州地震网络（SCSN）数据集包含来自南加州地震网络的带极性标签的地震波形。该数据集涵盖 2000-2020 年期间的地震事件，是经过人工标注的高质量数据集。</p>
+<p><img alt="SCSN" src="../../_images/SCSN.png" /></p>
+<section id="id13">
+<h4>警告<a class="headerlink" href="#id13" title="Link to this heading"></a></h4>
+<p>数据集大小：waveforms.hdf5 ~660Gb，metadata.csv ~2.2Gb
+针对极性数据集 SCSN 约 15 GB</p>
+</section>
+<section id="id14">
+<h4>引用<a class="headerlink" href="#id14" title="Link to this heading"></a></h4>
+<p>Cheng, Y., Ross, Z. E., Hauksson, E., Ben-Zion, Y. (2023). Refined earthquake focal mechanism catalog for southern California derived with deep learning algorithms. Journal of Geophysical Research: Solid Earth, 128, e2022JB025975. <a class="reference external" href="https://doi.org/10.1029/2022JB025975">https://doi.org/10.1029/2022JB025975</a></p>
+<p>Ross, Z. E., Meier, M.-A., Hauksson, E. (2018). P wave arrival picking and first-motion polarity determination with deep learning. Journal of Geophysical Research: Solid Earth, 123, 5405-5416. <a class="reference external" href="https://doi.org/10.1029/2018JB015510">https://doi.org/10.1029/2018JB015510</a></p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="txed">
+<h3>Txed<a class="headerlink" href="#txed" title="Link to this heading"></a></h3>
+<p>德克萨斯地震数据集（TXED）是一个来自德克萨斯州的本地地震信号基准数据集。该数据集包含大量地震事件和噪声波形，是机器学习在地震学研究中的重要数据资源。</p>
+<p><img alt="Txed" src="../../_images/TXED.png" /></p>
+<section id="id15">
+<h4>警告<a class="headerlink" href="#id15" title="Link to this heading"></a></h4>
+<p>数据集大小：waveforms.hdf5 ~70Gb，metadata.csv 120Mb</p>
+</section>
+<section id="id16">
+<h4>引用<a class="headerlink" href="#id16" title="Link to this heading"></a></h4>
+<p>Chen, Y., Savvaidis, A., Saad, O. M., Huang, G.-C. D., Siervo, D., O’Sullivan, V., McCabe, C., Uku, B., Fleck, P., Burke, G., Alvarez, N. L., Domino, J., &amp; Grigoratos, I. (2024). TXED: The Texas Earthquake Dataset for AI. Seismological Research Letters, 95(6), 1-13. <a class="reference external" href="https://doi.org/10.1785/0220230327">https://doi.org/10.1785/0220230327</a></p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="diting">
+<h3>DiTing<a class="headerlink" href="#diting" title="Link to this heading"></a></h3>
+<p>DiTing 数据集是一个大规模中国地震基准数据集，专门用于人工智能地震学研究。该数据集包含超过 64 万个高质量的 P 波初动极性标签，覆盖中国各地 1300 多个宽带和短周期地震台站。</p>
+<p><img alt="Diting" src="../../_images/DITING.jpg" /></p>
+<section id="id17">
+<h4>引用<a class="headerlink" href="#id17" title="Link to this heading"></a></h4>
+<p>Zhao, M., Xiao, Z., Chen, S., &amp; Fang, L. (2023). DiTing: A large-scale Chinese seismic benchmark dataset for artificial intelligence in seismology. Earthquake Science, 36(2), 84-94. <a class="reference external" href="https://doi.org/10.1016/j.eqs.2022.01.022">https://doi.org/10.1016/j.eqs.2022.01.022</a></p>
+</section>
+<section id="id18">
+<h4>数据下载<a class="headerlink" href="#id18" title="Link to this heading"></a></h4>
+<p>数据集可通过以下地址进行申请下载：<a class="reference external" href="https://data.earthquake.cn/">https://data.earthquake.cn/</a></p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="instance">
+<h3>Instance<a class="headerlink" href="#instance" title="Link to this heading"></a></h3>
+<p>INSTANCE 数据集是意大利国家地球物理和火山学研究所（INGV）整理的意大利地震波形数据集，专为机器学习应用设计。该数据集包含近 120 万个三分量波形迹线，是地震学研究的重要资源。</p>
+<p><img alt="Instance" src="../../_images/INSTANCE.png" /></p>
+<section id="id19">
+<h4>警告<a class="headerlink" href="#id19" title="Link to this heading"></a></h4>
+<p>数据集大小：</p>
+<ul class="simple">
+<li><p>waveforms (counts) ~160Gb</p></li>
+<li><p>waveforms (ground motion units) ~310Gb</p></li>
+</ul>
+</section>
+<section id="id20">
+<h4>引用<a class="headerlink" href="#id20" title="Link to this heading"></a></h4>
+<p>Michelini, A., Cianetti, S., Gaviano, S., Giunchi, C., Jozinović, D., &amp; Lauciani, V. (2021). INSTANCE – The Italian Seismic Dataset For Machine Learning. Earth System Science Data, 13, 5509–5542. <a class="reference external" href="https://doi.org/10.5194/essd-13-5509-2021">https://doi.org/10.5194/essd-13-5509-2021</a></p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="pnw">
+<h3>PNW<a class="headerlink" href="#pnw" title="Link to this heading"></a></h3>
+<p>太平洋西北地区（PNW）数据集是一个机器学习就绪的精选数据集，包含来自太平洋西北地区的多种地震信号。该数据集由太平洋西北地震网络整理，涵盖地震、爆炸、噪声等多种地震事件类型。</p>
+<p><img alt="PNW" src="../../_images/PNW.png" /></p>
+<section id="id21">
+<h4>引用<a class="headerlink" href="#id21" title="Link to this heading"></a></h4>
+<p>Ni, Y., Hutko, A., Skene, F., Denolle, M., Malone, S., Bodin, P., Hartog, R., &amp; Wright, A. (2023). Curated Pacific Northwest AI-ready Seismic Dataset. Seismica, 2(1), 368. <a class="reference external" href="https://doi.org/10.26443/seismica.v2i1.368">https://doi.org/10.26443/seismica.v2i1.368</a></p>
+</section>
+</section>
+</section>
+<section id="id22">
+<h2>下载位置<a class="headerlink" href="#id22" title="Link to this heading"></a></h2>
+<p>数据集可以从以下位置下载：</p>
+<ul class="simple">
+<li><p><strong>Hugging Face</strong>: <code class="docutils literal notranslate"><span class="pre">https://huggingface.co/datasets/chuanjun1978/Seismic-AI-Data</span></code></p></li>
+<li><p><strong>ModelScope</strong>: <code class="docutils literal notranslate"><span class="pre">https://www.modelscope.cn/datasets/chuanjun/Seismic-AI-Data/</span></code>（推荐中国用户使用）</p></li>
+</ul>
+<p>更多详细信息请参阅 <a class="reference internal" href="../installation.html"><span class="std std-doc">安装指南</span></a>。</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../installation.html" class="btn btn-neutral float-left" title="安装与配置" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../models/overview.html" class="btn btn-neutral float-right" title="模型概述" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, He XingChen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+<div class="footer">
+     
+    <p style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
+        All content written by He XingChen
+    </p>
+</div>
+
+
+</body>
+</html>
