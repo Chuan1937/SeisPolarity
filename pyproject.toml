@@ -31,6 +31,14 @@ dev = [
     "ruff>=0.6",
     "black>=24.10",
 ]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-rtd-theme>=2.0",
+    "myst-parser>=2.0",
+    "sphinx-autodoc-typehints>=2.0",
+    "sphinx-autodoc-typehints>=2.0",
+    "sphinxcontrib-mermaid>=1.0",
+]
 modelscope = [
     "modelscope>=1.0.0",
     "datasets>=3.0.0,<=3.6.0",

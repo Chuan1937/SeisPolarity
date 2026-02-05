@@ -1,0 +1,12 @@
+pages:
+  image: python:3.10
+  stage: deploy
+  script:
+    - pip install sphinx sphinx-rtd-theme myst-parser sphinx-autodoc-typehints sphinxcontrib-mermaid linkify-it-py
+    - cd docs
+    - sphinx-build -b html . ../public
+  artifacts:
+    paths:
+      - public
+  only:
+    - main

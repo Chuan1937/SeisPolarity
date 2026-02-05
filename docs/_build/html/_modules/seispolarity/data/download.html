@@ -1,0 +1,1100 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seispolarity.data.download &mdash; SeisPolarity</title>
+      <link rel="stylesheet" type="text/css" href="../../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../../_static/css/theme.css?v=9edc463e" />
+
+  
+    <link rel="shortcut icon" href="../../../_static/seispolarity_logo.svg"/>
+      <script src="../../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../../_static/documentation_options.js?v=3ce10a4d"></script>
+      <script src="../../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../index.html">
+            
+              <img src="../../../_static/seispolarity_logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"></div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../index.html">SeisPolarity</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">seispolarity.data.download</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for seispolarity.data.download</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">hashlib</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">shutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">socket</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Sequence</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">seispolarity.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">settings</span>
+
+<span class="n">_CHUNK_SIZE</span> <span class="o">=</span> <span class="mi">1024</span> <span class="o">*</span> <span class="mi">1024</span>  <span class="c1"># 1MB</span>
+
+<span class="c1"># 数据集源配置</span>
+<span class="n">HF_REPO</span> <span class="o">=</span> <span class="s2">&quot;HeXingChen/Seismic-AI-Data&quot;</span>
+<span class="c1"># ModelScope 仓库 ID（用于数据集下载）</span>
+<span class="n">MODELSCOPE_DATASET_REPO</span> <span class="o">=</span> <span class="s2">&quot;chuanjun/Seismic-AI-Data&quot;</span>
+<span class="c1"># ModelScope 模型仓库 ID（用于模型下载）</span>
+<span class="n">MODELSCOPE_MODEL_REPO</span> <span class="o">=</span> <span class="s2">&quot;chuanjun/HeXingChen&quot;</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_sha256</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">()</span>
+    <span class="k">with</span> <span class="n">path</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">_CHUNK_SIZE</span><span class="p">),</span> <span class="sa">b</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+            <span class="n">h</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">h</span><span class="o">.</span><span class="n">hexdigest</span><span class="p">()</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_verify_hdf5_integrity</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="n">Path</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;检查 HDF5 文件是否完整且可读。</span>
+
+<span class="sd">    参数</span>
+<span class="sd">    ----------</span>
+<span class="sd">    path：HDF5 文件的路径。</span>
+
+<span class="sd">    返回</span>
+<span class="sd">    -------</span>
+<span class="sd">    bool：如果文件完整且可读则返回 True，否则返回 False。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># 尝试以只读模式打开文件</span>
+        <span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="c1"># 尝试访问根组，如果文件损坏这里会抛出异常</span>
+            <span class="n">_</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">except</span> <span class="p">(</span><span class="ne">OSError</span><span class="p">,</span> <span class="ne">KeyError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  HDF5 file integrity check failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="kc">False</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">download_file</span><span class="p">(</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">dest_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">expected_sha256</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download a file to the dataset cache.</span>
+
+<span class="sd">    - If filename is None, derive it from the URL.</span>
+<span class="sd">    - If dest_dir is None, use settings.cache_datasets.</span>
+<span class="sd">    - If file exists and matches checksum (when provided), it is reused unless overwrite=True.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;下载文件到数据集缓存。</span>
+<span class="sd">    - 如果 filename 为 None，则从 URL 派生文件名。</span>
+<span class="sd">    - 如果 dest_dir 为 None，则使用 settings.cache_datasets。</span>
+<span class="sd">    - 如果文件存在且与校验和匹配（当提供时），则重用它，除非 overwrite=True。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">dest_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">dest_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">dest_dir</span> <span class="k">else</span> <span class="n">settings</span><span class="o">.</span><span class="n">cache_datasets</span>
+    <span class="n">dest_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">fname</span> <span class="o">=</span> <span class="n">filename</span> <span class="ow">or</span> <span class="n">url</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="n">dest_dir</span> <span class="o">/</span> <span class="n">fname</span>
+
+    <span class="k">if</span> <span class="n">target</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">overwrite</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">expected_sha256</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="n">_sha256</span><span class="p">(</span><span class="n">target</span><span class="p">)</span> <span class="o">==</span> <span class="n">expected_sha256</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">target</span>
+
+    <span class="c1"># 获取文件总大小用于显示进度条</span>
+    <span class="k">with</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">stream</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span> <span class="k">as</span> <span class="n">r</span><span class="p">:</span>
+        <span class="n">r</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+        <span class="n">total_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">headers</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;content-length&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">))</span>
+
+        <span class="c1"># 如果有文件大小，显示进度条</span>
+        <span class="k">if</span> <span class="n">total_size</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+            <span class="n">progress_bar</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">total</span><span class="o">=</span><span class="n">total_size</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s1">&#39;B&#39;</span><span class="p">,</span> <span class="n">unit_scale</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">desc</span><span class="o">=</span><span class="sa">f</span><span class="s2">&quot;Downloading </span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">with</span> <span class="n">target</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="n">chunk_size</span><span class="o">=</span><span class="n">_CHUNK_SIZE</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">chunk</span><span class="p">:</span>
+                        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+                        <span class="n">progress_bar</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">chunk</span><span class="p">))</span>
+            <span class="n">progress_bar</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># 没有文件大小信息，直接下载</span>
+            <span class="k">with</span> <span class="n">target</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="s2">&quot;wb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">chunk</span> <span class="ow">in</span> <span class="n">r</span><span class="o">.</span><span class="n">iter_content</span><span class="p">(</span><span class="n">chunk_size</span><span class="o">=</span><span class="n">_CHUNK_SIZE</span><span class="p">):</span>
+                    <span class="k">if</span> <span class="n">chunk</span><span class="p">:</span>
+                        <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">chunk</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">expected_sha256</span> <span class="ow">and</span> <span class="n">_sha256</span><span class="p">(</span><span class="n">target</span><span class="p">)</span> <span class="o">!=</span> <span class="n">expected_sha256</span><span class="p">:</span>
+        <span class="n">target</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">missing_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Downloaded file checksum mismatch&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">target</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">maybe_extract</span><span class="p">(</span><span class="n">archive_path</span><span class="p">:</span> <span class="n">Path</span><span class="p">,</span> <span class="n">target_dir</span><span class="p">:</span> <span class="n">Path</span> <span class="o">|</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extract common archive formats into a directory named after the archive stem.</span>
+
+<span class="sd">    Returns the extraction directory path.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;将常见的归档格式提取到以归档主干命名的目录中。</span>
+<span class="sd">    返回提取目录路径。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">target_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">target_dir</span><span class="p">)</span> <span class="k">if</span> <span class="n">target_dir</span> <span class="k">else</span> <span class="n">archive_path</span><span class="o">.</span><span class="n">parent</span> <span class="o">/</span> <span class="n">archive_path</span><span class="o">.</span><span class="n">stem</span>
+    <span class="k">if</span> <span class="n">target_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">overwrite</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">rmtree</span><span class="p">(</span><span class="n">target_dir</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">target_dir</span>
+
+    <span class="n">target_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">shutil</span><span class="o">.</span><span class="n">unpack_archive</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">archive_path</span><span class="p">),</span> <span class="n">extract_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">target_dir</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">target_dir</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_and_extract</span><span class="p">(</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">url</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">expected_sha256</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">overwrite</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Convenience: download an archive to cache/datasets/{name} and extract it.&quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;方便：将归档下载到 cache/datasets/{name} 并提取它。&quot;&quot;&quot;</span>
+    <span class="n">archive</span> <span class="o">=</span> <span class="n">download_file</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">filename</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">dest_dir</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">cache_datasets</span><span class="p">,</span> <span class="n">expected_sha256</span><span class="o">=</span><span class="n">expected_sha256</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">maybe_extract</span><span class="p">(</span><span class="n">archive</span><span class="p">,</span> <span class="n">target_dir</span><span class="o">=</span><span class="n">settings</span><span class="o">.</span><span class="n">cache_datasets</span> <span class="o">/</span> <span class="n">name</span><span class="p">,</span> <span class="n">overwrite</span><span class="o">=</span><span class="n">overwrite</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_hf_dataset</span><span class="p">(</span>
+    <span class="n">repo_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">revision</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">allow_patterns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">ignore_patterns</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">token</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">local_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">use_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">repo_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;dataset&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download a Hugging Face dataset repository snapshot into the datasets cache.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    repo_id: owner/name on Hugging Face, e.g. &quot;chuanjun1978/Seismic-AI-Data&quot;.</span>
+<span class="sd">    revision: branch/tag/commit; default None means main.</span>
+<span class="sd">    allow_patterns / ignore_patterns: glob patterns to filter which files to download.</span>
+<span class="sd">    token: optional HF token for private repos.</span>
+<span class="sd">    local_name: optional folder name under cache_datasets; defaults to repo_id with slashes replaced by &quot;__&quot;.</span>
+<span class="sd">    use_symlinks: whether to let huggingface_hub create symlinks to its cache (saves space). Set False to copy files.</span>
+<span class="sd">    repo_type: &quot;dataset&quot; (default), &quot;model&quot;, or &quot;space&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;将 Hugging Face 数据集存储库快照下载到数据集缓存中。</span>
+<span class="sd">    参数</span>
+<span class="sd">    ----------</span>
+<span class="sd">    repo_id：Hugging Face 上的所有者/名称，例如 &quot;chuanjun1978/Seismic-AI-Data&quot;。</span>
+<span class="sd">    revision：分支/标签/提交；默认 None 表示 main。</span>
+<span class="sd">    allow_patterns / ignore_patterns：用于过滤要下载的文件的全局模式。</span>
+<span class="sd">    token：用于私有存储库的可选 HF 令牌。</span>
+<span class="sd">    local_name：cache_datasets 下的可选文件夹名称；默认为用 &quot;__&quot; 替换斜杠的 repo_id。</span>
+<span class="sd">    use_symlinks：是否允许 huggingface_hub 创建其缓存的符号链接（节省空间）。设置为 False 以复制文件。</span>
+<span class="sd">    repo_type：“dataset”（默认）、“model”或“space”。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">huggingface_hub</span><span class="w"> </span><span class="kn">import</span> <span class="n">snapshot_download</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover - user environment issue</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;huggingface-hub is required for fetch_hf_dataset; pip install huggingface-hub&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="n">target_dir</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">cache_datasets</span> <span class="o">/</span> <span class="p">(</span><span class="n">local_name</span> <span class="ow">or</span> <span class="n">repo_id</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;__&quot;</span><span class="p">))</span>
+    <span class="n">target_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">snapshot_download</span><span class="p">(</span>
+        <span class="n">repo_id</span><span class="o">=</span><span class="n">repo_id</span><span class="p">,</span>
+        <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">,</span>
+        <span class="n">allow_patterns</span><span class="o">=</span><span class="n">allow_patterns</span><span class="p">,</span>
+        <span class="n">ignore_patterns</span><span class="o">=</span><span class="n">ignore_patterns</span><span class="p">,</span>
+        <span class="n">local_dir</span><span class="o">=</span><span class="n">target_dir</span><span class="p">,</span>
+        <span class="c1"># local_dir_use_symlinks=use_symlinks, # Deprecated</span>
+        <span class="n">token</span><span class="o">=</span><span class="n">token</span><span class="p">,</span>
+        <span class="n">repo_type</span><span class="o">=</span><span class="n">repo_type</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">target_dir</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_hf_file</span><span class="p">(</span>
+    <span class="n">repo_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">repo_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">revision</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">token</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">local_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">use_symlinks</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span><span class="p">,</span>
+    <span class="n">repo_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;dataset&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download a single file from a Hugging Face dataset repo into cache_datasets.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    repo_id: owner/name, e.g. &quot;chuanjun1978/Seismic-AI-Data&quot;.</span>
+<span class="sd">    repo_path: path to file inside the repo, e.g. &quot;SCSN/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5&quot;.</span>
+<span class="sd">    revision: branch/tag/commit; default main.</span>
+<span class="sd">    token: optional token for private repos.</span>
+<span class="sd">    local_name: optional folder name under cache_datasets; default repo_id with slashes replaced.</span>
+<span class="sd">    use_symlinks: whether to keep HF cache symlinks.</span>
+<span class="sd">    repo_type: &quot;dataset&quot; (default), &quot;model&quot;, or &quot;space&quot;.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;将 Hugging Face 数据集存储库中的单个文件下载到 cache_datasets 中。</span>
+<span class="sd">    参数</span>
+<span class="sd">    ----------</span>
+<span class="sd">    repo_id：所有者/名称，例如 &quot;chuanjun1978/Seismic-AI-Data&quot;。</span>
+<span class="sd">    repo_path：存储库内文件的路径，例如 &quot;SCSN/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5&quot;。</span>
+<span class="sd">    revision：分支/标签/提交；默认 main。</span>
+<span class="sd">    token：用于私有存储库的可选令牌。</span>
+<span class="sd">    local_name：cache_datasets 下的可选文件夹名称；默认替换斜杠的 repo_id。</span>
+<span class="sd">    use_symlinks：是否保留 HF 缓存符号链接。</span>
+<span class="sd">    repo_type：“dataset”（默认）、“model”或“space”。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">huggingface_hub</span><span class="w"> </span><span class="kn">import</span> <span class="n">hf_hub_download</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;huggingface-hub is required for fetch_hf_file; pip install huggingface-hub&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="n">target_dir</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">cache_datasets</span> <span class="o">/</span> <span class="p">(</span><span class="n">local_name</span> <span class="ow">or</span> <span class="n">repo_id</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;__&quot;</span><span class="p">))</span>
+    <span class="n">target_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">hf_hub_download</span><span class="p">(</span>
+        <span class="n">repo_id</span><span class="o">=</span><span class="n">repo_id</span><span class="p">,</span>
+        <span class="n">filename</span><span class="o">=</span><span class="n">repo_path</span><span class="p">,</span>
+        <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">,</span>
+        <span class="n">token</span><span class="o">=</span><span class="n">token</span><span class="p">,</span>
+        <span class="n">local_dir</span><span class="o">=</span><span class="n">target_dir</span><span class="p">,</span>
+        <span class="c1"># local_dir_use_symlinks=use_symlinks, # Deprecated</span>
+        <span class="n">repo_type</span><span class="o">=</span><span class="n">repo_type</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="n">downloaded_file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+
+    <span class="c1"># Verify the downloaded file is complete (especially for HDF5 files)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">repo_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+    <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.hdf5&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.h5&#39;</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Verifying downloaded HDF5 file integrity...&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_hdf5_integrity</span><span class="p">(</span><span class="n">downloaded_file</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  ERROR: Downloaded HDF5 file is corrupted or incomplete!&quot;</span><span class="p">)</span>
+            <span class="c1"># Remove the corrupted file</span>
+            <span class="k">if</span> <span class="n">downloaded_file</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">downloaded_file</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloaded HDF5 file is corrupted: </span><span class="si">{</span><span class="n">downloaded_file</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Downloaded HDF5 file is intact.&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">downloaded_file</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_modelscope_dataset</span><span class="p">(</span>
+    <span class="n">repo_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">subset_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;default&quot;</span><span class="p">,</span>
+    <span class="n">split</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span>
+    <span class="n">cache_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download a dataset from ModelScope using MsDataset.load API.</span>
+
+<span class="sd">    This is the preferred method for downloading datasets from ModelScope.</span>
+<span class="sd">    It uses MsDataset.load which handles dataset downloads differently from model downloads.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    repo_id: owner/name on ModelScope, e.g. &quot;chuanjun/Seismic-AI-Data&quot;.</span>
+<span class="sd">    subset_name: dataset subset name, default &#39;default&#39;.</span>
+<span class="sd">    split: dataset split, e.g. &quot;train&quot;, &quot;test&quot;. Default is &quot;train&quot;.</span>
+<span class="sd">    cache_dir: directory to cache the downloaded dataset. If None, uses settings.cache_datasets.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Path to the downloaded dataset directory.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;使用 MsDataset.load API 从 ModelScope 下载数据集。</span>
+
+<span class="sd">    这是从 ModelScope 下载数据集的首选方法。</span>
+<span class="sd">    它使用 MsDataset.load，该方法处理数据集下载的方式与模型下载不同。</span>
+
+<span class="sd">    参数</span>
+<span class="sd">    ----------</span>
+<span class="sd">    repo_id：ModelScope 上的所有者/名称，例如 &quot;chuanjun/Seismic-AI-Data&quot;。</span>
+<span class="sd">    subset_name：数据集子集名称，默认 &#39;default&#39;。</span>
+<span class="sd">    split：数据集分割，例如 &quot;train&quot;、&quot;test&quot;。默认为 &quot;train&quot;。</span>
+<span class="sd">    cache_dir：缓存下载的数据集的目录。如果为 None，则使用 settings.cache_datasets。</span>
+
+<span class="sd">    返回</span>
+<span class="sd">    -------</span>
+<span class="sd">    下载数据集目录的路径。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">modelscope.msdatasets</span><span class="w"> </span><span class="kn">import</span> <span class="n">MsDataset</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;modelscope is required for fetch_modelscope_dataset; pip install modelscope&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="c1"># Setup cache directory</span>
+    <span class="k">if</span> <span class="n">cache_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cache_dir</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">cache_datasets</span>
+    <span class="n">cache_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+    <span class="n">cache_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Create a dataset-specific cache directory</span>
+    <span class="n">target_dir</span> <span class="o">=</span> <span class="n">cache_dir</span> <span class="o">/</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">repo_id</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">,</span><span class="w"> </span><span class="s1">&#39;__&#39;</span><span class="p">)</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">subset_name</span><span class="si">}</span><span class="s2">__</span><span class="si">{</span><span class="n">split</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="n">target_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloading dataset from ModelScope using MsDataset.load...&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Repo ID: </span><span class="si">{</span><span class="n">repo_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Subset: </span><span class="si">{</span><span class="n">subset_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Split: </span><span class="si">{</span><span class="n">split</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Cache directory: </span><span class="si">{</span><span class="n">target_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Load the dataset using MsDataset.load</span>
+    <span class="n">ds</span> <span class="o">=</span> <span class="n">MsDataset</span><span class="o">.</span><span class="n">load</span><span class="p">(</span>
+        <span class="n">repo_id</span><span class="p">,</span>
+        <span class="n">subset_name</span><span class="o">=</span><span class="n">subset_name</span><span class="p">,</span>
+        <span class="n">split</span><span class="o">=</span><span class="n">split</span><span class="p">,</span>
+        <span class="n">cache_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">target_dir</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dataset downloaded successfully!&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dataset info: </span><span class="si">{</span><span class="n">ds</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">target_dir</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_modelscope_file</span><span class="p">(</span>
+    <span class="n">repo_id</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">repo_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">revision</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">local_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">subset_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">split</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download a single file from a ModelScope dataset repo into cache_datasets using model_file_download API.</span>
+
+<span class="sd">    Note: For datasets, prefer using fetch_modelscope_dataset instead.</span>
+<span class="sd">    This function is kept for backward compatibility and for downloading individual files.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    repo_id: owner/name on ModelScope, e.g. &quot;chuanjun/Seismic-AI-Data&quot;.</span>
+<span class="sd">    repo_path: path to file inside the repo, e.g. &quot;SCSN/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5&quot;.</span>
+<span class="sd">    revision: branch/tag/commit; default None means master.</span>
+<span class="sd">    local_name: optional folder name under cache_datasets; default repo_id with slashes replaced.</span>
+<span class="sd">    subset_name: dataset subset name, default None means &#39;default&#39;. (Not used in model_file_download)</span>
+<span class="sd">    split: dataset split, e.g. &quot;train&quot;, &quot;test&quot;. Default is &quot;train&quot;. (Not used in model_file_download)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;将 ModelScope 数据集存储库中的单个文件下载到 cache_datasets 中，使用 model_file_download API。</span>
+<span class="sd">    注意：对于数据集，优先使用 fetch_modelscope_dataset。</span>
+<span class="sd">    此函数保留用于向后兼容和下载单个文件。</span>
+
+<span class="sd">    参数</span>
+<span class="sd">    ----------</span>
+<span class="sd">    repo_id：ModelScope 上的所有者/名称，例如 &quot;chuanjun/Seismic-AI-Data&quot;。</span>
+<span class="sd">    repo_path：存储库内文件的路径，例如 &quot;SCSN/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5&quot;。</span>
+<span class="sd">    revision：分支/标签/提交；默认 None 表示 master。</span>
+<span class="sd">    local_name：cache_datasets 下的可选文件夹名称；默认替换斜杠的 repo_id。</span>
+<span class="sd">    subset_name：数据集子集名称，默认 None 表示 &#39;default&#39;。（在 model_file_download 中未使用）</span>
+<span class="sd">    split：数据集分割，例如 &quot;train&quot;、&quot;test&quot;。默认为 &quot;train&quot;。（在 model_file_download 中未使用）</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="k">try</span><span class="p">:</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">modelscope.hub.file_download</span><span class="w"> </span><span class="kn">import</span> <span class="n">model_file_download</span>
+    <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ImportError</span><span class="p">(</span><span class="s2">&quot;modelscope is required for fetch_modelscope_file; pip install modelscope&quot;</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+
+    <span class="n">target_dir</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">cache_datasets</span> <span class="o">/</span> <span class="p">(</span><span class="n">local_name</span> <span class="ow">or</span> <span class="n">repo_id</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">,</span> <span class="s2">&quot;__&quot;</span><span class="p">))</span>
+    <span class="n">target_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">repo_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">target_path</span> <span class="o">=</span> <span class="n">target_dir</span> <span class="o">/</span> <span class="n">filename</span>
+
+    <span class="c1"># Check if file already exists</span>
+    <span class="k">if</span> <span class="n">target_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found existing local file: </span><span class="si">{</span><span class="n">target_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># Check if file is complete and readable</span>
+        <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.hdf5&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.h5&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Verifying HDF5 file integrity...&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_hdf5_integrity</span><span class="p">(</span><span class="n">target_path</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  HDF5 file is corrupted or incomplete. Re-downloading...&quot;</span><span class="p">)</span>
+                <span class="c1"># Remove the corrupted file</span>
+                <span class="n">target_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  HDF5 file is intact.&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">target_path</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># For non-HDF5 files, just return if exists</span>
+            <span class="k">return</span> <span class="n">target_path</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloading file from ModelScope using model_file_download...&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Repo ID: </span><span class="si">{</span><span class="n">repo_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File path: </span><span class="si">{</span><span class="n">repo_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Use ModelScope&#39;s model_file_download API to download the file</span>
+    <span class="n">file_path</span> <span class="o">=</span> <span class="n">model_file_download</span><span class="p">(</span>
+        <span class="n">model_id</span><span class="o">=</span><span class="n">repo_id</span><span class="p">,</span>
+        <span class="n">file_path</span><span class="o">=</span><span class="n">repo_path</span><span class="p">,</span>
+        <span class="n">revision</span><span class="o">=</span><span class="n">revision</span><span class="p">,</span>
+        <span class="n">local_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">target_dir</span><span class="p">),</span>
+    <span class="p">)</span>
+
+    <span class="c1"># Copy the file to target_path if it&#39;s not already there</span>
+    <span class="n">downloaded_file</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">downloaded_file</span> <span class="o">!=</span> <span class="n">target_path</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copy2</span><span class="p">(</span><span class="n">downloaded_file</span><span class="p">,</span> <span class="n">target_path</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Copied to: </span><span class="si">{</span><span class="n">target_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Verify the downloaded file is complete (especially for HDF5 files)</span>
+    <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.hdf5&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.h5&#39;</span><span class="p">):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Verifying downloaded HDF5 file integrity...&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_hdf5_integrity</span><span class="p">(</span><span class="n">target_path</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  ERROR: Downloaded HDF5 file is corrupted or incomplete!&quot;</span><span class="p">)</span>
+            <span class="c1"># Remove the corrupted file</span>
+            <span class="k">if</span> <span class="n">target_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+                <span class="n">target_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloaded HDF5 file is corrupted: </span><span class="si">{</span><span class="n">target_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Downloaded HDF5 file is intact.&quot;</span><span class="p">)</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloaded to: </span><span class="si">{</span><span class="n">target_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">target_path</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_check_hf_network_access</span><span class="p">(</span><span class="n">timeout</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Check if Hugging Face is accessible.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    timeout: timeout in seconds for the connection test.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    True if huggingface.co is accessible, False otherwise.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">socket</span><span class="o">.</span><span class="n">setdefaulttimeout</span><span class="p">(</span><span class="n">timeout</span><span class="p">)</span>
+        <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="s2">&quot;huggingface.co&quot;</span><span class="p">,</span> <span class="mi">443</span><span class="p">))</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">socket</span><span class="o">.</span><span class="n">setdefaulttimeout</span><span class="p">(</span><span class="kc">None</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_dataset_from_remote</span><span class="p">(</span>
+    <span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">repo_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">hf_repo_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">HF_REPO</span><span class="p">,</span>
+    <span class="n">modelscope_repo_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">MODELSCOPE_DATASET_REPO</span><span class="p">,</span>
+    <span class="n">cache_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">force_download</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">revision</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">use_hf</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download a dataset file from ModelScope or Hugging Face.</span>
+
+<span class="sd">    Priority: ModelScope (default) &gt; Hugging Face (if use_hf=True).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dataset_name: name of the dataset (e.g., &quot;SCSN&quot;, &quot;TXED&quot;, &quot;PNW&quot;).</span>
+<span class="sd">    repo_path: path to file inside the repo (e.g., &quot;SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5&quot;).</span>
+<span class="sd">    hf_repo_id: Hugging Face repository ID (default: HeXingChen/Seismic-AI-Data).</span>
+<span class="sd">    modelscope_repo_id: ModelScope repository ID (default: chuanjun/Seismic-AI-Data).</span>
+<span class="sd">    cache_dir: directory to cache the downloaded files. If None, uses settings.cache_datasets.</span>
+<span class="sd">    force_download: if True, force re-download even if file exists.</span>
+<span class="sd">    use_hf: if True, use Hugging Face instead of ModelScope.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Path to the downloaded file.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; # Download SCSN training data from ModelScope (default)</span>
+<span class="sd">    &gt;&gt;&gt; path = fetch_dataset_from_remote(</span>
+<span class="sd">    ...     dataset_name=&quot;SCSN&quot;,</span>
+<span class="sd">    ...     repo_path=&quot;SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5&quot;</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; # Use in WaveformDataset</span>
+<span class="sd">    &gt;&gt;&gt; dataset = WaveformDataset(path=path, name=&quot;SCSN_Train&quot;, ...)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;从 ModelScope 或 Hugging Face 下载数据集文件。</span>
+
+<span class="sd">    优先级：ModelScope（默认）&gt; Hugging Face（当 use_hf=True 时）。</span>
+
+<span class="sd">    参数</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dataset_name：数据集名称（例如 &quot;SCSN&quot;、&quot;TXED&quot;、&quot;PNW&quot;）。</span>
+<span class="sd">    repo_path：存储库内文件的路径（例如 &quot;SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5&quot;）。</span>
+<span class="sd">    hf_repo_id：Hugging Face 存储库 ID（默认：HeXingChen/Seismic-AI-Data）。</span>
+<span class="sd">    modelscope_repo_id：ModelScope 存储库 ID（默认：chuanjun/Seismic-AI-Data）。</span>
+<span class="sd">    cache_dir：缓存下载文件的目录。如果为 None，则使用 settings.cache_datasets。</span>
+<span class="sd">    force_download：如果为 True，则即使文件存在也强制重新下载。</span>
+<span class="sd">    use_hf：如果为 True，则使用 Hugging Face 而不是 ModelScope。</span>
+
+<span class="sd">    返回</span>
+<span class="sd">    -------</span>
+<span class="sd">    下载文件的路径。</span>
+
+<span class="sd">    示例</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; # 从 ModelScope 下载 SCSN 训练数据（默认）</span>
+<span class="sd">    &gt;&gt;&gt; path = fetch_dataset_from_remote(</span>
+<span class="sd">    ...     dataset_name=&quot;SCSN&quot;,</span>
+<span class="sd">    ...     repo_path=&quot;SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5&quot;</span>
+<span class="sd">    ... )</span>
+<span class="sd">    &gt;&gt;&gt; # 在 WaveformDataset 中使用</span>
+<span class="sd">    &gt;&gt;&gt; dataset = WaveformDataset(path=path, name=&quot;SCSN_Train&quot;, ...)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Setup cache directory</span>
+    <span class="k">if</span> <span class="n">cache_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cache_dir</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">cache_datasets</span>
+    <span class="n">cache_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+    <span class="n">cache_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Determine target file path</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">repo_path</span><span class="p">)</span><span class="o">.</span><span class="n">name</span>
+    <span class="n">target_path</span> <span class="o">=</span> <span class="n">cache_dir</span> <span class="o">/</span> <span class="n">filename</span>
+
+    <span class="c1"># Check if file already exists</span>
+    <span class="k">if</span> <span class="n">target_path</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">force_download</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found existing local file: </span><span class="si">{</span><span class="n">target_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># Check if file is complete and readable</span>
+        <span class="k">if</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.hdf5&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="n">filename</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.h5&#39;</span><span class="p">):</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  Verifying HDF5 file integrity...&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">_verify_hdf5_integrity</span><span class="p">(</span><span class="n">target_path</span><span class="p">):</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  HDF5 file is corrupted or incomplete. Re-downloading...&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="c1"># Remove the corrupted file</span>
+                <span class="n">target_path</span><span class="o">.</span><span class="n">unlink</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;  HDF5 file is intact.&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">target_path</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># For non-HDF5 files, just return if exists</span>
+            <span class="k">return</span> <span class="n">target_path</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloading dataset &#39;</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">&#39; from </span><span class="si">{</span><span class="s1">&#39;Hugging Face&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">use_hf</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;ModelScope&#39;</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Target file: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">use_hf</span><span class="p">:</span>
+        <span class="c1"># Try Hugging Face if network is accessible</span>
+        <span class="k">if</span> <span class="n">_check_hf_network_access</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hugging Face network is accessible. Attempting download from Hugging Face...&quot;</span><span class="p">)</span>
+                <span class="n">file_path</span> <span class="o">=</span> <span class="n">fetch_hf_file</span><span class="p">(</span>
+                    <span class="n">repo_id</span><span class="o">=</span><span class="n">hf_repo_id</span><span class="p">,</span>
+                    <span class="n">repo_path</span><span class="o">=</span><span class="n">repo_path</span><span class="p">,</span>
+                    <span class="n">local_name</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dataset downloaded from Hugging Face: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">file_path</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">error_msg</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Failed to download dataset from Hugging Face.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Dataset: </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;File: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Hugging Face: </span><span class="si">{</span><span class="n">hf_repo_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">repo_path</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Solutions:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;1. Check your network connection (huggingface.co)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;2. Manually download from Hugging Face:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;   https://huggingface.co/datasets/</span><span class="si">{</span><span class="n">hf_repo_id</span><span class="si">}</span><span class="s2">/tree/main</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;3. Use ModelScope instead (set use_hf=False)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;4. Specify local path manually in WaveformDataset</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;5. Use VPN if Hugging Face is blocked in your region</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">error_msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Cannot access Hugging Face network.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Dataset: </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;File: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Hugging Face: </span><span class="si">{</span><span class="n">hf_repo_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">repo_path</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Solutions:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;1. Check your network connection (huggingface.co)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;2. Manually download from Hugging Face:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;   https://huggingface.co/datasets/</span><span class="si">{</span><span class="n">hf_repo_id</span><span class="si">}</span><span class="s2">/tree/main</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;3. Use ModelScope instead (set use_hf=False)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;4. Specify local path manually in WaveformDataset</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;5. Use VPN if Hugging Face is blocked in your region</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Try ModelScope (default)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">modelscope.hub.file_download</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataset_file_download</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Attempting download from ModelScope: </span><span class="si">{</span><span class="n">modelscope_repo_id</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+            <span class="n">file_path</span> <span class="o">=</span> <span class="n">dataset_file_download</span><span class="p">(</span>
+                <span class="n">dataset_id</span><span class="o">=</span><span class="n">modelscope_repo_id</span><span class="p">,</span>
+                <span class="n">file_path</span><span class="o">=</span><span class="n">repo_path</span><span class="p">,</span>
+                <span class="n">cache_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">)</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dataset downloaded from ModelScope: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">Path</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">error_msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;ModelScope not installed.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Please install modelscope:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;  pip install modelscope</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Or use Hugging Face instead (set use_hf=True)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">error_msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Failed to download dataset from ModelScope.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Dataset: </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;File: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;ModelScope: </span><span class="si">{</span><span class="n">modelscope_repo_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">repo_path</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Solutions:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;1. Check your network connection (modelscope.cn)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;2. Manually download from ModelScope:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;   https://www.modelscope.cn/datasets/</span><span class="si">{</span><span class="n">modelscope_repo_id</span><span class="si">}</span><span class="s2">/tree/master</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;3. Use Hugging Face instead (set use_hf=True)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;4. Specify local path manually in WaveformDataset</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_dataset_folder</span><span class="p">(</span>
+    <span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">folder_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">hf_repo_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">HF_REPO</span><span class="p">,</span>
+    <span class="n">modelscope_repo_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">MODELSCOPE_DATASET_REPO</span><span class="p">,</span>
+    <span class="n">cache_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">force_download</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">revision</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">use_hf</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Download an entire dataset folder from ModelScope or Hugging Face.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dataset_name: name of the dataset (e.g., &quot;SCSN&quot;, &quot;TXED&quot;, &quot;PNW&quot;).</span>
+<span class="sd">    folder_path: path to folder inside the repo (e.g., &quot;SCSN/&quot;, &quot;TXED/&quot;).</span>
+<span class="sd">    hf_repo_id: Hugging Face repository ID (default: HeXingChen/Seismic-AI-Data).</span>
+<span class="sd">    modelscope_repo_id: ModelScope repository ID (default: chuanjun/Seismic-AI-Data).</span>
+<span class="sd">    cache_dir: directory to cache the downloaded files. If None, uses settings.cache_datasets.</span>
+<span class="sd">    force_download: if True, force re-download even if files exist.</span>
+<span class="sd">    use_hf: if True, use Hugging Face instead of ModelScope.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Path to the downloaded dataset folder.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;从 ModelScope 或 Hugging Face 下载数据集文件夹。</span>
+
+<span class="sd">    参数</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dataset_name：数据集名称（例如 &quot;SCSN&quot;、&quot;TXED&quot;、&quot;PNW&quot;）。</span>
+<span class="sd">    folder_path：存储库内文件夹的路径（例如 &quot;SCSN/&quot;, &quot;TXED/&quot;）。</span>
+<span class="sd">    hf_repo_id：Hugging Face 存储库 ID（默认：HeXingChen/Seismic-AI-Data）。</span>
+<span class="sd">    modelscope_repo_id：ModelScope 存储库 ID（默认：chuanjun/Seismic-AI-Data）。</span>
+<span class="sd">    cache_dir：缓存下载文件的目录。如果为 None，则使用 settings.cache_datasets。</span>
+<span class="sd">    force_download：如果为 True，则即使文件存在也强制重新下载。</span>
+<span class="sd">    use_hf：如果为 True，则使用 Hugging Face 而不是 ModelScope。</span>
+
+<span class="sd">    返回</span>
+<span class="sd">    -------</span>
+<span class="sd">    下载数据集文件夹的路径。</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Setup cache directory</span>
+    <span class="k">if</span> <span class="n">cache_dir</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cache_dir</span> <span class="o">=</span> <span class="n">settings</span><span class="o">.</span><span class="n">cache_datasets</span>
+    <span class="n">cache_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="n">cache_dir</span><span class="p">)</span><span class="o">.</span><span class="n">expanduser</span><span class="p">()</span>
+    <span class="n">cache_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="c1"># Remove trailing slash from folder_path</span>
+    <span class="n">folder_name</span> <span class="o">=</span> <span class="n">folder_path</span><span class="o">.</span><span class="n">rstrip</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">)</span>
+    <span class="n">target_dir</span> <span class="o">=</span> <span class="n">cache_dir</span> <span class="o">/</span> <span class="n">folder_name</span>
+
+    <span class="c1"># Check if folder already exists and is not empty</span>
+    <span class="k">if</span> <span class="n">target_dir</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">force_download</span><span class="p">:</span>
+        <span class="n">files</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">target_dir</span><span class="o">.</span><span class="n">iterdir</span><span class="p">())</span>
+        <span class="k">if</span> <span class="n">files</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found existing dataset folder: </span><span class="si">{</span><span class="n">target_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Folder contains </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">files</span><span class="p">)</span><span class="si">}</span><span class="s2"> files/directories.&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">target_dir</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloading dataset folder &#39;</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">&#39; from </span><span class="si">{</span><span class="s1">&#39;Hugging Face&#39;</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">use_hf</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="s1">&#39;ModelScope&#39;</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Target folder: </span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">use_hf</span><span class="p">:</span>
+        <span class="c1"># Try Hugging Face if network is accessible</span>
+        <span class="k">if</span> <span class="n">_check_hf_network_access</span><span class="p">():</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Hugging Face network is accessible. Attempting download from Hugging Face...&quot;</span><span class="p">)</span>
+                <span class="c1"># Use allow_patterns to download only the specified folder</span>
+                <span class="n">target_dir</span> <span class="o">=</span> <span class="n">fetch_hf_dataset</span><span class="p">(</span>
+                    <span class="n">repo_id</span><span class="o">=</span><span class="n">hf_repo_id</span><span class="p">,</span>
+                    <span class="n">allow_patterns</span><span class="o">=</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="s2">/*&quot;</span><span class="p">],</span>
+                    <span class="n">local_name</span><span class="o">=</span><span class="n">folder_name</span><span class="p">,</span>
+                <span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dataset folder downloaded from Hugging Face: </span><span class="si">{</span><span class="n">target_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">target_dir</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">error_msg</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Failed to download dataset from Hugging Face.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Dataset: </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Folder: </span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Hugging Face: </span><span class="si">{</span><span class="n">hf_repo_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Solutions:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;1. Check your network connection (huggingface.co)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;2. Manually download from Hugging Face:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;   https://huggingface.co/datasets/</span><span class="si">{</span><span class="n">hf_repo_id</span><span class="si">}</span><span class="s2">/tree/main</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;3. Use ModelScope instead (set use_hf=False)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;4. Specify local path manually in WaveformDataset</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;5. Use VPN if Hugging Face is blocked in your region</span><span class="se">\n</span><span class="s2">&quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+                <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">error_msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Cannot access Hugging Face network.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Dataset: </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Folder: </span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Hugging Face: </span><span class="si">{</span><span class="n">hf_repo_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Solutions:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;1. Check your network connection (huggingface.co)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;2. Manually download from Hugging Face:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;   https://huggingface.co/datasets/</span><span class="si">{</span><span class="n">hf_repo_id</span><span class="si">}</span><span class="s2">/tree/main</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;3. Use ModelScope instead (set use_hf=False)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;4. Specify local path manually in WaveformDataset</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;5. Use VPN if Hugging Face is blocked in your region</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Try ModelScope (default)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">modelscope.hub.file_download</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataset_file_download</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Attempting download from ModelScope: </span><span class="si">{</span><span class="n">modelscope_repo_id</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Note: Downloading files one by one from the folder...&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            
+            <span class="n">target_dir</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">parents</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            
+            <span class="c1"># Known files for each dataset folder</span>
+            <span class="n">folder_files_map</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s2">&quot;SCSN&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">&quot;SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TEST.hdf5&quot;</span><span class="p">,</span>
+                <span class="p">],</span>
+                <span class="s2">&quot;TXED&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">&quot;TXED/TXED.hdf5&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;TXED/TXED.csv&quot;</span><span class="p">,</span>
+                <span class="p">],</span>
+                <span class="s2">&quot;PNW&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">&quot;PNW/PNW.hdf5&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;PNW/PNW.csv&quot;</span><span class="p">,</span>
+                <span class="p">],</span>
+                <span class="s2">&quot;DiTing&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">&quot;DiTing/DiTing_augmented_merge.hdf5&quot;</span><span class="p">,</span>
+                <span class="p">],</span>
+                <span class="s2">&quot;Instance&quot;</span><span class="p">:</span> <span class="p">[</span>
+                    <span class="s2">&quot;Instance/Instance_polarity.hdf5&quot;</span><span class="p">,</span>
+                <span class="p">],</span>
+            <span class="p">}</span>
+            
+            <span class="n">files_to_download</span> <span class="o">=</span> <span class="n">folder_files_map</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">folder_name</span><span class="p">,</span> <span class="p">[])</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">files_to_download</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Warning: No known files for folder &#39;</span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="s2">&#39;&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Trying to discover files in the folder...&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="c1"># For unknown folders, we&#39;ll need to use a different approach</span>
+                <span class="c1"># For now, just return the empty directory</span>
+                <span class="k">return</span> <span class="n">target_dir</span>
+            
+            <span class="n">downloaded_files</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">file_path</span> <span class="ow">in</span> <span class="n">files_to_download</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Downloading: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="n">local_file</span> <span class="o">=</span> <span class="n">dataset_file_download</span><span class="p">(</span>
+                        <span class="n">dataset_id</span><span class="o">=</span><span class="n">modelscope_repo_id</span><span class="p">,</span>
+                        <span class="n">file_path</span><span class="o">=</span><span class="n">file_path</span><span class="p">,</span>
+                        <span class="n">cache_dir</span><span class="o">=</span><span class="nb">str</span><span class="p">(</span><span class="n">target_dir</span><span class="p">)</span>
+                    <span class="p">)</span>
+                    <span class="n">downloaded_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">local_file</span><span class="p">))</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    ✓ Downloaded: </span><span class="si">{</span><span class="n">Path</span><span class="p">(</span><span class="n">local_file</span><span class="p">)</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;    ✗ Failed to download </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="c1"># Continue with other files</span>
+                    <span class="k">continue</span>
+            
+            <span class="k">if</span> <span class="n">downloaded_files</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Dataset folder downloaded from ModelScope: </span><span class="si">{</span><span class="n">target_dir</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  Downloaded </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">downloaded_files</span><span class="p">)</span><span class="si">}</span><span class="s2"> files.&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">Warning: No files were downloaded!&quot;</span><span class="p">,</span> <span class="n">flush</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            
+            <span class="k">return</span> <span class="n">target_dir</span>
+        <span class="k">except</span> <span class="ne">ImportError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+            <span class="n">error_msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;ModelScope not installed.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Please install modelscope:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;  pip install modelscope</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Or use Hugging Face instead (set use_hf=True)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">exc</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">error_msg</span> <span class="o">=</span> <span class="p">(</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="se">\n</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Failed to download dataset from ModelScope.</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Dataset: </span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Folder: </span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;ModelScope: </span><span class="si">{</span><span class="n">modelscope_repo_id</span><span class="si">}</span><span class="s2">/</span><span class="si">{</span><span class="n">folder_name</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="se">\n\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;Solutions:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;1. Check your network connection (modelscope.cn)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;2. Manually download from ModelScope:</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;   https://www.modelscope.cn/datasets/</span><span class="si">{</span><span class="n">modelscope_repo_id</span><span class="si">}</span><span class="s2">/tree/master</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;3. Use Hugging Face instead (set use_hf=True)</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;4. Specify local path manually in WaveformDataset</span><span class="se">\n</span><span class="s2">&quot;</span>
+                <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="s1">&#39;=&#39;</span><span class="o">*</span><span class="mi">60</span><span class="si">}</span><span class="s2">&quot;</span>
+            <span class="p">)</span>
+            <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+
+
+<span class="c1"># Dataset configuration registry for easy access</span>
+<span class="n">DATASET_REGISTRY</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;SCSN&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;train&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;repo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5&quot;</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;test&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;repo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TEST.hdf5&quot;</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;repo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;SCSN/&quot;</span><span class="p">,</span>  <span class="c1"># Download entire SCSN folder</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;TXED&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;hdf5&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;repo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;TXED/TXED.hdf5&quot;</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;csv&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;repo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;TXED/TXED.csv&quot;</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;repo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;TXED/&quot;</span><span class="p">,</span>  <span class="c1"># Download entire TXED folder</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+    <span class="s2">&quot;PNW&quot;</span><span class="p">:</span> <span class="p">{</span>
+        <span class="s2">&quot;hdf5&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;repo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;PNW/PNW.hdf5&quot;</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;csv&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;repo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;PNW/PNW.csv&quot;</span><span class="p">,</span>
+        <span class="p">},</span>
+        <span class="s2">&quot;default&quot;</span><span class="p">:</span> <span class="p">{</span>
+            <span class="s2">&quot;repo_path&quot;</span><span class="p">:</span> <span class="s2">&quot;PNW/&quot;</span><span class="p">,</span>  <span class="c1"># Download entire PNW folder</span>
+        <span class="p">},</span>
+    <span class="p">},</span>
+<span class="p">}</span>
+
+
+<div class="viewcode-block" id="get_dataset_path">
+<a class="viewcode-back" href="../../../pages/api/overview.html#seispolarity.get_dataset_path">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_dataset_path</span><span class="p">(</span>
+    <span class="n">dataset_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">subset</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;train&quot;</span><span class="p">,</span>
+    <span class="n">cache_dir</span><span class="p">:</span> <span class="nb">str</span> <span class="o">|</span> <span class="n">Path</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">force_download</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="n">use_hf</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Path</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the path to a dataset file, downloading it if necessary.</span>
+
+<span class="sd">    This is a convenience wrapper around fetch_dataset_from_remote that uses</span>
+<span class="sd">    the predefined DATASET_REGISTRY to look up dataset paths.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dataset_name: name of the dataset (e.g., &quot;SCSN&quot;, &quot;TXED&quot;, &quot;PNW&quot;).</span>
+<span class="sd">    subset: which subset to download. For SCSN: &quot;train&quot; or &quot;test&quot;.</span>
+<span class="sd">             For TXED/PNW: &quot;hdf5&quot; or &quot;csv&quot; or &quot;default&quot;.</span>
+<span class="sd">             Defaults to &quot;train&quot; for SCSN, &quot;default&quot; for others.</span>
+<span class="sd">    cache_dir: directory to cache the downloaded files. If None, uses settings.cache_datasets.</span>
+<span class="sd">    force_download: if True, force re-download even if file exists.</span>
+<span class="sd">    use_hf: if True, use Hugging Face instead of ModelScope.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Path to the dataset file.</span>
+
+<span class="sd">    Examples</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; # Get SCSN training dataset path from ModelScope (default)</span>
+<span class="sd">    &gt;&gt;&gt; path = get_dataset_path(&quot;SCSN&quot;, subset=&quot;train&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; dataset = WaveformDataset(path=path, name=&quot;SCSN_Train&quot;, ...)</span>
+<span class="sd">    &gt;&gt;&gt; # Get SCSN training dataset path from Hugging Face</span>
+<span class="sd">    &gt;&gt;&gt; path = get_dataset_path(&quot;SCSN&quot;, subset=&quot;train&quot;, use_hf=True)</span>
+<span class="sd">    &gt;&gt;&gt; dataset = WaveformDataset(path=path, name=&quot;SCSN_Train&quot;, ...)</span>
+<span class="sd">    &gt;&gt;&gt; # Get TXED HDF5 dataset path</span>
+<span class="sd">    &gt;&gt;&gt; path = get_dataset_path(&quot;TXED&quot;, subset=&quot;hdf5&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;获取数据集文件的路径，必要时下载它。</span>
+
+<span class="sd">    这是 fetch_dataset_from_remote 的便捷包装器，使用预定义的 DATASET_REGISTRY 查找数据集路径。</span>
+
+<span class="sd">    参数</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dataset_name：数据集名称（例如 &quot;SCSN&quot;、&quot;TXED&quot;、&quot;PNW&quot;）。</span>
+<span class="sd">    subset：要下载的子集。对于SCSN：&quot;train&quot;或&quot;test&quot;。</span>
+<span class="sd">            对于TXED/PNW：&quot;hdf5&quot;、&quot;csv&quot;或&quot;default&quot;。</span>
+<span class="sd">            默认：SCSN为&quot;train&quot;，其他为&quot;default&quot;。</span>
+<span class="sd">    cache_dir：缓存下载文件的目录。如果为 None，则使用 settings.cache_datasets。</span>
+<span class="sd">    force_download：如果为 True，则即使文件存在也强制重新下载。</span>
+<span class="sd">    use_hf：如果为 True，则使用 Hugging Face 而不是 ModelScope。</span>
+
+<span class="sd">    返回</span>
+<span class="sd">    -------</span>
+<span class="sd">    数据集文件的路径。</span>
+
+<span class="sd">    示例</span>
+<span class="sd">    --------</span>
+<span class="sd">    &gt;&gt;&gt; # 从 ModelScope 获取 SCSN 训练数据集路径（默认）</span>
+<span class="sd">    &gt;&gt;&gt; path = get_dataset_path(&quot;SCSN&quot;, subset=&quot;train&quot;)</span>
+<span class="sd">    &gt;&gt;&gt; dataset = WaveformDataset(path=path, name=&quot;SCSN_Train&quot;, ...)</span>
+<span class="sd">    &gt;&gt;&gt; # 从 Hugging Face 获取 SCSN 训练数据集路径</span>
+<span class="sd">    &gt;&gt;&gt; path = get_dataset_path(&quot;SCSN&quot;, subset=&quot;train&quot;, use_hf=True)</span>
+<span class="sd">    &gt;&gt;&gt; dataset = WaveformDataset(path=path, name=&quot;SCSN_Train&quot;, ...)</span>
+<span class="sd">    &gt;&gt;&gt; # 获取 TXED HDF5 数据集路径</span>
+<span class="sd">    &gt;&gt;&gt; path = get_dataset_path(&quot;TXED&quot;, subset=&quot;hdf5&quot;)</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="n">dataset_name</span> <span class="o">=</span> <span class="n">dataset_name</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">dataset_name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DATASET_REGISTRY</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown dataset &#39;</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">&#39;. Available: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">DATASET_REGISTRY</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">subset</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">DATASET_REGISTRY</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">]:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unknown subset &#39;</span><span class="si">{</span><span class="n">subset</span><span class="si">}</span><span class="s2">&#39; for dataset &#39;</span><span class="si">{</span><span class="n">dataset_name</span><span class="si">}</span><span class="s2">&#39;. Available: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">DATASET_REGISTRY</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">]</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+    <span class="n">subset_config</span> <span class="o">=</span> <span class="n">DATASET_REGISTRY</span><span class="p">[</span><span class="n">dataset_name</span><span class="p">][</span><span class="n">subset</span><span class="p">]</span>
+    <span class="n">repo_path</span> <span class="o">=</span> <span class="n">subset_config</span><span class="p">[</span><span class="s2">&quot;repo_path&quot;</span><span class="p">]</span>
+
+    <span class="c1"># If repo_path ends with &#39;/&#39;, download entire folder</span>
+    <span class="k">if</span> <span class="n">repo_path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;/&#39;</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">fetch_dataset_folder</span><span class="p">(</span>
+            <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">,</span>
+            <span class="n">folder_path</span><span class="o">=</span><span class="n">repo_path</span><span class="p">,</span>
+            <span class="n">cache_dir</span><span class="o">=</span><span class="n">cache_dir</span><span class="p">,</span>
+            <span class="n">force_download</span><span class="o">=</span><span class="n">force_download</span><span class="p">,</span>
+            <span class="n">use_hf</span><span class="o">=</span><span class="n">use_hf</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">fetch_dataset_from_remote</span><span class="p">(</span>
+            <span class="n">dataset_name</span><span class="o">=</span><span class="n">dataset_name</span><span class="p">,</span>
+            <span class="n">repo_path</span><span class="o">=</span><span class="n">repo_path</span><span class="p">,</span>
+            <span class="n">cache_dir</span><span class="o">=</span><span class="n">cache_dir</span><span class="p">,</span>
+            <span class="n">force_download</span><span class="o">=</span><span class="n">force_download</span><span class="p">,</span>
+            <span class="n">use_hf</span><span class="o">=</span><span class="n">use_hf</span><span class="p">,</span>
+        <span class="p">)</span></div>
+
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SeisPolarity Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

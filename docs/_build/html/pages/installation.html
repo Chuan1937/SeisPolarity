@@ -1,0 +1,197 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>安装与配置 &mdash; SeisPolarity</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+    <link rel="shortcut icon" href="../_static/seispolarity_logo.svg"/>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=3ce10a4d"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html">
+            
+              <img src="../_static/seispolarity_logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">安装与配置</a><ul>
+<li><a class="reference internal" href="#pip">通过 pip 安装</a><ul>
+<li><a class="reference internal" href="#id2">标准安装</a></li>
+<li><a class="reference internal" href="#id3">从源码安装</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#id4">安装文档依赖</a></li>
+<li><a class="reference internal" href="#id5">配置</a><ul>
+<li><a class="reference internal" href="#id6">数据集缓存目录</a></li>
+<li><a class="reference internal" href="#id7">远程仓库</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#gpu">GPU 支持</a><ul>
+<li><a class="reference internal" href="#id8">GPU 安装</a></li>
+<li><a class="reference internal" href="#modelscope">ModelScope 访问（中国用户）</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">SeisPolarity</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">安装与配置</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/pages/installation.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="id1">
+<h1>安装与配置<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
+<section id="pip">
+<h2>通过 pip 安装<a class="headerlink" href="#pip" title="Link to this heading"></a></h2>
+<p>SeisPolarity 可以通过两种方式安装。在这两种情况下，您可能需要考虑在虚拟环境中安装 SeisPolarity，例如使用 conda。</p>
+<section id="id2">
+<h3>标准安装<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<p>SeisPolarity 可直接通过 pip 获取。要在本地安装，请运行：</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>seispolarity
+</pre></div>
+</div>
+</section>
+<section id="id3">
+<h3>从源码安装<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<p>如果您想从源码安装最新版本，请克隆仓库并运行：</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Chuan1937/SeisPolarity.git
+<span class="nb">cd</span><span class="w"> </span>SeisPolarity
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+</section>
+<section id="id4">
+<h2>安装文档依赖<a class="headerlink" href="#id4" title="Link to this heading"></a></h2>
+<p>要构建文档，请安装文档依赖：</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>seispolarity<span class="o">[</span>docs<span class="o">]</span>
+</pre></div>
+</div>
+</section>
+<section id="id5">
+<h2>配置<a class="headerlink" href="#id5" title="Link to this heading"></a></h2>
+<section id="id6">
+<h3>数据集缓存目录<a class="headerlink" href="#id6" title="Link to this heading"></a></h3>
+<p>SeisPolarity 会自动下载数据集和模型。默认情况下，数据集缓存在 <code class="docutils literal notranslate"><span class="pre">~/.cache/seispolarity/datasets</span></code>，模型缓存在 <code class="docutils literal notranslate"><span class="pre">~/.cache/seispolarity/models</span></code>。</p>
+<p>要配置自定义缓存目录：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">from</span><span class="w"> </span><span class="nn">seispolarity</span><span class="w"> </span><span class="kn">import</span> <span class="n">configure_cache</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="n">configure_cache</span><span class="p">(</span><span class="n">cache_dir</span><span class="o">=</span><span class="s2">&quot;/path/to/cache&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>或者设置 <code class="docutils literal notranslate"><span class="pre">SEISPOLARITY_CACHE_DIR</span></code> 环境变量：</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">SEISPOLARITY_CACHE_DIR</span><span class="o">=</span>/path/to/cache
+</pre></div>
+</div>
+</section>
+<section id="id7">
+<h3>远程仓库<a class="headerlink" href="#id7" title="Link to this heading"></a></h3>
+<p>SeisPolarity 使用远程仓库来提供数据集和模型权重。您可以配置远程仓库：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">import</span><span class="w"> </span><span class="nn">seispolarity</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="c1"># 查看当前的远程根目录</span>
+<span class="linenos">4</span><span class="nb">print</span><span class="p">(</span><span class="n">seispolarity</span><span class="o">.</span><span class="n">remote_root</span><span class="p">)</span>      <span class="c1"># 数据仓库</span>
+<span class="linenos">5</span><span class="nb">print</span><span class="p">(</span><span class="n">seispolarity</span><span class="o">.</span><span class="n">remote_model_root</span><span class="p">)</span>  <span class="c1"># 模型仓库</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="gpu">
+<h2>GPU 支持<a class="headerlink" href="#gpu" title="Link to this heading"></a></h2>
+<p>SeisPolarity 基于 PyTorch 构建，PyTorch 支持 CUDA 进行 GPU 加速。</p>
+<section id="id8">
+<h3>GPU 安装<a class="headerlink" href="#id8" title="Link to this heading"></a></h3>
+<p>要安装带 CUDA 支持的 PyTorch，请遵循<a class="reference external" href="https://pytorch.org/">官方 PyTorch 安装指南</a>。</p>
+</section>
+<section id="modelscope">
+<h3>ModelScope 访问（中国用户）<a class="headerlink" href="#modelscope" title="Link to this heading"></a></h3>
+<p>对于中国用户，SeisPolarity 支持 ModelScope 以实现更快的下载：</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">from</span><span class="w"> </span><span class="nn">seispolarity</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_dataset_path</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="c1"># 使用 ModelScope 而不是 Hugging Face</span>
+<span class="linenos">4</span><span class="n">data_path</span> <span class="o">=</span> <span class="n">get_dataset_path</span><span class="p">(</span><span class="s2">&quot;SCSN&quot;</span><span class="p">,</span> <span class="n">use_hf</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SeisPolarity Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

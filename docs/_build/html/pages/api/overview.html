@@ -1,0 +1,583 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference &mdash; SeisPolarity</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+    <link rel="shortcut icon" href="../../_static/seispolarity_logo.svg"/>
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=3ce10a4d"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html">
+            
+              <img src="../../_static/seispolarity_logo.svg" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <!-- Local TOC -->
+              <div class="local-toc"><ul>
+<li><a class="reference internal" href="#">API Reference</a><ul>
+<li><a class="reference internal" href="#modules">Modules</a></li>
+<li><a class="reference internal" href="#package-structure">Package Structure</a></li>
+<li><a class="reference internal" href="#quick-links">Quick Links</a><ul>
+<li><a class="reference internal" href="#data-loading">Data Loading</a></li>
+<li><a class="reference internal" href="#models">Models</a><ul>
+<li><a class="reference internal" href="#seispolarity.models.PPNet"><code class="docutils literal notranslate"><span class="pre">PPNet</span></code></a><ul>
+<li><a class="reference internal" href="#seispolarity.models.PPNet.__init__"><code class="docutils literal notranslate"><span class="pre">PPNet.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.models.PPNet.forward"><code class="docutils literal notranslate"><span class="pre">PPNet.forward()</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.models.PPNet.forward_tensor"><code class="docutils literal notranslate"><span class="pre">PPNet.forward_tensor()</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.models.PPNet.build_picks"><code class="docutils literal notranslate"><span class="pre">PPNet.build_picks()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#training">Training</a><ul>
+<li><a class="reference internal" href="#seispolarity.training.Trainer"><code class="docutils literal notranslate"><span class="pre">Trainer</span></code></a><ul>
+<li><a class="reference internal" href="#seispolarity.training.Trainer.__init__"><code class="docutils literal notranslate"><span class="pre">Trainer.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.Trainer.train"><code class="docutils literal notranslate"><span class="pre">Trainer.train()</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.Trainer.evaluate"><code class="docutils literal notranslate"><span class="pre">Trainer.evaluate()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig"><code class="docutils literal notranslate"><span class="pre">TrainingConfig</span></code></a><ul>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.batch_size"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.batch_size</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.epochs"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.epochs</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.learning_rate"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.learning_rate</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.num_workers"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.num_workers</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.train_val_split"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.train_val_split</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.val_split"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.val_split</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.test_split"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.test_split</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.limit"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.limit</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.label_key"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.label_key</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.device"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.device</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.checkpoint_dir"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.checkpoint_dir</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.save_best_only"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.save_best_only</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.patience"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.patience</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.resume_checkpoint"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.resume_checkpoint</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.loss_fn"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.loss_fn</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.output_index"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.output_index</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.metric_index"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.metric_index</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.random_seed"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.random_seed</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.__init__"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#augmentation">Augmentation</a><ul>
+<li><a class="reference internal" href="#seispolarity.generate.GenericGenerator"><code class="docutils literal notranslate"><span class="pre">GenericGenerator</span></code></a><ul>
+<li><a class="reference internal" href="#seispolarity.generate.GenericGenerator.__init__"><code class="docutils literal notranslate"><span class="pre">GenericGenerator.__init__()</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.generate.GenericGenerator.augmentations"><code class="docutils literal notranslate"><span class="pre">GenericGenerator.augmentations</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.generate.GenericGenerator.augmentation"><code class="docutils literal notranslate"><span class="pre">GenericGenerator.augmentation()</span></code></a></li>
+<li><a class="reference internal" href="#seispolarity.generate.GenericGenerator.add_augmentations"><code class="docutils literal notranslate"><span class="pre">GenericGenerator.add_augmentations()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#seispolarity.generate.BalancedPolarityGenerator"><code class="docutils literal notranslate"><span class="pre">BalancedPolarityGenerator</span></code></a><ul>
+<li><a class="reference internal" href="#seispolarity.generate.BalancedPolarityGenerator.__init__"><code class="docutils literal notranslate"><span class="pre">BalancedPolarityGenerator.__init__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><a class="reference internal" href="#utility-functions">Utility Functions</a><ul>
+<li><a class="reference internal" href="#get-dataset-path">get_dataset_path</a><ul>
+<li><a class="reference internal" href="#seispolarity.get_dataset_path"><code class="docutils literal notranslate"><span class="pre">get_dataset_path()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#configure-cache">configure_cache</a><ul>
+<li><a class="reference internal" href="#seispolarity.configure_cache"><code class="docutils literal notranslate"><span class="pre">configure_cache()</span></code></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#get-hf-path">get_hf_path</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#exceptions">Exceptions</a></li>
+<li><a class="reference internal" href="#version-information">Version Information</a></li>
+</ul>
+</li>
+</ul>
+</div>
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">SeisPolarity</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/pages/api/overview.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
+<p>This section provides detailed API documentation for SeisPolarity modules.</p>
+<section id="modules">
+<h2>Modules<a class="headerlink" href="#modules" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="#dataset.md"><span class="xref myst">Dataset API</span></a> - WaveformDataset and data loading utilities</p></li>
+<li><p><a class="reference internal" href="#model.md"><span class="xref myst">Model API</span></a> - Pretrained models and model utilities</p></li>
+<li><p><a class="reference internal" href="#training.md"><span class="xref myst">Training API</span></a> - Training utilities and configuration</p></li>
+<li><p><a class="reference internal" href="#augmentation.md"><span class="xref myst">Augmentation API</span></a> - Data augmentation classes</p></li>
+</ul>
+</section>
+<section id="package-structure">
+<h2>Package Structure<a class="headerlink" href="#package-structure" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>seispolarity/
+├── __init__.py              # Main package entry point
+├── dataset/                 # Dataset loading and utilities
+│   ├── __init__.py
+│   ├── dataset.py          # WaveformDataset class
+│   ├── utils.py            # Dataset utilities
+│   └── huggingface.py      # Hugging Face integration
+├── models/                  # Model architectures
+│   ├── __init__.py
+│   ├── ross.py             # Ross model
+│   ├── eqpolarity.py       # Eqpolarity model
+│   ├── ditingmotion.py     # DiTingMotion model
+│   ├── cfm.py              # CFM model
+│   ├── rpnet.py            # RPNet model
+│   ├── polarcap.py         # PolarCAP model
+│   └── app.py              # APP model
+├── training/                # Training utilities
+│   ├── __init__.py
+│   ├── trainer.py          # Trainer class
+│   └── config.py           # TrainingConfig class
+└── generate/                # Data generation and augmentation
+    ├── __init__.py
+    ├── generator.py        # Generator classes
+    └── augmentation.py     # Augmentation classes
+</pre></div>
+</div>
+</section>
+<section id="quick-links">
+<h2>Quick Links<a class="headerlink" href="#quick-links" title="Link to this heading"></a></h2>
+<section id="data-loading">
+<h3>Data Loading<a class="headerlink" href="#data-loading" title="Link to this heading"></a></h3>
+</section>
+<section id="models">
+<h3>Models<a class="headerlink" href="#models" title="Link to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="seispolarity.models.PPNet">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">PPNet</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_len</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">400</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_sizes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[16,</span> <span class="pre">32,</span> <span class="pre">64]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_dense</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lstm_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attention_heads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/models/app.html#PPNet"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.models.PPNet" title="Link to this definition"></a></dt>
+<dd><p>A PyTorch implementation of the <cite>build_PP_model</cite> from the provided Keras code.</p>
+<p>This model features a U-Net-like architecture with an LSTM and a Multi-Head
+Self-Attention layer in the bottleneck. It produces two outputs:
+1. A segmentation-style mask (out1).
+2. A classification prediction (out2).</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.models.PPNet.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_len</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">400</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">input_channels</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_classes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">filter_sizes</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">[16,</span> <span class="pre">32,</span> <span class="pre">64]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">kernel_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">3</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_dense</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">128</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lstm_units</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attention_heads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/models/app.html#PPNet.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.models.PPNet.__init__" title="Link to this definition"></a></dt>
+<dd><p>Initializes the model layers.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_len</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The length of the input sequence.</p></li>
+<li><p><strong>input_channels</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The number of channels in the input sequence (e.g., 1 or 2).</p></li>
+<li><p><strong>num_classes</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The number of classes for the classification output.</p></li>
+<li><p><strong>filter_sizes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a>) – A list of three integers for the number of filters in each Conv1D block.</p></li>
+<li><p><strong>kernel_size</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The kernel size for the convolutional layers.</p></li>
+<li><p><strong>num_dense</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The number of units in the dense layer for the classification head.</p></li>
+<li><p><strong>lstm_units</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>, </em><em>optional</em>) – The number of units in the LSTM layer. If None, it defaults to
+2 * filter_sizes[2].</p></li>
+<li><p><strong>attention_heads</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>) – The number of heads for the multi-head self-attention mechanism.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.models.PPNet.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/models/app.html#PPNet.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.models.PPNet.forward" title="Link to this definition"></a></dt>
+<dd><p>Defines the forward pass of the model.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>x</strong> (<a class="reference external" href="https://docs.pytorch.org/docs/stable/tensors.html#torch.Tensor" title="(in PyTorch v2.10)"><em>torch.Tensor</em></a>) – Input tensor of shape (batch_size, input_channels, sequence_length).</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>A tuple containing two output tensors:</dt><dd><ul class="simple">
+<li><p>out1 (torch.Tensor): Segmentation output of shape (batch_size, sequence_length, 1).</p></li>
+<li><p>out2 (torch.Tensor): Classification output of shape (batch_size, num_classes).</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.models.PPNet.forward_tensor">
+<span class="sig-name descname"><span class="pre">forward_tensor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">tensor</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/models/app.html#PPNet.forward_tensor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.models.PPNet.forward_tensor" title="Link to this definition"></a></dt>
+<dd><p>Model forward pass for a batch tensor.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.models.PPNet.build_picks">
+<span class="sig-name descname"><span class="pre">build_picks</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raw_output</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/models/app.html#PPNet.build_picks"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.models.PPNet.build_picks" title="Link to this definition"></a></dt>
+<dd><p>Convert raw model output to picks with polarity labels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">PickList</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="training">
+<h3>Training<a class="headerlink" href="#training" title="Link to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="seispolarity.training.Trainer">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">Trainer</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_augmentations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_augmentations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_augmentations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/training/trainer.html#Trainer"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.training.Trainer" title="Link to this definition"></a></dt>
+<dd><dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.training.Trainer.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">model</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_augmentations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_augmentations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_augmentations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_dataset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/training/trainer.html#Trainer.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.training.Trainer.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.training.Trainer.train">
+<span class="sig-name descname"><span class="pre">train</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/training/trainer.html#Trainer.train"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.training.Trainer.train" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.training.Trainer.evaluate">
+<span class="sig-name descname"><span class="pre">evaluate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_loader</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">criterion</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/training/trainer.html#Trainer.evaluate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.training.Trainer.evaluate" title="Link to this definition"></a></dt>
+<dd><p>Evaluate model on a given data loader.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">TrainingConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">256</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epochs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">learning_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_workers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_val_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'label'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_best_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patience</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resume_checkpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/training/trainer.html#TrainingConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.training.TrainingConfig" title="Link to this definition"></a></dt>
+<dd><dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.batch_size">
+<span class="sig-name descname"><span class="pre">batch_size</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">256</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.batch_size" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.epochs">
+<span class="sig-name descname"><span class="pre">epochs</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">10</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.epochs" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.learning_rate">
+<span class="sig-name descname"><span class="pre">learning_rate</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.001</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.learning_rate" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.num_workers">
+<span class="sig-name descname"><span class="pre">num_workers</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.num_workers" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.train_val_split">
+<span class="sig-name descname"><span class="pre">train_val_split</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.8</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.train_val_split" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.val_split">
+<span class="sig-name descname"><span class="pre">val_split</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.1</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.val_split" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.test_split">
+<span class="sig-name descname"><span class="pre">test_split</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">float</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.1</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.test_split" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.limit">
+<span class="sig-name descname"><span class="pre">limit</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a><span class="pre">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a><span class="pre">]</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.limit" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.label_key">
+<span class="sig-name descname"><span class="pre">label_key</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'label'</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.label_key" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.device">
+<span class="sig-name descname"><span class="pre">device</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a><span class="pre">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a><span class="pre">]</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.device" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.checkpoint_dir">
+<span class="sig-name descname"><span class="pre">checkpoint_dir</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'.'</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.checkpoint_dir" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.save_best_only">
+<span class="sig-name descname"><span class="pre">save_best_only</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">bool</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.save_best_only" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.patience">
+<span class="sig-name descname"><span class="pre">patience</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">-1</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.patience" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.resume_checkpoint">
+<span class="sig-name descname"><span class="pre">resume_checkpoint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a><span class="pre">[</span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a><span class="pre">]</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.resume_checkpoint" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.loss_fn">
+<span class="sig-name descname"><span class="pre">loss_fn</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a><span class="pre">[</span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Callable" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Callable</span></code></a><span class="pre">]</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.loss_fn" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.output_index">
+<span class="sig-name descname"><span class="pre">output_index</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a><span class="pre">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a><span class="pre">]</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.output_index" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.metric_index">
+<span class="sig-name descname"><span class="pre">metric_index</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.metric_index" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.random_seed">
+<span class="sig-name descname"><span class="pre">random_seed</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Optional" title="(in Python v3.14)"><code class="xref py py-data docutils literal notranslate"><span class="pre">Optional</span></code></a><span class="pre">[</span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">int</span></code></a><span class="pre">]</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">42</span></em><a class="headerlink" href="#seispolarity.training.TrainingConfig.random_seed" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.training.TrainingConfig.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">batch_size</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">256</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">epochs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">learning_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_workers</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_val_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.8</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">val_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">test_split</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">limit</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'label'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">checkpoint_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_best_only</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">patience</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">-1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resume_checkpoint</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_fn</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">metric_index</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#seispolarity.training.TrainingConfig.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="augmentation">
+<h3>Augmentation<a class="headerlink" href="#augmentation" title="Link to this heading"></a></h3>
+<dl class="py class">
+<dt class="sig sig-object py" id="seispolarity.generate.GenericGenerator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">GenericGenerator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/generate/generator.html#GenericGenerator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.generate.GenericGenerator" title="Link to this definition"></a></dt>
+<dd><p>通用数据生成器，用于构建数据预处理和增强流水线。
+继承自PyTorch的Dataset类，可以直接与DataLoader一起使用。</p>
+<p>生成器的处理流水线通过一系列处理步骤或增强函数定义。
+对于每个数据样本，生成器按顺序调用增强函数。
+增强函数之间的信息通过状态字典（state_dict）传递。</p>
+<p>状态字典是一个Python字典，将键映射到元组（数据, 元数据）。
+在__getitem__中，生成器自动使用键”X”将波形数据和对应的元数据填充到初始字典中。
+应用所有增强后，生成器会移除所有元数据信息。</p>
+<p>这意味着输出字典只将键映射到数据部分。
+任何应该输出的元数据都需要显式地写入到数据中。</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dataset</strong> (<em>seispolarity.data.WaveformDataset 或 seispolarity.data.MultiWaveformDataset</em>) – 底层SeisPolarity数据集</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.generate.GenericGenerator.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/generate/generator.html#GenericGenerator.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.generate.GenericGenerator.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="seispolarity.generate.GenericGenerator.augmentations">
+<em class="property"><span class="pre">property</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">augmentations</span></span><a class="headerlink" href="#seispolarity.generate.GenericGenerator.augmentations" title="Link to this definition"></a></dt>
+<dd><p>获取增强函数列表（与WaveformDataset兼容）</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.generate.GenericGenerator.augmentation">
+<span class="sig-name descname"><span class="pre">augmentation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">f</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/generate/generator.html#GenericGenerator.augmentation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.generate.GenericGenerator.augmentation" title="Link to this definition"></a></dt>
+<dd><p>Decorator for augmentations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.generate.GenericGenerator.add_augmentations">
+<span class="sig-name descname"><span class="pre">add_augmentations</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">augmentations</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/generate/generator.html#GenericGenerator.add_augmentations"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.generate.GenericGenerator.add_augmentations" title="Link to this definition"></a></dt>
+<dd><p>向生成器添加增强函数列表。不能用作装饰器。</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>augmentations</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><em>callable</em><em>]</em>) – List of augmentations</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="seispolarity.generate.BalancedPolarityGenerator">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">BalancedPolarityGenerator</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apply_polarity_inversion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'label'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'D':</span> <span class="pre">1,</span> <span class="pre">'U':</span> <span class="pre">0,</span> <span class="pre">'X':</span> <span class="pre">2}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inherit_augmentations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/generate/generator.html#BalancedPolarityGenerator"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.generate.BalancedPolarityGenerator" title="Link to this definition"></a></dt>
+<dd><p>平衡极性数据生成器，用于处理类别不平衡问题。</p>
+<p>这个生成器专门用于极性分类任务，提供以下功能：
+1. 对U（正向）和D（负向）类别进行1:1平衡
+2. 从X（不确定）类别中采样与U+D相同数量的样本
+3. 如果X数量不够，会自动复制X样本
+4. 可选地应用极性反转增强</p>
+<p>使用方式：
+<a href="#id1"><span class="problematic" id="id2">``</span></a><a href="#id3"><span class="problematic" id="id4">`</span></a>python
+# 创建平衡生成器
+balanced_generator = BalancedPolarityGenerator(</p>
+<blockquote>
+<div><p>dataset=waveform_dataset,
+apply_polarity_inversion=True  # 可选，默认为True</p>
+</div></blockquote>
+<p>)</p>
+<p># 添加其他增强
+balanced_generator.add_augmentations([</p>
+<blockquote>
+<div><p>Demean(key=”X”, axis=-1),
+Normalize(key=”X”, amp_norm_axis=-1, amp_norm_type=”std”),</p>
+</div></blockquote>
+<section id="id5">
+<h4>])<a class="headerlink" href="#id5" title="Link to this heading"></a></h4>
+<dl class="py method">
+<dt class="sig sig-object py" id="seispolarity.generate.BalancedPolarityGenerator.__init__">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">apply_polarity_inversion</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_key</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'label'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">label_map</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{'D':</span> <span class="pre">1,</span> <span class="pre">'U':</span> <span class="pre">0,</span> <span class="pre">'X':</span> <span class="pre">2}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">42</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inherit_augmentations</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/generate/generator.html#BalancedPolarityGenerator.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.generate.BalancedPolarityGenerator.__init__" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+</dd></dl>
+
+</section>
+</section>
+<section id="utility-functions">
+<h2>Utility Functions<a class="headerlink" href="#utility-functions" title="Link to this heading"></a></h2>
+<section id="get-dataset-path">
+<h3>get_dataset_path<a class="headerlink" href="#get-dataset-path" title="Link to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="seispolarity.get_dataset_path">
+<span class="sig-name descname"><span class="pre">get_dataset_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dataset_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subset</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'train'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">force_download</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">use_hf</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/data/download.html#get_dataset_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.get_dataset_path" title="Link to this definition"></a></dt>
+<dd><p>Get the path to a dataset file, downloading it if necessary.</p>
+<p>This is a convenience wrapper around fetch_dataset_from_remote that uses
+the predefined DATASET_REGISTRY to look up dataset paths.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Path</span></code></a></span></p>
+</dd>
+<dt class="field-even">Parameters<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>dataset_name</strong> (<em>name</em><em> of </em><em>the dataset</em><em> (</em><em>e.g.</em><em>, </em><em>&quot;SCSN&quot;</em><em>, </em><em>&quot;TXED&quot;</em><em>, </em><em>&quot;PNW&quot;</em><em>)</em><em>.</em>)</p></li>
+<li><p><strong>subset</strong> (<em>which subset to download. For SCSN: &quot;train&quot;</em><em> or </em><em>&quot;test&quot;.</em>) – For TXED/PNW: “hdf5” or “csv” or “default”.
+Defaults to “train” for SCSN, “default” for others.</p></li>
+<li><p><strong>cache_dir</strong> (<em>directory to cache the downloaded files. If None</em><em>, </em><em>uses settings.cache_datasets.</em>)</p></li>
+<li><p><strong>force_download</strong> (<em>if True</em><em>, </em><em>force re-download even if file exists.</em>)</p></li>
+<li><p><strong>use_hf</strong> (<em>if True</em><em>, </em><em>use Hugging Face instead</em><em> of </em><em>ModelScope.</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Path to the dataset file.</p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get SCSN training dataset path from ModelScope (default)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span> <span class="n">get_dataset_path</span><span class="p">(</span><span class="s2">&quot;SCSN&quot;</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">WaveformDataset</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SCSN_Train&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get SCSN training dataset path from Hugging Face</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span> <span class="n">get_dataset_path</span><span class="p">(</span><span class="s2">&quot;SCSN&quot;</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s2">&quot;train&quot;</span><span class="p">,</span> <span class="n">use_hf</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">dataset</span> <span class="o">=</span> <span class="n">WaveformDataset</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">path</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;SCSN_Train&quot;</span><span class="p">,</span> <span class="o">...</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get TXED HDF5 dataset path</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">path</span> <span class="o">=</span> <span class="n">get_dataset_path</span><span class="p">(</span><span class="s2">&quot;TXED&quot;</span><span class="p">,</span> <span class="n">subset</span><span class="o">=</span><span class="s2">&quot;hdf5&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</section>
+<section id="configure-cache">
+<h3>configure_cache<a class="headerlink" href="#configure-cache" title="Link to this heading"></a></h3>
+<dl class="py function">
+<dt class="sig sig-object py" id="seispolarity.configure_cache">
+<span class="sig-name descname"><span class="pre">configure_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cache_root</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/seispolarity/config.html#configure_cache"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#seispolarity.configure_cache" title="Link to this definition"></a></dt>
+<dd><p>Update cache root and ensure required subfolders exist.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><span class="sphinx_autodoc_typehints-type"><code class="xref py py-class docutils literal notranslate"><span class="pre">Settings</span></code></span></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="get-hf-path">
+<h3>get_hf_path<a class="headerlink" href="#get-hf-path" title="Link to this heading"></a></h3>
+</section>
+</section>
+<section id="exceptions">
+<h2>Exceptions<a class="headerlink" href="#exceptions" title="Link to this heading"></a></h2>
+</section>
+<section id="version-information">
+<h2>Version Information<a class="headerlink" href="#version-information" title="Link to this heading"></a></h2>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="linenos">1</span><span class="kn">import</span><span class="w"> </span><span class="nn">seispolarity</span>
+<span class="linenos">2</span>
+<span class="linenos">3</span><span class="nb">print</span><span class="p">(</span><span class="n">seispolarity</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, SeisPolarity Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
