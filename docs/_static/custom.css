@@ -1,0 +1,22 @@
+.wy-nav-content {
+    max-width: 100% !important;
+}
+
+.wy-nav-content-wrap {
+    margin-left: 300px;
+}
+
+.wy-nav-side {
+    width: 300px;
+}
+
+@media screen and (max-width: 768px) {
+    .wy-nav-content {
+        margin-left: 0;
+        max-width: 100% !important;
+    }
+    
+    .wy-nav-content-wrap {
+        margin-left: 0;
+    }
+}

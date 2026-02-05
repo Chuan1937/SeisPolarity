@@ -9,6 +9,7 @@
   <title>模型概述 &mdash; SeisPolarity</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=5af64b9e" />
 
   
     <link rel="shortcut icon" href="../../_static/seispolarity_logo.svg"/>
@@ -17,9 +18,12 @@
       <script src="../../_static/documentation_options.js?v=3ce10a4d"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/custom.js?v=13dabb7d"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" /> 
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="训练概述" href="../training/overview.html" />
+    <link rel="prev" title="数据集概述" href="../datasets/overview.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -42,38 +46,43 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">模型概述</a><ul>
-<li><a class="reference internal" href="#id2">可用模型</a></li>
-<li><a class="reference internal" href="#id3">加载模型</a><ul>
-<li><a class="reference internal" href="#id4">预训练模型</a></li>
-<li><a class="reference internal" href="#id5">加载自定义权重</a></li>
+              <p class="caption" role="heading"><span class="caption-text">文档目录</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">安装与配置</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../datasets/overview.html">数据集概述</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">模型概述</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#id2">可用模型</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id3">加载模型</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id4">预训练模型</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id5">加载自定义权重</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#api">模型 API</a></li>
-<li><a class="reference internal" href="#id6">模型架构</a><ul>
-<li><a class="reference internal" href="#ross-scsn">Ross (SCSN)</a></li>
-<li><a class="reference internal" href="#eqpolarity">Eqpolarity</a></li>
-<li><a class="reference internal" href="#ditingmotion">DiTingMotion</a></li>
-<li><a class="reference internal" href="#cfm">CFM</a></li>
-<li><a class="reference internal" href="#rpnet">RPNet</a></li>
-<li><a class="reference internal" href="#polarcap">PolarCAP</a></li>
-<li><a class="reference internal" href="#app">APP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#api">模型 API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id6">模型架构</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ross-scsn">Ross (SCSN)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#eqpolarity">Eqpolarity</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ditingmotion">DiTingMotion</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cfm">CFM</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#rpnet">RPNet</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#polarcap">PolarCAP</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#app">APP</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id7">推理</a><ul>
-<li><a class="reference internal" href="#id8">批量推理</a></li>
-<li><a class="reference internal" href="#id9">单样本推理</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id7">推理</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id8">批量推理</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id9">单样本推理</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id10">模型输出</a></li>
-<li><a class="reference internal" href="#id11">模型下载</a></li>
-<li><a class="reference internal" href="#id12">自定义模型</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id10">模型输出</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id11">模型下载</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id12">自定义模型</a></li>
 </ul>
 </li>
+<li class="toctree-l1"><a class="reference internal" href="../training/overview.html">训练概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../augmentation/overview.html">数据增强概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/overview.html">API Reference</a></li>
 </ul>
-</div>
+
         </div>
       </div>
     </nav>
@@ -96,6 +105,17 @@
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+<div class="document-wrapper" style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px; border-left: 4px solid #2980b9;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 14px; color: #555;">
+            <strong>Author:</strong> He XingChen
+        </div>
+        <div style="font-size: 14px; color: #555;">
+            <strong>Date:</strong> <span id="gregorian-date"></span> | <span id="lunar-date"></span>
+        </div>
+    </div>
+</div>
+
            <div itemprop="articleBody">
              
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
@@ -394,12 +414,16 @@
 
            </div>
           </div>
-          <footer>
+
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../datasets/overview.html" class="btn btn-neutral float-left" title="数据集概述" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../training/overview.html" class="btn btn-neutral float-right" title="训练概述" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2026, SeisPolarity Contributors.</p>
+    <p>&#169; Copyright 2026, He XingChen.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
@@ -416,7 +440,14 @@
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+<div class="footer">
+     
+    <p style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
+        All content written by He XingChen
+    </p>
+</div>
+
 
 </body>
 </html>

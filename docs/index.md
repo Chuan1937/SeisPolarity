@@ -64,12 +64,17 @@ loader = generator.get_dataloader(batch_size=256)
 
 ## 文档
 
-- [安装指南](pages/installation.md)
-- [数据集](pages/datasets/overview.md)
-- [模型](pages/models/overview.md)
-- [训练](pages/training/overview.md)
-- [数据增强](pages/augmentation/overview.md)
-- [API 参考](pages/api/overview.md)
+```{toctree}
+:maxdepth: 1
+:caption: 文档目录
+
+pages/installation.md
+pages/datasets/overview.md
+pages/models/overview.md
+pages/training/overview.md
+pages/augmentation/overview.md
+pages/api/overview.md
+```
 
 ## 引用
 

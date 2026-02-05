@@ -9,6 +9,7 @@
   <title>安装与配置 &mdash; SeisPolarity</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=5af64b9e" />
 
   
     <link rel="shortcut icon" href="../_static/seispolarity_logo.svg"/>
@@ -17,9 +18,12 @@
       <script src="../_static/documentation_options.js?v=3ce10a4d"></script>
       <script src="../_static/doctools.js?v=9bcbadda"></script>
       <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/custom.js?v=13dabb7d"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
-    <link rel="search" title="Search" href="../search.html" /> 
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="数据集概述" href="datasets/overview.html" />
+    <link rel="prev" title="欢迎使用 SeisPolarity" href="../index.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -42,29 +46,34 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">安装与配置</a><ul>
-<li><a class="reference internal" href="#pip">通过 pip 安装</a><ul>
-<li><a class="reference internal" href="#id2">标准安装</a></li>
-<li><a class="reference internal" href="#id3">从源码安装</a></li>
+              <p class="caption" role="heading"><span class="caption-text">文档目录</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">安装与配置</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pip">通过 pip 安装</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id2">标准安装</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">从源码安装</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#id4">安装文档依赖</a></li>
-<li><a class="reference internal" href="#id5">配置</a><ul>
-<li><a class="reference internal" href="#id6">数据集缓存目录</a></li>
-<li><a class="reference internal" href="#id7">远程仓库</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id4">安装文档依赖</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#id5">配置</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id6">数据集缓存目录</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id7">远程仓库</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#gpu">GPU 支持</a><ul>
-<li><a class="reference internal" href="#id8">GPU 安装</a></li>
-<li><a class="reference internal" href="#modelscope">ModelScope 访问（中国用户）</a></li>
-</ul>
-</li>
+<li class="toctree-l2"><a class="reference internal" href="#gpu">GPU 支持</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id8">GPU 安装</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#modelscope">ModelScope 访问（中国用户）</a></li>
 </ul>
 </li>
 </ul>
-</div>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="datasets/overview.html">数据集概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="models/overview.html">模型概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="training/overview.html">训练概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="augmentation/overview.html">数据增强概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api/overview.html">API Reference</a></li>
+</ul>
+
         </div>
       </div>
     </nav>
@@ -87,6 +96,17 @@
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+<div class="document-wrapper" style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px; border-left: 4px solid #2980b9;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 14px; color: #555;">
+            <strong>Author:</strong> He XingChen
+        </div>
+        <div style="font-size: 14px; color: #555;">
+            <strong>Date:</strong> <span id="gregorian-date"></span> | <span id="lunar-date"></span>
+        </div>
+    </div>
+</div>
+
            <div itemprop="articleBody">
              
   <section class="tex2jax_ignore mathjax_ignore" id="id1">
@@ -169,12 +189,16 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 
            </div>
           </div>
-          <footer>
+
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="欢迎使用 SeisPolarity" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="datasets/overview.html" class="btn btn-neutral float-right" title="数据集概述" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2026, SeisPolarity Contributors.</p>
+    <p>&#169; Copyright 2026, He XingChen.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
@@ -191,7 +215,14 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+<div class="footer">
+     
+    <p style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
+        All content written by He XingChen
+    </p>
+</div>
+
 
 </body>
 </html>

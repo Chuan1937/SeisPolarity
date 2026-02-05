@@ -9,6 +9,7 @@
   <title>API Reference &mdash; SeisPolarity</title>
       <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../../_static/custom.css?v=5af64b9e" />
 
   
     <link rel="shortcut icon" href="../../_static/seispolarity_logo.svg"/>
@@ -17,9 +18,11 @@
       <script src="../../_static/documentation_options.js?v=3ce10a4d"></script>
       <script src="../../_static/doctools.js?v=9bcbadda"></script>
       <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../../_static/custom.js?v=13dabb7d"></script>
     <script src="../../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../../genindex.html" />
-    <link rel="search" title="Search" href="../../search.html" /> 
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="prev" title="数据增强概述" href="../augmentation/overview.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -42,88 +45,52 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">API Reference</a><ul>
-<li><a class="reference internal" href="#modules">Modules</a></li>
-<li><a class="reference internal" href="#package-structure">Package Structure</a></li>
-<li><a class="reference internal" href="#quick-links">Quick Links</a><ul>
-<li><a class="reference internal" href="#data-loading">Data Loading</a></li>
-<li><a class="reference internal" href="#models">Models</a><ul>
-<li><a class="reference internal" href="#seispolarity.models.PPNet"><code class="docutils literal notranslate"><span class="pre">PPNet</span></code></a><ul>
-<li><a class="reference internal" href="#seispolarity.models.PPNet.__init__"><code class="docutils literal notranslate"><span class="pre">PPNet.__init__()</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.models.PPNet.forward"><code class="docutils literal notranslate"><span class="pre">PPNet.forward()</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.models.PPNet.forward_tensor"><code class="docutils literal notranslate"><span class="pre">PPNet.forward_tensor()</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.models.PPNet.build_picks"><code class="docutils literal notranslate"><span class="pre">PPNet.build_picks()</span></code></a></li>
+              <p class="caption" role="heading"><span class="caption-text">文档目录</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">安装与配置</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../datasets/overview.html">数据集概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../models/overview.html">模型概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../training/overview.html">训练概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../augmentation/overview.html">数据增强概述</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#modules">Modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#package-structure">Package Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#quick-links">Quick Links</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#data-loading">Data Loading</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#models">Models</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#seispolarity.models.PPNet"><code class="docutils literal notranslate"><span class="pre">PPNet</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#training">Training</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#seispolarity.training.Trainer"><code class="docutils literal notranslate"><span class="pre">Trainer</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#seispolarity.training.TrainingConfig"><code class="docutils literal notranslate"><span class="pre">TrainingConfig</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#augmentation">Augmentation</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#seispolarity.generate.GenericGenerator"><code class="docutils literal notranslate"><span class="pre">GenericGenerator</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#seispolarity.generate.BalancedPolarityGenerator"><code class="docutils literal notranslate"><span class="pre">BalancedPolarityGenerator</span></code></a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#training">Training</a><ul>
-<li><a class="reference internal" href="#seispolarity.training.Trainer"><code class="docutils literal notranslate"><span class="pre">Trainer</span></code></a><ul>
-<li><a class="reference internal" href="#seispolarity.training.Trainer.__init__"><code class="docutils literal notranslate"><span class="pre">Trainer.__init__()</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.Trainer.train"><code class="docutils literal notranslate"><span class="pre">Trainer.train()</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.Trainer.evaluate"><code class="docutils literal notranslate"><span class="pre">Trainer.evaluate()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#utility-functions">Utility Functions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#get-dataset-path">get_dataset_path</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#seispolarity.get_dataset_path"><code class="docutils literal notranslate"><span class="pre">get_dataset_path()</span></code></a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig"><code class="docutils literal notranslate"><span class="pre">TrainingConfig</span></code></a><ul>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.batch_size"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.batch_size</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.epochs"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.epochs</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.learning_rate"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.learning_rate</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.num_workers"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.num_workers</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.train_val_split"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.train_val_split</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.val_split"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.val_split</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.test_split"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.test_split</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.limit"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.limit</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.label_key"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.label_key</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.device"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.device</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.checkpoint_dir"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.checkpoint_dir</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.save_best_only"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.save_best_only</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.patience"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.patience</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.resume_checkpoint"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.resume_checkpoint</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.loss_fn"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.loss_fn</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.output_index"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.output_index</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.metric_index"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.metric_index</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.random_seed"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.random_seed</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.training.TrainingConfig.__init__"><code class="docutils literal notranslate"><span class="pre">TrainingConfig.__init__()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configure-cache">configure_cache</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#seispolarity.configure_cache"><code class="docutils literal notranslate"><span class="pre">configure_cache()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#get-hf-path">get_hf_path</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#exceptions">Exceptions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#version-information">Version Information</a></li>
 </ul>
 </li>
 </ul>
-</li>
-<li><a class="reference internal" href="#augmentation">Augmentation</a><ul>
-<li><a class="reference internal" href="#seispolarity.generate.GenericGenerator"><code class="docutils literal notranslate"><span class="pre">GenericGenerator</span></code></a><ul>
-<li><a class="reference internal" href="#seispolarity.generate.GenericGenerator.__init__"><code class="docutils literal notranslate"><span class="pre">GenericGenerator.__init__()</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.generate.GenericGenerator.augmentations"><code class="docutils literal notranslate"><span class="pre">GenericGenerator.augmentations</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.generate.GenericGenerator.augmentation"><code class="docutils literal notranslate"><span class="pre">GenericGenerator.augmentation()</span></code></a></li>
-<li><a class="reference internal" href="#seispolarity.generate.GenericGenerator.add_augmentations"><code class="docutils literal notranslate"><span class="pre">GenericGenerator.add_augmentations()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#seispolarity.generate.BalancedPolarityGenerator"><code class="docutils literal notranslate"><span class="pre">BalancedPolarityGenerator</span></code></a><ul>
-<li><a class="reference internal" href="#seispolarity.generate.BalancedPolarityGenerator.__init__"><code class="docutils literal notranslate"><span class="pre">BalancedPolarityGenerator.__init__()</span></code></a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
-</li>
-<li><a class="reference internal" href="#utility-functions">Utility Functions</a><ul>
-<li><a class="reference internal" href="#get-dataset-path">get_dataset_path</a><ul>
-<li><a class="reference internal" href="#seispolarity.get_dataset_path"><code class="docutils literal notranslate"><span class="pre">get_dataset_path()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#configure-cache">configure_cache</a><ul>
-<li><a class="reference internal" href="#seispolarity.configure_cache"><code class="docutils literal notranslate"><span class="pre">configure_cache()</span></code></a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#get-hf-path">get_hf_path</a></li>
-</ul>
-</li>
-<li><a class="reference internal" href="#exceptions">Exceptions</a></li>
-<li><a class="reference internal" href="#version-information">Version Information</a></li>
-</ul>
-</li>
-</ul>
-</div>
+
         </div>
       </div>
     </nav>
@@ -146,6 +113,17 @@
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+<div class="document-wrapper" style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px; border-left: 4px solid #2980b9;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 14px; color: #555;">
+            <strong>Author:</strong> He XingChen
+        </div>
+        <div style="font-size: 14px; color: #555;">
+            <strong>Date:</strong> <span id="gregorian-date"></span> | <span id="lunar-date"></span>
+        </div>
+    </div>
+</div>
+
            <div itemprop="articleBody">
              
   <section class="tex2jax_ignore mathjax_ignore" id="api-reference">
@@ -555,12 +533,15 @@ Defaults to “train” for SCSN, “default” for others.</p></li>
 
            </div>
           </div>
-          <footer>
+
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../augmentation/overview.html" class="btn btn-neutral float-left" title="数据增强概述" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2026, SeisPolarity Contributors.</p>
+    <p>&#169; Copyright 2026, He XingChen.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
@@ -577,7 +558,14 @@ Defaults to “train” for SCSN, “default” for others.</p></li>
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+<div class="footer">
+     
+    <p style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
+        All content written by He XingChen
+    </p>
+</div>
+
 
 </body>
 </html>

@@ -9,6 +9,7 @@
   <title>欢迎使用 SeisPolarity &mdash; SeisPolarity</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=5af64b9e" />
 
   
     <link rel="shortcut icon" href="_static/seispolarity_logo.svg"/>
@@ -17,9 +18,11 @@
       <script src="_static/documentation_options.js?v=3ce10a4d"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/custom.js?v=13dabb7d"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
-    <link rel="search" title="Search" href="search.html" /> 
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="安装与配置" href="pages/installation.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -42,23 +45,16 @@
   </form>
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
-              <!-- Local TOC -->
-              <div class="local-toc"><ul>
-<li><a class="reference internal" href="#">欢迎使用 SeisPolarity</a><ul>
-<li><a class="reference internal" href="#id1">功能特性</a></li>
-<li><a class="reference internal" href="#id2">快速开始</a><ul>
-<li><a class="reference internal" href="#id3">安装</a></li>
-<li><a class="reference internal" href="#id4">推理</a></li>
-<li><a class="reference internal" href="#id5">数据增强</a></li>
+              <p class="caption" role="heading"><span class="caption-text">文档目录</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pages/installation.html">安装与配置</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pages/datasets/overview.html">数据集概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pages/models/overview.html">模型概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pages/training/overview.html">训练概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pages/augmentation/overview.html">数据增强概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pages/api/overview.html">API Reference</a></li>
 </ul>
-</li>
-<li><a class="reference internal" href="#id6">文档</a></li>
-<li><a class="reference internal" href="#id7">引用</a></li>
-<li><a class="reference internal" href="#id8">相关链接</a></li>
-</ul>
-</li>
-</ul>
-</div>
+
         </div>
       </div>
     </nav>
@@ -81,6 +77,17 @@
   <hr/>
 </div>
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+<div class="document-wrapper" style="background-color: #f8f9fa; padding: 15px; margin-bottom: 20px; border-radius: 5px; border-left: 4px solid #2980b9;">
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="font-size: 14px; color: #555;">
+            <strong>Author:</strong> He XingChen
+        </div>
+        <div style="font-size: 14px; color: #555;">
+            <strong>Date:</strong> <span id="gregorian-date"></span> | <span id="lunar-date"></span>
+        </div>
+    </div>
+</div>
+
            <div itemprop="articleBody">
              
   <section class="tex2jax_ignore mathjax_ignore" id="seispolarity">
@@ -148,14 +155,17 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 </section>
 <section id="id6">
 <h2>文档<a class="headerlink" href="#id6" title="Link to this heading"></a></h2>
-<ul class="simple">
-<li><p><a class="reference internal" href="pages/installation.html"><span class="std std-doc">安装指南</span></a></p></li>
-<li><p><a class="reference internal" href="pages/datasets/overview.html"><span class="std std-doc">数据集</span></a></p></li>
-<li><p><a class="reference internal" href="pages/models/overview.html"><span class="std std-doc">模型</span></a></p></li>
-<li><p><a class="reference internal" href="pages/training/overview.html"><span class="std std-doc">训练</span></a></p></li>
-<li><p><a class="reference internal" href="pages/augmentation/overview.html"><span class="std std-doc">数据增强</span></a></p></li>
-<li><p><a class="reference internal" href="pages/api/overview.html"><span class="std std-doc">API 参考</span></a></p></li>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">文档目录</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="pages/installation.html">安装与配置</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pages/datasets/overview.html">数据集概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pages/models/overview.html">模型概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pages/training/overview.html">训练概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pages/augmentation/overview.html">数据增强概述</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pages/api/overview.html">API Reference</a></li>
 </ul>
+</div>
 </section>
 <section id="id7">
 <h2>引用<a class="headerlink" href="#id7" title="Link to this heading"></a></h2>
@@ -181,12 +191,15 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 
            </div>
           </div>
-          <footer>
+
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="pages/installation.html" class="btn btn-neutral float-right" title="安装与配置" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
 
   <hr/>
 
   <div role="contentinfo">
-    <p>&#169; Copyright 2026, SeisPolarity Contributors.</p>
+    <p>&#169; Copyright 2026, He XingChen.</p>
   </div>
 
   Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
@@ -203,7 +216,14 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
       jQuery(function () {
           SphinxRtdTheme.Navigation.enable(true);
       });
-  </script> 
+  </script>
+<div class="footer">
+     
+    <p style="text-align: center; margin-top: 10px; font-size: 12px; color: #666;">
+        All content written by He XingChen
+    </p>
+</div>
+
 
 </body>
 </html>

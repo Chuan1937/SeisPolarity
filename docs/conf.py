@@ -14,8 +14,8 @@ except Exception:
     release = "dev"
 
 project = "SeisPolarity"
-copyright = f"{datetime.now().year}, SeisPolarity Contributors"
-author = "SeisPolarity Contributors"
+copyright = f"{datetime.now().year}, He XingChen"
+author = "He XingChen"
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -43,6 +43,14 @@ html_theme_options = {
     "logo_only": True,
     "display_version": True,
 }
+
+html_css_files = [
+    "custom.css",
+]
+
+html_js_files = [
+    "custom.js",
+]
 
 autodoc_default_options = {
     "members": True,
