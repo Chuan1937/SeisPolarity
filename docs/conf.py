@@ -13,6 +13,14 @@ except ImportError:
 
 sys.path.insert(0, os.path.abspath(".."))
 
+def get_ganzhi_year(zh_date):
+    chinese = zh_date.chinese()
+    parts = chinese.split()
+    for part in parts:
+        if '年' in part and len(part) == 3:
+            return part
+    return None
+
 def get_git_last_updated(file_path):
     try:
         result = subprocess.run(
@@ -42,10 +50,9 @@ lunar_year = None
 if ZHDATE_AVAILABLE:
     try:
         zh_date = ZhDate.from_datetime(now)
-        full_chinese = zh_date.chinese()
-        parts = full_chinese.split()
-        if len(parts) >= 3:
-            lunar_year = parts[1]
+        ganzhi = get_ganzhi_year(zh_date)
+        if ganzhi:
+            lunar_year = ganzhi
     except Exception:
         pass
 
@@ -86,7 +93,20 @@ def get_lunar_date(gregorian_date):
         return None
     try:
         zh_date = ZhDate.from_datetime(gregorian_date)
-        return f"农历{zh_date.lunar_month_name}{zh_date.lunar_day_name}"
+        ganzhi_year = get_ganzhi_year(zh_date)
+        chinese_str = zh_date.chinese()
+        parts = chinese_str.split()
+        if ganzhi_year and len(parts) >= 1:
+            month_day_str = parts[0]
+            if '腊月' in month_day_str or '正月' in month_day_str or '二月' in month_day_str:
+                month_day = month_day_str.replace('二零二五年', '').replace('二零二六年', '')
+                if month_day:
+                    return f"{ganzhi_year}{month_day}"
+            else:
+                for part in parts:
+                    if '月' in part and '年' not in part:
+                        return f"{ganzhi_year}{part}"
+        return None
     except Exception:
         return None
 
