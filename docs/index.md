@@ -2,7 +2,6 @@
 
 :::{figure} _static/seispolarity_logo_title.svg
 :align: center
-:width: 200px
 :::
 
 **SeisPolarity** 是一个全面的地震初至极性拾取框架。
