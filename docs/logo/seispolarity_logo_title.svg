@@ -1,0 +1,28 @@
+<svg width="600" height="200" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <style>
+            .cls-circle { fill: none; stroke: #2c3e50; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+            .cls-fill { fill: #2c3e50; }
+            .cls-line { fill: none; stroke: #2c3e50; stroke-width: 8; stroke-linecap: round; stroke-linejoin: round; }
+            .cls-text { font-family: 'Times New Roman', Times, serif; font-weight: bold; fill: #2c3e50; font-size: 32px; }
+            .cls-title { font-family: 'Times New Roman', Times, serif; font-weight: bold; fill: #2c3e50; font-size: 48px; }
+            .cls-subtitle { font-family: 'Times New Roman', Times, serif; font-style: italic; fill: #7f8c8d; font-size: 18px; }
+        </style>
+    </defs>
+
+    <rect width="600" height="200" fill="transparent"/>
+
+    <g transform="translate(100, 100)">
+        <circle class="cls-circle" cx="0" cy="0" r="90" stroke-width="8"/>
+        <path class="cls-fill" d="M 0 0 L -64 -64 A 90 90 0 0 1 0 -90 Z" opacity="0.1"/>
+        <path class="cls-fill" d="M 0 0 L 64 64 A 90 90 0 0 1 0 90 Z" opacity="0.1"/>
+        <path class="cls-line" d="M 0 -90 Q -30 -50 0 0 T 0 90" fill="none"/>
+        <path class="cls-line" d="M -90 0 L -40 0 L -20 -40 L 20 40 L 40 0 L 90 0" fill="none"/>
+        <text x="-50" y="-40" class="cls-text" text-anchor="middle">+</text>
+        <text x="50" y="60" class="cls-text" text-anchor="middle">-</text>
+    </g>
+
+    <text x="240" y="95" class="cls-title">SeisPolarity</text>
+    <text x="240" y="130" class="cls-subtitle">A Toolbox for First-Motion Polarity</text>
+    <text x="240" y="155" class="cls-subtitle">Determination in Seismology</text>
+</svg>

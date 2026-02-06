@@ -1,5 +1,9 @@
 # SeisPolarity
 
+<p align="center">
+  <img src="/home/yuan/code/SeisPolarity/docs/logo/seispolarity_logo_title.svg" alt="SeisPolarity Logo">
+</p>
+
 A comprehensive framework for seismic first-motion polarity picking with unified APIs.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
