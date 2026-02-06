@@ -78,18 +78,11 @@ pages/api/overview.md
 
 ## 引用
 
-如果您在研究中使用了 SeisPolarity，请引用：
-
-```bibtex
-@software{seispolarity,
-  title = {SeisPolarity: A Framework for Seismic First-Motion Polarity Picking},
-  author = {He, Xingchen},
-  year = {2025},
-  url = {https://github.com/Chuan1937/SeisPolarity}
-}
-```
+文章将在后续发布，敬请关注。
 
 ## 相关链接
 
 - GitHub: https://github.com/Chuan1937/SeisPolarity
-- Hugging Face: https://huggingface.co/HeXingChen/SeisPolarity-Model
+- Documentation: https://seispolarity.readthedocs.io/en/latest/index.html
+- Hugging Face: https://huggingface.co/HeXingChen
+- ModelScope: https://www.modelscope.cn/profile/chuanjun
