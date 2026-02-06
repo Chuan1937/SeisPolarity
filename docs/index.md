@@ -1,6 +1,6 @@
 # 欢迎使用 SeisPolarity
 
-:::{figure} _static/seispolarity_logo.svg
+:::{figure} _static/seispolarity_logo_title.svg
 :align: center
 :width: 200px
 :::

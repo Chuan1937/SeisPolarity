@@ -33,7 +33,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install sphinx sphinx-rtd-theme myst-parser sphinx-autodoc-typehints sphinxcontrib-mermaid linkify-it-py zhdate
+          pip install sphinx sphinx-rtd-theme myst-parser sphinx-autodoc-typehints sphinxcontrib-mermaid linkify-it-py
 
       - name: Build docs
         run: |

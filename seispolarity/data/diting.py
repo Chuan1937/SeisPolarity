@@ -31,6 +31,8 @@ from scipy import signal
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 
+from .download import fetch_dataset_folder
+
 logger = logging.getLogger(__name__)
 
 
@@ -74,7 +76,10 @@ class DiTing:
         output_polarity: str,
         component: str = "Z",
         sampling_rate: int = 100,
-        original_sampling_rate: int = 50
+        original_sampling_rate: int = 50,
+        auto_download: bool = False,
+        use_hf: bool = False,
+        force_download: bool = False
     ):
         """
         Initialize DiTing processor.
@@ -85,6 +90,9 @@ class DiTing:
             component: Which component to extract (default: "Z" for vertical)
             sampling_rate: Target sampling rate in Hz (default: 100)
             original_sampling_rate: Original sampling rate in Hz (default: 50)
+            auto_download: If True, automatically download data if data_dir not found (default: False)
+            use_hf: If True, use Hugging Face instead of ModelScope for download (default: False)
+            force_download: If True, force re-download even if files exist (default: False)
         """
         self.data_dir = Path(data_dir)
         self.output_dir = Path(output_polarity)
@@ -94,6 +102,13 @@ class DiTing:
         self.component = component.upper()
         self.sampling_rate = sampling_rate
         self.original_sampling_rate = original_sampling_rate
+        self.auto_download = auto_download
+        self.use_hf = use_hf
+        self.force_download = force_download
+        
+        # Auto-download if enabled and data_dir doesn't exist
+        if auto_download:
+            self._auto_download_data()
         
         # Calculate resampling ratio
         self.sr_ratio = self.sampling_rate / self.original_sampling_rate
@@ -133,6 +148,55 @@ class DiTing:
         logger.info(f"  Waveform length: {self.waveform_length} (fixed)")
         logger.info(f"  Component: {self.component}")
         logger.info(f"  Sampling rate: {original_sampling_rate} -> {sampling_rate} Hz")
+        logger.info(f"  Auto download: {auto_download}")
+        logger.info(f"  Use HF: {use_hf}")
+    
+    def _auto_download_data(self):
+        """
+        Automatically download DiTing dataset if data_dir not found.
+        
+        This method uses fetch_dataset_folder to download the DiTing dataset
+        from ModelScope or Hugging Face to the specified output directory.
+        """
+        data_dir_exists = self.data_dir.exists()
+        
+        if not self.force_download and data_dir_exists:
+            csv_found = any(self.data_dir.glob('*.csv'))
+            hdf5_found = any(self.data_dir.glob('*.hdf5'))
+            
+            if csv_found and hdf5_found:
+                logger.info(f"Data directory exists with CSV and HDF5 files, skipping download")
+                return
+        
+        if self.force_download:
+            logger.info(f"Force download enabled, proceeding with download")
+        elif not data_dir_exists:
+            logger.warning(f"Data directory not found: {self.data_dir}")
+        else:
+            logger.warning(f"Data directory exists but missing required files")
+        
+        try:
+            logger.info(f"Downloading DiTing dataset to: {self.data_dir}")
+            downloaded_path = fetch_dataset_folder(
+                dataset_name="DiTing",
+                folder_path=str(self.data_dir),
+                cache_dir=str(self.data_dir),
+                use_hf=self.use_hf,
+                force_download=self.force_download
+            )
+            logger.info(f"DiTing dataset downloaded successfully to: {downloaded_path}")
+            
+            # Update data_dir based on downloaded location
+            downloaded_path = Path(downloaded_path)
+            if downloaded_path.exists():
+                self.data_dir = downloaded_path
+                logger.info(f"Updated data directory: {self.data_dir}")
+            else:
+                logger.warning(f"Downloaded directory not found: {downloaded_path}")
+                
+        except Exception as e:
+            logger.error(f"Failed to download DiTing dataset: {e}")
+            raise
     
     def _find_csv_file(self) -> Path:
         """Find CSV file(s) in data directory.

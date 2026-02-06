@@ -791,11 +791,12 @@ def fetch_dataset_folder(
                     "PNW/PNW.hdf5",
                     "PNW/PNW.csv",
                 ],
+                # DiTing is not supported due to national security concerns.
                 "DiTing": [
-                    "DiTing/DiTing_augmented_merge.hdf5",
                 ],
                 "Instance": [
-                    "Instance/Instance_polarity.hdf5",
+                    "Instance/Instance.hdf5",
+                    "Instance/Instance.csv",
                 ],
             }
             
@@ -816,8 +817,14 @@ def fetch_dataset_folder(
                         file_path=file_path,
                         cache_dir=str(target_dir)
                     )
-                    downloaded_files.append(Path(local_file))
-                    print(f"    ✓ Downloaded: {Path(local_file).name}", flush=True)
+                    # ModelScope downloads to ._____temp/{dataset_id}/{file_path}
+                    # We need to move the file to the target location
+                    local_path = Path(local_file)
+                    target_file = target_dir / Path(file_path).name
+                    target_file.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy(local_file, target_file)
+                    downloaded_files.append(target_file)
+                    print(f"    ✓ Downloaded and copied: {target_file.name}", flush=True)
                 except Exception as e:
                     print(f"    ✗ Failed to download {file_path}: {e}", flush=True)
                     # Continue with other files

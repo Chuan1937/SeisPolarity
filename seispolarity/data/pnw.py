@@ -35,6 +35,8 @@ from pathlib import Path
 from typing import Optional, Tuple, Literal
 from tqdm import tqdm
 
+from .download import fetch_dataset_folder
+
 logger = logging.getLogger(__name__)
 
 
@@ -71,7 +73,10 @@ class PNW:
         output_polarity: str,
         component_order: str = "ENZ",
         component: str = "Z",
-        sampling_rate: int = 100
+        sampling_rate: int = 100,
+        auto_download: bool = False,
+        use_hf: bool = False,
+        force_download: bool = False
     ):
         """
         Initialize PNW processor.
@@ -83,6 +88,9 @@ class PNW:
             component_order: Order of components in raw HDF5 (default: "ENZ")
             component: Which component to extract (default: "Z" for vertical)
             sampling_rate: Target sampling rate in Hz (default: 100)
+            auto_download: If True, automatically download data if csv_path or hdf5_path not found (default: False)
+            use_hf: If True, use Hugging Face instead of ModelScope for download (default: False)
+            force_download: If True, force re-download even if files exist (default: False)
         """
         self.csv_path = Path(csv_path)
         self.hdf5_path = Path(hdf5_path)
@@ -93,6 +101,13 @@ class PNW:
         self.component_order = component_order
         self.component = component.upper()
         self.sampling_rate = sampling_rate
+        self.auto_download = auto_download
+        self.use_hf = use_hf
+        self.force_download = force_download
+        
+        # Auto-download if enabled and paths don't exist
+        if auto_download:
+            self._auto_download_data()
         
         # Component index mapping
         self._component_index = self._get_component_index(component_order, component)
@@ -119,6 +134,60 @@ class PNW:
         logger.info(f"  Waveform length: {self.waveform_length} (fixed)")
         logger.info(f"  Component: {self.component}")
         logger.info(f"  Sampling rate: {sampling_rate} Hz")
+        logger.info(f"  Auto download: {auto_download}")
+        logger.info(f"  Use HF: {use_hf}")
+    
+    def _auto_download_data(self):
+        """
+        Automatically download PNW dataset if csv_path or hdf5_path not found.
+        
+        This method uses fetch_dataset_folder to download the PNW dataset
+        from ModelScope or Hugging Face to the specified output directory.
+        """
+        csv_exists = self.csv_path.exists()
+        hdf5_exists = self.hdf5_path.exists()
+        
+        if not self.force_download and csv_exists and hdf5_exists:
+            logger.info(f"Both CSV and HDF5 files exist, skipping download")
+            return
+        
+        if self.force_download:
+            logger.info(f"Force download enabled, proceeding with download")
+        elif not csv_exists:
+            logger.warning(f"CSV file not found: {self.csv_path}")
+        elif not hdf5_exists:
+            logger.warning(f"HDF5 file not found: {self.hdf5_path}")
+        
+        try:
+            logger.info(f"Downloading PNW dataset to: {self.output_dir}")
+            downloaded_path = fetch_dataset_folder(
+                dataset_name="PNW",
+                folder_path="PNW",
+                cache_dir=self.output_dir.parent,
+                use_hf=self.use_hf,
+                force_download=self.force_download
+            )
+            logger.info(f"PNW dataset downloaded successfully to: {downloaded_path}")
+            
+            # Update paths based on downloaded location (raw data: PNW.csv and PNW.hdf5)
+            downloaded_path = Path(downloaded_path)
+            expected_csv = downloaded_path / "PNW.csv"
+            expected_hdf5 = downloaded_path / "PNW.hdf5"
+            
+            if expected_csv.exists() and expected_hdf5.exists():
+                self.csv_path = expected_csv
+                self.hdf5_path = expected_hdf5
+                logger.info(f"Updated paths (raw data):")
+                logger.info(f"  CSV: {self.csv_path}")
+                logger.info(f"  HDF5: {self.hdf5_path}")
+            else:
+                logger.warning(f"Expected raw files not found in downloaded directory")
+                logger.warning(f"Expected CSV: {expected_csv}")
+                logger.warning(f"Expected HDF5: {expected_hdf5}")
+                
+        except Exception as e:
+            logger.error(f"Failed to download PNW dataset: {e}")
+            raise
     
     def _get_component_index(self, order: str, component: str) -> int:
         """Get component index based on order string."""
