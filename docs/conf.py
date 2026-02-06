@@ -2,9 +2,32 @@
 
 import os
 import sys
+import subprocess
 from datetime import datetime
 
+try:
+    from zhdate import ZhDate
+    ZHDATE_AVAILABLE = True
+except ImportError:
+    ZHDATE_AVAILABLE = False
+
 sys.path.insert(0, os.path.abspath(".."))
+
+def get_git_last_updated(file_path):
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%ci", "--", file_path],
+            cwd=os.path.abspath(".."),
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        if result.stdout.strip():
+            git_date = datetime.strptime(result.stdout.strip(), "%Y-%m-%d %H:%M:%S %z")
+            return git_date.strftime("%Y-%m-%d")
+    except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+        pass
+    return None
 
 from importlib.metadata import version as _version
 
@@ -43,6 +66,46 @@ html_theme_options = {
     "logo_only": True,
     "display_version": True,
 }
+
+html_last_updated_fmt = "%Y-%m-%d"
+
+def get_lunar_date(gregorian_date):
+    if not ZHDATE_AVAILABLE:
+        return None
+    try:
+        zh_date = ZhDate.from_datetime(gregorian_date)
+        return f"农历{zh_date.lunar_month_name}{zh_date.lunar_day_name}"
+    except Exception:
+        return None
+
+def setup(app):
+    app.add_config_value('get_lunar_date', get_lunar_date, 'html')
+    
+    def html_page_context_handler(app, pagename, templatename, context, doctree):
+        source_suffix = app.config.source_suffix
+        if not isinstance(source_suffix, list):
+            source_suffix = list(source_suffix.keys())
+        
+        source_file = None
+        for suffix in source_suffix:
+            possible_path = os.path.join(app.srcdir, pagename + suffix)
+            if os.path.exists(possible_path):
+                source_file = possible_path
+                break
+        
+        if source_file:
+            last_updated_str = get_git_last_updated(source_file)
+            if last_updated_str:
+                context['last_updated'] = last_updated_str
+                try:
+                    last_updated_dt = datetime.strptime(last_updated_str, "%Y-%m-%d")
+                    lunar_date_str = get_lunar_date(last_updated_dt)
+                    if lunar_date_str:
+                        context['lunar_last_updated'] = lunar_date_str
+                except Exception:
+                    pass
+    
+    app.connect('html-page-context', html_page_context_handler)
 
 html_css_files = [
     "custom.css",

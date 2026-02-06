@@ -38,6 +38,7 @@ docs = [
     "sphinx-autodoc-typehints>=2.0",
     "sphinx-autodoc-typehints>=2.0",
     "sphinxcontrib-mermaid>=1.0",
+    "zhdate>=0.1",
 ]
 modelscope = [
     "modelscope>=1.0.0",

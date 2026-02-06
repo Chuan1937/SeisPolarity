@@ -12,6 +12,17 @@ Update_model.ipynb
 pretrained_model/
 /Model_Tensorflow_Hdf5/
 /checkpoints*/
+
+# Documentation build artifacts
+docs/_build/
+
+# Python build artifacts
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
 docs/_build/
 *.egg-info/
 dist/

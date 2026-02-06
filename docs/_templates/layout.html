@@ -9,6 +9,12 @@
         <div style="font-size: 14px; color: #555;">
             <strong>Date:</strong> <span id="gregorian-date"></span> | <span id="lunar-date"></span>
         </div>
+        {% if last_updated %}
+        <div style="font-size: 14px; color: #555;">
+            <strong>Last Updated:</strong> {{ last_updated }}
+            {% if lunar_last_updated %} | {{ lunar_last_updated }}{% endif %}
+        </div>
+        {% endif %}
     </div>
 </div>
 {{ super() }}
