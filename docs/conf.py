@@ -37,7 +37,16 @@ except Exception:
     release = "dev"
 
 project = "SeisPolarity"
-copyright = f"{datetime.now().year}, He XingChen"
+# 获取当前公历年与对应农历年
+now = datetime.now()
+lunar_year = ""
+if ZHDATE_AVAILABLE:
+    try:
+        zh_date = ZhDate.from_datetime(now)
+        lunar_year = f"农历{zh_date.lunar_year}年"
+    except Exception:
+        pass
+copyright = f"{now.year}, He XingChen {lunar_year}"
 author = "He XingChen"
 
 extensions = [
