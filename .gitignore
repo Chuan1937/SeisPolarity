@@ -12,3 +12,8 @@ Update_model.ipynb
 pretrained_model/
 /Model_Tensorflow_Hdf5/
 /checkpoints*/
+docs/_build/
+*.egg-info/
+dist/
+build/
+.eggs/
