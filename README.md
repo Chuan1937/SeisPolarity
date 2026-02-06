@@ -1,7 +1,7 @@
 # SeisPolarity
 
 <p align="center">
-  <img src="../docs/logo/seispolarity_logo_title.svg" alt="SeisPolarity Logo">
+  <img src="../SeisPolarity/docs/logo/seispolarity_logo_title.svg" alt="SeisPolarity Logo">
 </p>
 
 A comprehensive framework for seismic first-motion polarity picking with unified APIs.
