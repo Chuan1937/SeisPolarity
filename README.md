@@ -10,15 +10,15 @@ A comprehensive framework for seismic first-motion polarity picking with unified
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-red)](https://pytorch.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## Features
+## Documentation
 
-- **Unified Data Interface**: Support for SCSN, Txed, DiTing, Instance, PNW datasets with automatic download
-- **Multiple Models**: Ross, Eqpolarity, APP, DiTingMotion, CFM, RPNet, PolarCAP with pre-trained weights
-- **Flexible Data Loading**: RAM/Disk streaming for datasets of any size
-- **High-level Inference**: `Predictor` class with auto-download from Hugging Face/ModelScope
-- **Data Augmentation**: Comprehensive augmentation pipeline with balanced sampling
-- **Unified Training**: `Trainer` with checkpointing, early stopping, and logging
-- **Cross-platform Support**: Works on Linux, macOS, and Windows
+Full documentation is available at: https://seispolarity.readthedocs.io/
+
+Build documentation locally:
+```bash
+cd docs
+make html
+```
 
 ## Installation
 
@@ -30,7 +30,15 @@ cd SeisPolarity
 pip install -e .
 ```
 
-**Requirements**: Python ≥ 3.10, PyTorch ≥ 2.1, NumPy, h5py, ObsPy, Pandas
+## Features
+
+- **Unified Data Interface**: Support for SCSN, Txed, DiTing, Instance, PNW datasets with automatic download
+- **Multiple Models**: Ross, Eqpolarity, APP, DiTingMotion, CFM, RPNet, PolarCAP with pre-trained weights
+- **Flexible Data Loading**: RAM/Disk streaming for datasets of any size
+- **High-level Inference**: `Predictor` class with auto-download from Hugging Face/ModelScope
+- **Data Augmentation**: Comprehensive augmentation pipeline with balanced sampling
+- **Unified Training**: `Trainer` with checkpointing, early stopping, and logging
+- **Cross-platform Support**: Works on Linux, macOS, and Windows
 
 ## Quick Start
 
@@ -208,16 +216,6 @@ Pre-trained models are automatically downloaded from:
 See the `examples/` directory for complete notebooks:
 - [Dataset API Usage](examples/datasets_api.ipynb) - PNW dataset example
 - More examples coming soon...
-
-## Documentation
-
-Full documentation is available at: https://seispolarity.readthedocs.io/
-
-Build documentation locally:
-```bash
-cd docs
-make html
-```
 
 ## Contributing
 
