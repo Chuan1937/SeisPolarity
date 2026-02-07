@@ -116,7 +116,7 @@ model = EqpolarityNet()
 
 ```{image} ditingmotion.png
 :align: center
-:width: 80%
+:width: 60%
 ```
 
 基于运动的极性分类模型。
