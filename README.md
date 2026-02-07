@@ -1,14 +1,14 @@
 # SeisPolarity
 
 <p align="center">
-  <img src="docs/logo/seispolarity_logo_title.svg" alt="SeisPolarity Logo">
+  <img src="https://raw.githubusercontent.com/Chuan1937/SeisPolarity/main/docs/logo/seispolarity_logo_title.svg" alt="SeisPolarity Logo" width="400">
 </p>
 
 A comprehensive framework for seismic first-motion polarity picking with unified APIs.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-red)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-BSD%203-Clause-blue.svg)](LICENSE)
 
 ## Documentation
 
@@ -232,7 +232,7 @@ Paper will come soon...
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the BSD 3-Clause License - see the [LICENSE](LICENSE) file for details.
 
 ## Acknowledgments
 

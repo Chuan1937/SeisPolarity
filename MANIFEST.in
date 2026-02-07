@@ -1,0 +1,46 @@
+include README.md
+include LICENSE
+include pyproject.toml
+recursive-include seispolarity *.py *.json *.yaml *.yml
+
+# Exclude unnecessary files and directories
+exclude seisbench-main
+exclude datasets
+exclude pretrained_model
+exclude Model_Tensorflow_Hdf5
+exclude Polarity-model
+exclude Pre-model
+exclude checkpoints_download
+exclude docs
+exclude examples
+exclude *.ipynb
+exclude .git
+exclude .pytest_cache
+exclude .github
+
+# Prune entire directories from the distribution
+prune seisbench-main
+prune datasets
+prune pretrained_model
+prune Model_Tensorflow_Hdf5
+prune Polarity-model
+prune Pre-model
+prune checkpoints_download
+prune docs
+prune examples
+prune .git
+prune .pytest_cache
+prune .github
+
+# Exclude Python cache and compiled files
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude *.so
+global-exclude *.pyd
+global-exclude *.egg-info
+global-exclude *.egg
+global-exclude dist
+global-exclude build
+
+# Exclude Jupyter notebooks
+global-exclude *.ipynb
