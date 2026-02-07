@@ -1,14 +1,14 @@
 # SeisPolarity
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Chuan1937/SeisPolarity/main/docs/logo/seispolarity_logo_title.svg" alt="SeisPolarity Logo" width="400">
+  <img src="https://raw.githubusercontent.com/Chuan1937/SeisPolarity/main/docs/logo/seispolarity_logo_title.svg" alt="SeisPolarity Logo">
 </p>
 
 A comprehensive framework for seismic first-motion polarity picking with unified APIs.
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.1%2B-red)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/License-BSD%203-Clause-blue.svg)](LICENSE)
+[![License: BSD 3-Clause](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 
 ## Documentation
 
@@ -21,6 +21,12 @@ make html
 ```
 
 ## Installation
+
+### Install via pip (Recommended)
+
+```bash
+pip install seispolarity
+```
 
 ### From Source
 
