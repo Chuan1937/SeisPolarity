@@ -135,8 +135,8 @@ loader = generator.get_dataloader(batch_size=256)
 |---------|-------------|---------|---------------|
 | SCSN | Southern California Seismic Network | 100k+ | Yes |
 | Txed | Texas Earthquake Data | 50k+ | Yes |
-| DiTing | Chinese seismic network | 80k+ | Yes |
-| Instance | Instance-based dataset | 30k+ | No(must apply) |
+| DiTing | Chinese seismic network | 80k+ | No(must apply) |
+| Instance | Instance-based dataset | 30k+ | Yes |
 | PNW | Pacific Northwest | 20k+ | Yes |
 
 ## Supported Models
