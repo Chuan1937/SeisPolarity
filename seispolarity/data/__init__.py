@@ -15,6 +15,7 @@ from .txed import TXED
 from .instance import Instance
 from .diting import DiTing
 from .pnw import PNW
+from .scsn import SCSNData
 
 __all__ = [
     "WaveformDataset",
@@ -24,6 +25,7 @@ __all__ = [
     "Instance",
     "DiTing",
     "PNW",
+    "SCSNData",
     # Download functions
     "download_file",
     "maybe_extract",

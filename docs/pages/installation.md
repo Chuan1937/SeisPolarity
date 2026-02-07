@@ -32,22 +32,26 @@ pip install seispolarity[docs]
 
 ## 配置
 
-### 数据集缓存目录
+### 缓存目录配置
 
-SeisPolarity 会自动下载数据集和模型。默认情况下，数据集缓存在 `~/.cache/seispolarity/datasets`，模型缓存在 `~/.cache/seispolarity/models`。
+SeisPolarity 会自动下载数据集和模型。默认情况下，所有缓存内容存储在 `~/.seispolarity/` 目录下：
+
+- 数据集：`~/.seispolarity/datasets`
+- 模型：`~/.seispolarity/models`
+- 波形数据：`~/.seispolarity/waveforms`
 
 要配置自定义缓存目录：
 
 ```python
 from seispolarity import configure_cache
 
-configure_cache(cache_dir="/path/to/cache")
+configure_cache(cache_root="/path/to/cache")
 ```
 
-或者设置 `SEISPOLARITY_CACHE_DIR` 环境变量：
+或者设置 `SEISPOLARITY_CACHE_ROOT` 环境变量：
 
 ```bash
-export SEISPOLARITY_CACHE_DIR=/path/to/cache
+export SEISPOLARITY_CACHE_ROOT=/path/to/cache
 ```
 
 ### 远程仓库

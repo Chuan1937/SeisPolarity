@@ -32,7 +32,8 @@ MODELS_CONFIG = {
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": None,
-        "description": "ROSS model: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. Trained on SCSN dataset. 3-class classification (Up, Down, Unknown). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "ROSS model: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) . Trained on SCSN dataset. 3-class classification (Up, Down, Unknown). Input length: 400 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "ROSS_GLOBAL": {
         "filename": "ROSS_GLOBAL.pth",
@@ -43,7 +44,8 @@ MODELS_CONFIG = {
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": None,
-        "description": "ROSS model: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. Trained on global datasets: SCSN [13], INSTANCE: Michelini, A. et al. INSTANCE-the Italian seismic dataset for machine learning. Earth System Science Data 13, 5509-5544 (2021) [12], PNW: Ni, Y. et al. Curated Pacific Northwest AI-ready seismic dataset. https://eartharxiv.org/repository/view/5049/ (2023) [6], TXED: Chen, Y. et al. TXED: The Texas Earthquake Dataset for AI. Seismological Research Letters 95, 2013-2022 (2024) [21], DiTing. 3-class classification (Up, Down, Unknown). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "ROSS model: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) . Trained on global datasets: SCSN , INSTANCE: Michelini, A. et al. INSTANCE-the Italian seismic dataset for machine learning. Earth System Science Data 13, 5509-5544 (2021) , PNW: Ni, Y. et al. Curated Pacific Northwest AI-ready seismic dataset. https://eartharxiv.org/repository/view/5049/ (2023) , TXED: Chen, Y. et al. TXED: The Texas Earthquake Dataset for AI. Seismological Research Letters 95, 2013-2022 (2024) , DiTing. 3-class classification (Up, Down, Unknown). Input length: 400 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "EQPOLARITY_SCSN": {
         "filename": "EQPOLARITY_SCSN.pth",
@@ -54,7 +56,8 @@ MODELS_CONFIG = {
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None,
-        "description": "EQPolarity CCT model: Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion. IEEE Transactions on Geoscience and Remote Sensing (2024) [7]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. 2-class classification (Up, Down). Input length: 600 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "EQPolarity CCT model: Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion. IEEE Transactions on Geoscience and Remote Sensing (2024) . Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) . 2-class classification (Up, Down). Input length: 600 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "EQPOLARITY_TXED": {
         "filename": "EQPOLARITY_TXED.pth",
@@ -65,7 +68,8 @@ MODELS_CONFIG = {
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None,
-        "description": "EQPolarity CCT model: Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion. IEEE Transactions on Geoscience and Remote Sensing (2024) [7]. Trained on TXED dataset: Chen, Y. et al. TXED: The Texas Earthquake Dataset for AI. Seismological Research Letters 95, 2013-2022 (2024) [21]. 2-class classification (Up, Down). Input length: 600 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "EQPolarity CCT model: Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion. IEEE Transactions on Geoscience and Remote Sensing (2024) . Trained on TXED dataset: Chen, Y. et al. TXED: The Texas Earthquake Dataset for AI. Seismological Research Letters 95, 2013-2022 (2024) . 2-class classification (Up, Down). Input length: 600 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "EQPOLARITY_GLOBAL": {
         "filename": "EQPOLARITY_GLOBAL.pth",
@@ -76,7 +80,8 @@ MODELS_CONFIG = {
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None,
-        "description": "EQPolarity CCT model: Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion. IEEE Transactions on Geoscience and Remote Sensing (2024) [7]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. 2-class classification (Up, Down). Input length: 600 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "EQPolarity CCT model: Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion. IEEE Transactions on Geoscience and Remote Sensing (2024) . Trained on global datasets: SCSN , INSTANCE , PNW , TXED , DiTing. 2-class classification (Up, Down). Input length: 600 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "DITINGMOTION_DITINGSCSN": {
         "filename": "DITINGMOTION_DITINGSCSN.pth",
@@ -87,7 +92,8 @@ MODELS_CONFIG = {
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": 3,
-        "description": "DiTingMotion model: Zhao, M. et al. DiTingMotion: A deep-learning first-motion-polarity classifier and its application to focal mechanism inversion. Frontiers in Earth Science 11, 1103914 (2023) [9]. Trained on DiTing dataset. Multi-output model for polarity and clarity prediction. 3-class classification (Up, Down, Unknown). Input length: 128 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "DiTingMotion model: Zhao, M. et al. DiTingMotion: A deep-learning first-motion-polarity classifier and its application to focal mechanism inversion. Frontiers in Earth Science 11, 1103914 (2023) . Trained on DiTing dataset. Multi-output model for polarity and clarity prediction. 3-class classification (Up, Down, Unknown). Input length: 128 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "DITING_GLOBAL": {
         "filename": "DITING_GLOBAL.pth",
@@ -98,7 +104,8 @@ MODELS_CONFIG = {
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": 3,
-        "description": "DiTingMotion model: Zhao, M. et al. DiTingMotion: A deep-learning first-motion-polarity classifier and its application to focal mechanism inversion. Frontiers in Earth Science 11, 1103914 (2023) [9]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. Multi-output model for polarity and clarity prediction. 3-class classification (Up, Down, Unknown). Input length: 128 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "DiTingMotion model: Zhao, M. et al. DiTingMotion: A deep-learning first-motion-polarity classifier and its application to focal mechanism inversion. Frontiers in Earth Science 11, 1103914 (2023) [9]. Trained on global datasets: SCSN , INSTANCE , PNW , TXED , DiTing. Multi-output model for polarity and clarity prediction. 3-class classification (Up, Down, Unknown). Input length: 128 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "APP_SCSN": {
         "filename": "APP_SCSN.pth",
@@ -109,7 +116,9 @@ MODELS_CONFIG = {
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": 1,
-        "description": "APP (PPNet) model: Song, J., Zhu, W., Zi, J., Yang, H. & Chu, R. An Enhanced Focal Mechanism Catalog of Induced Earthquakes in Weiyuan, Sichuan, from Dense Array Data and a Multitask Deep Learning Model. The Seismic Record 5, 175-184 (2025) [2]; Zhu, W., Tai, K. S., Mousavi, S. M., Bailis, P. & Beroza, G. C. An End-to-End Earthquake Detection Method for Joint Phase Picking and Association using Deep Learning. JGR Solid Earth 127, e2021JB023283 (2022) [1]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. U-Net + LSTM + attention architecture. Multi-output model. 3-class classification (Up, Down, Unknown). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "APP (PPNet) model: Song, J., Zhu, W., Zi, J., Yang, H. & Chu, R. An Enhanced Focal Mechanism Catalog of Induced Earthquakes in Weiyuan, Sichuan, from Dense Array Data and a Multitask Deep Learning Model. The Seismic Record 5, 175-184 (2025) ; Zhu, W., Tai, K. S., Mousavi, S. M., Bailis, P. & Beroza, G. C. An End-to-End Earthquake Detection Method for Joint Phase Picking and Association using Deep Learning. JGR Solid Earth 127, e2021JB023283 (2022) . Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) . U-Net + LSTM + attention architecture. Multi-output model. 3-class classification (Up, Down, Unknown). Input length: 400 samples",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
+        
     },
     "APP_GLOBAL": {
         "filename": "APP_GLOBAL.pth",
@@ -120,7 +129,8 @@ MODELS_CONFIG = {
         "num_classes": 3,
         "class_map": {0: "Up", 1: "Down", 2: "Unknown"},
         "output_index": 1,
-        "description": "APP (PPNet) model: Song, J., Zhu, W., Zi, J., Yang, H. & Chu, R. An Enhanced Focal Mechanism Catalog of Induced Earthquakes in Weiyuan, Sichuan, from Dense Array Data and a Multitask Deep Learning Model. The Seismic Record 5, 175-184 (2025) [2]; Zhu, W., Tai, K. S., Mousavi, S. M., Bailis, P. & Beroza, G. C. An End-to-End Earthquake Detection Method for Joint Phase Picking and Association using Deep Learning. JGR Solid Earth 127, e2021JB023283 (2022) [1]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. U-Net + LSTM + attention architecture. Multi-output model. 3-class classification (Up, Down, Unknown). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "APP (PPNet) model: Song, J., Zhu, W., Zi, J., Yang, H. & Chu, R. An Enhanced Focal Mechanism Catalog of Induced Earthquakes in Weiyuan, Sichuan, from Dense Array Data and a Multitask Deep Learning Model. The Seismic Record 5, 175-184 (2025) [2]; Zhu, W., Tai, K. S., Mousavi, S. M., Bailis, P. & Beroza, G. C. An End-to-End Earthquake Detection Method for Joint Phase Picking and Association using Deep Learning. JGR Solid Earth 127, e2021JB023283 (2022) [1]. Trained on global datasets: SCSN , INSTANCE , PNW , TXED , DiTing. U-Net + LSTM + attention architecture. Multi-output model. 3-class classification (Up, Down, Unknown). Input length: 400 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "CFM_SCSN": {
         "filename": "CFM_SCSN.pth",
@@ -131,7 +141,8 @@ MODELS_CONFIG = {
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None,
-        "description": "CFM model: Messuti, G. et al. CFM: a convolutional neural network for first-motion polarity classification of seismic records in volcanic and tectonic areas. Frontiers in Earth Science 11, 1223686 (2023) [5]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. Multi-layer Conv1D + dense heads architecture. 2-class classification (Up, Down). Input length: 160 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "CFM model: Messuti, G. et al. CFM: a convolutional neural network for first-motion polarity classification of seismic records in volcanic and tectonic areas. Frontiers in Earth Science 11, 1223686 (2023) . Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) . Multi-layer Conv1D + dense heads architecture. 2-class classification (Up, Down). Input length: 160 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "CFM_GLOBAL": {
         "filename": "CFM_GLOBAL.pth",
@@ -142,7 +153,8 @@ MODELS_CONFIG = {
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None,
-        "description": "CFM model: Messuti, G. et al. CFM: a convolutional neural network for first-motion polarity classification of seismic records in volcanic and tectonic areas. Frontiers in Earth Science 11, 1223686 (2023) [5]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. Multi-layer Conv1D + dense heads architecture. 2-class classification (Up, Down). Input length: 160 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "CFM model: Messuti, G. et al. CFM: a convolutional neural network for first-motion polarity classification of seismic records in volcanic and tectonic areas. Frontiers in Earth Science 11, 1223686 (2023) . Trained on global datasets: SCSN , INSTANCE , PNW , TXED , DiTing. Multi-layer Conv1D + dense heads architecture. 2-class classification (Up, Down). Input length: 160 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "POLARCAP_SCSN": {
         "filename": "POLARCAP_SCSN.pth",
@@ -153,7 +165,8 @@ MODELS_CONFIG = {
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
         "output_index": 1,
-        "description": "PolarCAP model: Chakraborty, M. et al. PolarCAP-A deep learning approach for first motion polarity classification of earthquake waveforms. Artificial Intelligence in Geosciences 3, 46-52 (2022) [16]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. Encoder-decoder + classification head architecture. Multi-output model. 2-class classification (Up, Down). Input length: 64 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "PolarCAP model: Chakraborty, M. et al. PolarCAP-A deep learning approach for first motion polarity classification of earthquake waveforms. Artificial Intelligence in Geosciences 3, 46-52 (2022) [16]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) . Encoder-decoder + classification head architecture. Multi-output model. 2-class classification (Up, Down). Input length: 64 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "POLARCAP_GLOBAL": {
         "filename": "POLARCAP_GLOBAL.pth",
@@ -164,7 +177,8 @@ MODELS_CONFIG = {
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
         "output_index": 1,
-        "description": "PolarCAP model: Chakraborty, M. et al. PolarCAP-A deep learning approach for first motion polarity classification of earthquake waveforms. Artificial Intelligence in Geosciences 3, 46-52 (2022) [16]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. Encoder-decoder + classification head architecture. Multi-output model. 2-class classification (Up, Down). Input length: 64 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "PolarCAP model: Chakraborty, M. et al. PolarCAP-A deep learning approach for first motion polarity classification of earthquake waveforms. Artificial Intelligence in Geosciences 3, 46-52 (2022) [16]. Trained on global datasets: SCSN , INSTANCE , PNW , TXED , DiTing. Encoder-decoder + classification head architecture. Multi-output model. 2-class classification (Up, Down). Input length: 64 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "RPNET_SCSN": {
         "filename": "RPNET_SCSN.pth",
@@ -175,7 +189,8 @@ MODELS_CONFIG = {
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None,
-        "description": "RPNet model: Han, J., Kim, S. & Sheen, D.-H. RPNet: Robust P-Wave First-motion polarity determination using deep learning. Seismological Research Letters (2025) [17]. Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) [13]. ResNet-based architecture for polarity prediction. 2-class classification (Up, Down). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "RPNet model: Han, J., Kim, S. & Sheen, D.-H. RPNet: Robust P-Wave First-motion polarity determination using deep learning. Seismological Research Letters (2025) . Trained on SCSN dataset: Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018) . ResNet-based architecture for polarity prediction. 2-class classification (Up, Down). Input length: 400 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     },
     "RPNET_GLOBAL": {
         "filename": "RPNET_GLOBAL.pth",
@@ -186,7 +201,8 @@ MODELS_CONFIG = {
         "num_classes": 2,
         "class_map": {0: "Up", 1: "Down"},
         "output_index": None,
-        "description": "RPNet model: Han, J., Kim, S. & Sheen, D.-H. RPNet: Robust P-Wave First-motion polarity determination using deep learning. Seismological Research Letters (2025) [17]. Trained on global datasets: SCSN [13], INSTANCE [12], PNW [6], TXED [21], DiTing. ResNet-based architecture for polarity prediction. 2-class classification (Up, Down). Input length: 400 samples. Model weights converted and maintained by He XingChen (Chinese, Han ethnicity). GitHub: https://github.com/Chuan1937"
+        "description": "RPNet model: Han, J., Kim, S. & Sheen, D.-H. RPNet: Robust P-Wave First-motion polarity determination using deep learning. Seismological Research Letters (2025) . Trained on global datasets: SCSN , INSTANCE , PNW , TXED , DiTing. ResNet-based architecture for polarity prediction. 2-class classification (Up, Down). Input length: 400 samples.",
+        "author": "Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), `https://github.com/Chuan1937`"
     }
 }
 
@@ -231,6 +247,7 @@ class Predictor:
                 print(f"  Input Length: {config['input_len']}")
                 print(f"  Classes: {config['num_classes']} ({', '.join([config['class_map'][i] for i in range(config['num_classes'])])})")
                 print(f"  Description: {config['description']}")
+                print(f"  Author: {config['author']}")
                 print("-" * 55)
                 print()
         return MODELS_CONFIG
@@ -452,7 +469,7 @@ class Predictor:
                         if checkpoint_output_weight is not None:
                             # Get number of output classes
                             num_classes = checkpoint_output_weight.shape[0]
-                            in_features = checkpoint_output_weight.shape[1]
+                            in_features = checkpoint_output_weight.shape
                             
                             # Dynamically create new output layer
                             import torch.nn as nn
@@ -570,11 +587,11 @@ class Predictor:
                             probs = torch.softmax(selected_output, dim=1)
                         else:
                             # Default to second output (classification output)
-                            probs = torch.softmax(logits[1], dim=1)
+                            probs = torch.softmax(logits, dim=1)
                     else:
                         # Other multi-output cases, use last output
                         probs = torch.softmax(logits[-1], dim=1)
-                elif logits.shape[1] == 1:
+                elif logits.shape == 1:
                     # Binary classification sigmoid output (batch, 1)
                     probs = torch.sigmoid(logits)
                     # Convert to two-class probability distribution
@@ -584,7 +601,7 @@ class Predictor:
                     probs = torch.softmax(logits, dim=1)
                 
                 # Handle force_ud (force output U/D)
-                if use_force_ud and probs.shape[1] == 3:
+                if use_force_ud and probs.shape == 3:
                     # For three-class (U, D, X), force output U/D
                     # If prediction is X (index 2), select the one with higher probability between U and D
                     preds = torch.argmax(probs, dim=1)
@@ -679,11 +696,11 @@ class Predictor:
                             probs = torch.softmax(selected_output, dim=1)
                         else:
                             # Default to second output (classification output)
-                            probs = torch.softmax(logits[1], dim=1)
+                            probs = torch.softmax(logits, dim=1)
                     else:
                         # Other multi-output cases, use last output
                         probs = torch.softmax(logits[-1], dim=1)
-                elif logits.shape[1] == 1:
+                elif logits.shape == 1:
                     # Binary classification sigmoid output (batch, 1)
                     probs = torch.sigmoid(logits)
                     # Convert to two-class probability distribution
@@ -693,7 +710,7 @@ class Predictor:
                     probs = torch.softmax(logits, dim=1)
                 
                 # 4. Handle force_ud (force output U/D)
-                if use_force_ud and probs.shape[1] == 3:
+                if use_force_ud and probs.shape == 3:
                     # For three-class (U, D, X), force output U/D
                     # If prediction is X (index 2), select the one with higher probability between U and D
                     preds = torch.argmax(probs, dim=1)
