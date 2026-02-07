@@ -76,7 +76,7 @@ with torch.no_grad():
 
 ```{image} ross.png
 :align: center
-:width: 100%
+:width: 80%
 ```
 
 Ross 模型是针对 SCSN 数据优化的基于 CNN 的架构。
@@ -99,7 +99,7 @@ model = PPNet(num_fm_classes=3)
 
 ```{image} eqpolarity.png
 :align: center
-:width: 100%
+:width: 80%
 ```
 
 Eqpolarity 是用于极性分类的深度 CNN 模型。
@@ -116,7 +116,7 @@ model = EqpolarityNet()
 
 ```{image} ditingmotion.png
 :align: center
-:width: 100%
+:width: 80%
 ```
 
 基于运动的极性分类模型。
@@ -133,7 +133,7 @@ model = DiTingMotionNet()
 
 ```{image} cfm.png
 :align: center
-:width: 100%
+:width: 80%
 ```
 
 用于极性检测的自定义架构。
@@ -150,7 +150,7 @@ model = CFM()
 
 ```{image} rpnet.png
 :align: center
-:width: 100%
+:width: 80%
 ```
 
 残差极性网络。
@@ -167,7 +167,7 @@ model = RPNet()
 
 ```{image} polarcap.png
 :align: center
-:width: 100%
+:width: 80%
 ```
 
 用于极性分类的轻量级模型。
@@ -185,7 +185,7 @@ loss_fn = PolarCAPLoss()
 
 ```{image} app.png
 :align: center
-:width: 100%
+:width: 80%
 ```
 
 自适应极性预测器。
