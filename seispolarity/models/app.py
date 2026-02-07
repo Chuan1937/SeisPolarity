@@ -11,6 +11,15 @@ class PPNet(BasePolarityModel, nn.Module):
     Self-Attention layer in the bottleneck. It produces two outputs:
     1. A segmentation-style mask (out1).
     2. A classification prediction (out2).
+    
+    Reference:
+        Song, J., Zhu, W., Zi, J., Yang, H. & Chu, R. An Enhanced Focal Mechanism Catalog of Induced Earthquakes in Weiyuan, Sichuan, 
+        from Dense Array Data and a Multitask Deep Learning Model. The Seismic Record 5, 175-184 (2025).
+        Zhu, W., Tai, K. S., Mousavi, S. M., Bailis, P. & Beroza, G. C. An End-to-End Earthquake Detection Method for Joint Phase 
+        Picking and Association using Deep Learning. JGR Solid Earth 127, e2021JB023283 (2022).
+    
+    Author:
+        Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), https://github.com/Chuan1937
     """
     def __init__(self, input_len=400, input_channels=1, num_classes=3, 
                  filter_sizes=[16, 32, 64], kernel_size=3, num_dense=128, lstm_units=None,

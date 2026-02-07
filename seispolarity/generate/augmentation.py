@@ -4,14 +4,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 from scipy import signal
 
-# ==============================================================================
-# Signal Processing Augmentations (信号处理增强)
-# ==============================================================================
-
 class Demean:
     """Remove the mean from the waveform.
     
-    对于地震波形数据，通常沿时间轴（axis=-1）去除均值。
+    For seismic waveform data, typically remove mean along time axis (axis=-1).
     """
     def __init__(self, key="X", axis=-1):
         self.key = key
@@ -20,7 +16,7 @@ class Demean:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -32,7 +28,7 @@ class Demean:
             mean = np.mean(x, axis=self.axis, keepdims=True)
             x = x - mean
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.key] = (x, meta)
             else:
@@ -41,13 +37,13 @@ class Demean:
 class Detrend:
     """Remove the linear trend from the waveform.
     
-    对于地震波形数据，通常沿时间轴（axis=-1）去除线性趋势。
-    使用 scipy.signal.detrend 函数去除线性趋势。
+    For seismic waveform data, typically remove linear trend along time axis (axis=-1).
+    Use scipy.signal.detrend to remove linear trend.
     
     Args:
-        key: 状态字典中的键
-        axis: 去趋势的轴，通常为 -1（时间轴）
-        type: 去趋势类型，'linear' 或 'constant'
+        key: Key in state dictionary
+        axis: Axis for detrending, typically -1 (time axis)
+        type: Detrend type, 'linear' or 'constant'
     """
     def __init__(self, key="X", axis=-1, type="linear"):
         self.key = key
@@ -57,7 +53,7 @@ class Detrend:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -68,7 +64,7 @@ class Detrend:
             
             x = signal.detrend(x, axis=self.axis, type=self.type)
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.key] = (x, meta)
             else:
@@ -77,21 +73,21 @@ class Detrend:
 class Stretching:
     """Stretch the waveform by upsampling and cropping.
     
-    通过上采样和截取实现数据拉伸，模拟低频信号。
-    原始数据频率 5-15 Hz，拉伸 2-3 倍后频率约为 2-5 Hz。
+    Implement data stretching by upsampling and cropping to simulate low-frequency signals.
+    Original data frequency 5-15 Hz, after 2-3x stretching frequency is approximately 2-5 Hz.
     
-    处理流程：
-    1. 从原始采样率上采样到更高的采样率（如 100 Hz -> 200 Hz 或 300 Hz）
-    2. 截取包含 P 波的固定长度采样点（默认 400 个采样点）
+    Processing flow:
+    1. Upsample from original sampling rate to higher rate (e.g., 100 Hz -> 200 Hz or 300 Hz)
+    2. Crop fixed-length samples containing P-wave (default 400 samples)
     
     Args:
-        key: 状态字典中的键
-        original_fs: 原始采样率，默认 100 Hz
-        stretch_factors: 拉伸因子列表，如 [2, 3] 表示随机选择 2 倍或 3 倍拉伸
-        target_samples: 截取的采样点数，默认 400
-        p_pick_key: metadata 中 P 波到时的键名
-        crop_left: P 波左侧截取的采样点数
-        crop_right: P 波右侧截取的采样点数
+        key: Key in state dictionary
+        original_fs: Original sampling rate, default 100 Hz
+        stretch_factors: List of stretch factors, e.g., [2, 3] means randomly select 2x or 3x stretching
+        target_samples: Number of samples to crop, default 400
+        p_pick_key: Key name for P-wave arrival time in metadata
+        crop_left: Number of samples to crop left of P-wave
+        crop_right: Number of samples to crop right of P-wave
     """
     def __init__(self, key="X", original_fs=100, stretch_factors=[2, 3], 
                  target_samples=400, p_pick_key="p_pick", crop_left=None, crop_right=None):
@@ -107,7 +103,7 @@ class Stretching:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -116,36 +112,36 @@ class Stretching:
                 meta = None
                 is_tuple = False
             
-            # 确保x至少是2D数组
+            # Ensure x is at least 2D array
             if x.ndim == 1:
                 x = x.reshape(1, -1)
             
-            # 随机选择拉伸因子
+            # Randomly select stretch factor
             stretch_factor = np.random.choice(self.stretch_factors)
             
-            # 计算目标采样率
+            # Calculate target sampling rate
             target_fs = self.original_fs * stretch_factor
             
-            # 获取原始长度（时间点数）
+            # Get original length (number of time points)
             original_length = x.shape[-1]
             
-            # 上采样到目标采样率
+            # Upsample to target sampling rate
             original_time = np.linspace(0, original_length / self.original_fs, original_length)
             target_length = int(original_length * stretch_factor)
             target_time = np.linspace(0, original_length / self.original_fs, target_length)
             
-            # 对每个通道进行插值
+            # Interpolate for each channel
             stretched_data = np.zeros((x.shape[0], target_length))
             for i in range(x.shape[0]):
                 stretched_data[i] = np.interp(target_time, original_time, x[i])
             
-            # 截取包含 P 波的区域
+            # Crop region containing P-wave
             if meta is not None and self.p_pick_key in meta:
                 p_pick = meta[self.p_pick_key]
-                # 将原始采样点位置映射到拉伸后的位置
+                # Map original sample positions to stretched positions
                 p_pick_stretched = int(p_pick * stretch_factor)
                 
-                # 计算 crop_left 和 crop_right
+                # Calculate crop_left and crop_right
                 if self.crop_left is None:
                     crop_left = self.target_samples // 2
                 else:
@@ -156,11 +152,11 @@ class Stretching:
                 else:
                     crop_right = int(self.crop_right * stretch_factor)
                 
-                # 计算截取范围
+                # Calculate crop range
                 start_idx = p_pick_stretched - crop_left
                 end_idx = p_pick_stretched + crop_right
                 
-                # 确保索引在有效范围内
+                # Ensure indices are within valid range
                 if start_idx < 0:
                     start_idx = 0
                     end_idx = min(target_length, self.target_samples)
@@ -168,10 +164,10 @@ class Stretching:
                     end_idx = target_length
                     start_idx = max(0, end_idx - self.target_samples)
                 
-                # 截取数据
+                # Crop data
                 cropped_data = stretched_data[:, start_idx:end_idx]
                 
-                # 如果截取长度不足，进行填充
+                # If cropped length is insufficient, pad
                 if cropped_data.shape[-1] < self.target_samples:
                     pad_length = self.target_samples - cropped_data.shape[-1]
                     pad_left = pad_length // 2
@@ -180,13 +176,13 @@ class Stretching:
                                           ((0, 0), (pad_left, pad_right)), 
                                           mode='constant')
                 
-                # 更新 metadata 中的采样率和 P 波到时
+                # Update sampling rate and P-wave arrival time in metadata
                 meta['sampling_rate'] = target_fs
-                meta[self.p_pick_key] = self.target_samples // 2  # 将 P 波设置在中间
+                meta[self.p_pick_key] = self.target_samples // 2  # Place P-wave in center
                 
                 x = cropped_data
             else:
-                # 如果没有 P 波信息，直接截取中间区域
+                # If no P-wave information, directly crop center region
                 start_idx = (target_length - self.target_samples) // 2
                 end_idx = start_idx + self.target_samples
                 if start_idx < 0:
@@ -198,11 +194,11 @@ class Stretching:
                 
                 x = stretched_data[:, start_idx:end_idx]
                 
-                # 更新采样率
+                # Update sampling rate
                 if meta is not None:
                     meta['sampling_rate'] = target_fs
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.key] = (x, meta)
             else:
@@ -211,16 +207,16 @@ class Stretching:
 class BandpassFilter:
     """Apply bandpass or highpass filter to the waveform.
     
-    使用巴特沃斯滤波器对波形进行滤波。
-    当 highcut 为 None 时，实现高通滤波；否则实现带通滤波。
+    Use Butterworth filter to filter the waveform.
+    When highcut is None, implement highpass filter; otherwise implement bandpass filter.
     
     Args:
-        key: 状态字典中的键
-        lowcut: 低截止频率
-        highcut: 高截止频率，如果为None则实现高通滤波
-        fs: 采样率，如果为None则从metadata中读取
-        order: 滤波器阶数
-        zerophase: 是否使用零相位滤波
+        key: Key in state dictionary
+        lowcut: Low cutoff frequency
+        highcut: High cutoff frequency, if None then implement highpass filter
+        fs: Sampling rate, if None read from metadata
+        order: Filter order
+        zerophase: Whether to use zero-phase filtering
     """
     def __init__(self, key="X", lowcut=1.0, highcut=20.0, fs=None, order=4, zerophase=True):
         self.key = key
@@ -234,7 +230,7 @@ class BandpassFilter:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -243,7 +239,7 @@ class BandpassFilter:
                 meta = None
                 is_tuple = False
             
-            # 确定采样率
+            # Determine sampling rate
             if self.fs is None and meta is not None and 'sampling_rate' in meta:
                 fs = meta['sampling_rate']
             elif self.fs is not None:
@@ -251,28 +247,28 @@ class BandpassFilter:
             else:
                 raise ValueError("Sampling rate must be provided either directly or in metadata")
             
-            # 确保x至少是2D数组
+            # Ensure x is at least 2D array
             if x.ndim == 1:
                 x = x.reshape(1, -1)
             
-            # 设计滤波器
+            # Design filter
             nyquist = 0.5 * fs
             
             if self.highcut is None:
-                # 高通滤波
+                # Highpass filter
                 high = self.lowcut / nyquist
                 if high >= 1.0:
                     raise ValueError(f"Invalid cutoff frequency: {self.lowcut} Hz for sampling rate {fs} Hz")
                 sos = signal.butter(self.order, high, btype='high', output='sos')
             else:
-                # 带通滤波
+                # Bandpass filter
                 low = self.lowcut / nyquist
                 high = self.highcut / nyquist
                 if low >= 1.0 or high >= 1.0 or low >= high:
                     raise ValueError(f"Invalid frequency range: [{self.lowcut}, {self.highcut}] Hz for sampling rate {fs} Hz")
                 sos = signal.butter(self.order, [low, high], btype='band', output='sos')
             
-            # 对每个通道应用滤波
+            # Apply filter to each channel
             filtered_data = np.zeros_like(x)
             for i in range(x.shape[0]):
                 if self.zerophase:
@@ -280,7 +276,7 @@ class BandpassFilter:
                 else:
                     filtered_data[i] = signal.sosfilt(sos, x[i])
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.key] = (filtered_data, meta)
             else:
@@ -297,7 +293,7 @@ class Normalize:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -314,7 +310,7 @@ class Normalize:
                 peak = np.max(np.abs(x), axis=self.axis, keepdims=True)
                 x = x / (peak + self.eps)
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.key] = (x, meta)
             else:
@@ -323,12 +319,12 @@ class Normalize:
 class DifferentialFeatures:
     """Computes the differential of the waveform and its sign.
     
-    对于地震波形数据，通常形状为 (C, N) 或 (N,)，其中：
-    - C: 通道数（通常为1）
-    - N: 时间点数量（如128）
+    For seismic waveform data, typically shape is (C, N) or (N,), where:
+    - C: Number of channels (typically 1)
+    - N: Number of time points (e.g., 128)
     
-    当append=True时，将差分符号特征作为新通道添加。
-    例如：输入形状 (1, 128) -> 输出形状 (2, 128)
+    When append=True, add differential sign feature as new channel.
+    Example: input shape (1, 128) -> output shape (2, 128)
     """
     def __init__(self, key="X", axis=-1, append=True):
         self.key = key
@@ -338,7 +334,7 @@ class DifferentialFeatures:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -347,58 +343,58 @@ class DifferentialFeatures:
                 meta = None
                 is_tuple = False
             
-            # 确保x至少是2D数组
+            # Ensure x is at least 2D array
             if x.ndim == 1:
                 x = x.reshape(1, -1)
             
-            # 计算差分（沿时间轴）
+            # Calculate differential (along time axis)
             diff = np.diff(x, axis=self.axis)
             
-            # 填充以保持原始长度（在开始处填充0）
+            # Pad to maintain original length (pad with 0 at beginning)
             pad_shape = [(0, 0)] * x.ndim
             if self.axis == -1:
                 idx = x.ndim - 1
             else:
                 idx = self.axis
-            pad_shape[idx] = (1, 0) # 在开始处填充1个0
+            pad_shape[idx] = (1, 0) # Pad with 1 zero at beginning
             
             diff = np.pad(diff, pad_shape, mode='constant')
             sign_diff = np.sign(diff)
             
             if self.append:
-                # 沿通道轴（axis=0）拼接
+                # Concatenate along channel axis (axis=0)
                 new_x = np.concatenate([x, sign_diff], axis=0)
-                # 根据原始类型返回
+                # Return based on original type
                 if is_tuple:
                     state_dict[self.key] = (new_x, meta)
                 else:
                     state_dict[self.key] = new_x
             else:
-                # 当append=False时，将差分符号特征存储为新键
+                # When append=False, store differential sign feature as new key
                 if is_tuple:
-                    # 如果原始是元组，我们需要保持元组结构
+                    # If original is tuple, we need to maintain tuple structure
                     state_dict[self.key] = (x, meta)
                 state_dict[self.key + "_diff_sign"] = sign_diff
 
 class RandomTimeShift:
-    """对 P 波到时标签进行随机扰动。
+    """Randomly perturb P-wave arrival time labels.
     
-    对 metadata 中的 p_pick 进行±max_shift范围内的均匀随机平移。
-    这样可以模拟真实情况中 P 波到时拾取的不确定性，使模型对 P 波对齐误差具有鲁棒性。
+    Apply uniform random shift to p_pick in metadata within ±max_shift range.
+    This simulates P-wave arrival time picking uncertainty in real situations, making model robust to P-wave alignment errors.
     
-    注意：这个增强不会改变波形数据，只修改 metadata 中的 p_pick 标签。
-    波形的裁剪会在后续的 WaveformDataset 中根据扰动后的 p_pick 进行。
+    Note: This augmentation does not change waveform data, only modifies p_pick label in metadata.
+    Waveform cropping will be done in subsequent WaveformDataset based on perturbed p_pick.
     
-    例如：采样率100Hz，±0.5s对应±50个采样点。
+    Example: sampling rate 100Hz, ±0.5s corresponds to ±50 samples.
     
     Args:
-        key: 状态字典中的键（用于获取 waveform 和 metadata）
-        max_shift: 最大平移量
-        shift_unit: 平移单位，'samples'（采样点）或 'seconds'（秒）
-        sampling_rate: 采样率，当 shift_unit='seconds' 时使用
-        p_pick_key: metadata 中 p_pick 的键名
-        fixed_p_pick: 固定的 P 波到时（采样点数），当 metadata 中没有 p_pick_key 时使用
-                      例如 SCSN 数据的 P 波固定在某个位置
+        key: Key in state dictionary (used to get waveform and metadata)
+        max_shift: Maximum shift amount
+        shift_unit: Shift unit, 'samples' (samples) or 'seconds' (seconds)
+        sampling_rate: Sampling rate, used when shift_unit='seconds'
+        p_pick_key: Key name for p_pick in metadata
+        fixed_p_pick: Fixed P-wave arrival time (samples), used when metadata has no p_pick_key
+                      e.g., P-wave in SCSN data is fixed at a certain position
     """
     def __init__(self, key="X", max_shift=5, shift_unit="samples", sampling_rate=100, p_pick_key="p_pick", fixed_p_pick=None):
         self.key = key
@@ -412,7 +408,7 @@ class RandomTimeShift:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -421,9 +417,9 @@ class RandomTimeShift:
                 meta = None
                 is_tuple = False
             
-            # 只修改metadata中的p_pick
+            # Only modify p_pick in metadata
             if meta is not None:
-                # 获取 P 波到时：优先从 metadata 中读取，否则使用 fixed_p_pick
+                # Get P-wave arrival time: prioritize reading from metadata, otherwise use fixed_p_pick
                 has_p_pick_key = False
                 p_pick = None
                 
@@ -434,32 +430,28 @@ class RandomTimeShift:
                     p_pick = self.fixed_p_pick
                     has_p_pick_key = False
                 
-                # 应用平移
+                # Apply shift
                 if has_p_pick_key or (self.fixed_p_pick is not None):
-                    # 根据shift_unit计算随机平移量
+                    # Calculate random shift based on shift_unit
                     if self.shift_unit == "seconds":
                         shift_seconds = np.random.uniform(-self.max_shift, self.max_shift)
                         shift_samples = int(shift_seconds * self.sampling_rate)
                     else:  # samples
                         shift_samples = np.random.randint(-self.max_shift, self.max_shift + 1)
                     
-                    # 应用平移
+                    # Apply shift
                     if has_p_pick_key:
-                        # 更新 metadata 中的 p_pick
+                        # Update p_pick in metadata
                         meta[self.p_pick_key] = p_pick + shift_samples
                     else:
-                        # 使用 fixed_p_pick，创建或更新 metadata 中的 p_pick
+                        # Use fixed_p_pick, create or update p_pick in metadata
                         meta[self.p_pick_key] = p_pick + shift_samples
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.key] = (x, meta)
             else:
                 state_dict[self.key] = x
-
-# ==============================================================================
-# Data Type and Format Augmentations (数据类型和格式增强)
-# ==============================================================================
 
 class ChangeDtype:
     """Change the dtype of the data in the state dict."""
@@ -470,7 +462,7 @@ class ChangeDtype:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -482,7 +474,7 @@ class ChangeDtype:
             if hasattr(x, "astype"):
                 x = x.astype(self.dtype)
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.key] = (x, meta)
             else:
@@ -497,7 +489,7 @@ class Copy:
         if self.source_key in state_dict:
             value = state_dict[self.source_key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -511,7 +503,7 @@ class Copy:
             else:
                 x_copy = x
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.target_key] = (x_copy, meta)
             else:
@@ -528,10 +520,6 @@ class FilterKeys:
             if key not in self.keep_keys:
                 del state_dict[key]
 
-# ==============================================================================
-# Noise and Distortion Augmentations (噪声和失真增强)
-# ==============================================================================
-
 class GaussianNoise:
     """Add Gaussian noise to the waveform."""
     def __init__(self, key="X", std=0.1):
@@ -541,7 +529,7 @@ class GaussianNoise:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -553,7 +541,7 @@ class GaussianNoise:
             noise = np.random.normal(0, self.std, x.shape)
             x = x + noise
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.key] = (x, meta)
             else:
@@ -568,7 +556,7 @@ class ChannelDropout:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -578,26 +566,26 @@ class ChannelDropout:
                 is_tuple = False
             
             if x.ndim >= 2:
-                # 对每个通道应用独立的dropout
+                # Apply independent dropout to each channel
                 mask = np.random.binomial(1, 1 - self.dropout_prob, size=x.shape[0])
                 mask = mask.reshape(-1, *([1] * (x.ndim - 1)))
                 x = x * mask
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.key] = (x, meta)
             else:
                 state_dict[self.key] = x
 
 class PolarityInversion:
-    """反转波形极性并相应地更新标签。
+    """Invert waveform polarity and update labels accordingly.
     
-    这个增强专门用于极性分类任务：
-    - 对于U（正向）标签：反转波形，标签变为D（负向）
-    - 对于D（负向）标签：反转波形，标签变为U（正向）
-    - 对于X（不确定）标签：不进行反转
+    This augmentation is specifically for polarity classification tasks:
+    - For U (positive) labels: invert waveform, label becomes D (negative)
+    - For D (negative) labels: invert waveform, label becomes U (positive)
+    - For X (uncertain) labels: no inversion
     
-    注意：这个增强假设标签映射为 {'U': 0, 'D': 1, 'X': 2}
+    Note: This augmentation assumes label mapping is {'U': 0, 'D': 1, 'X': 2}
     """
     def __init__(self, key="X", label_key="label", label_map={'U': 0, 'D': 1, 'X': 2}):
         self.key = key
@@ -609,7 +597,7 @@ class PolarityInversion:
         if self.key in state_dict:
             value = state_dict[self.key]
             
-            # 处理元组情况：当value是(waveform, metadata)元组时
+            # Handle tuple case: when value is (waveform, metadata) tuple
             if isinstance(value, tuple) and len(value) == 2:
                 x, meta = value
                 is_tuple = True
@@ -618,28 +606,25 @@ class PolarityInversion:
                 meta = None
                 is_tuple = False
             
-            # 检查是否有标签信息
+            # Check if there is label information
             if meta is not None and self.label_key in meta:
                 label = meta[self.label_key]
                 
-                # 只对U和D标签进行反转
+                # Only invert U and D labels
                 if label == self.label_map['U']:  # U -> D
-                    x = -x  # 反转波形
+                    x = -x  # Invert waveform
                     meta[self.label_key] = self.label_map['D']
                 elif label == self.label_map['D']:  # D -> U
-                    x = -x  # 反转波形
+                    x = -x  # Invert waveform
                     meta[self.label_key] = self.label_map['U']
-                # X标签保持不变
+                # X label remains unchanged
             
-            # 根据原始类型返回
+            # Return based on original type
             if is_tuple:
                 state_dict[self.key] = (x, meta)
             else:
                 state_dict[self.key] = x
 
-# ==============================================================================
-# Loss Functions (损失函数)
-# ==============================================================================
 class FocalLoss(nn.Module):
     """Focal Loss for addressing class imbalance."""
     def __init__(self, gamma=2.0, alpha=None, reduction='mean'):
@@ -683,39 +668,39 @@ class MultiHeadFocalLoss(nn.Module):
 
 class DitingMotionLoss(nn.Module):
     """
-    DitingMotion模型的专用损失函数。
+    Specialized loss function for DitingMotion model.
     
-    DitingMotion有8个输出：
-    1-4: polarity输出 (o3, o4, o5, ofuse)
-    5-8: clarity输出 (o3_clarity, o4_clarity, o5_clarity, ofuse_clarity)
+    DitingMotion has 8 outputs:
+    1-4: polarity outputs (o3, o4, o5, ofuse)
+    5-8: clarity outputs (o3_clarity, o4_clarity, o5_clarity, ofuse_clarity)
     
-    这个损失函数可以处理以下情况：
-    1. 只有polarity标签：计算前4个输出的损失
-    2. 同时有polarity和clarity标签：计算所有8个输出的损失
+    This loss function can handle the following cases:
+    1. Only polarity labels: compute loss for first 4 outputs
+    2. Both polarity and clarity labels: compute loss for all 8 outputs
     """
     def __init__(self, gamma=2.0, polarity_weights=None, clarity_weights=None, 
                  has_clarity_labels=True):
         super().__init__()
         self.focal_loss = FocalLoss(gamma=gamma)
-        # polarity输出的权重
+        # Weights for polarity outputs
         self.polarity_weights = polarity_weights or [1.0, 1.0, 1.0, 1.0]
-        # clarity输出的权重
+        # Weights for clarity outputs
         self.clarity_weights = clarity_weights or [1.0, 1.0, 1.0, 1.0]
         self.has_clarity_labels = has_clarity_labels
         
     def forward(self, outputs, targets, **kwargs):
         """
         Args:
-            outputs: 模型输出，应该是8个张量的元组/列表
-            targets: 目标标签，可以是：
-                - 单个张量：只有polarity标签
-                - 元组/列表：(polarity_targets, clarity_targets)
-            **kwargs: 额外参数（用于接收 inputs 关键字参数）
+            outputs: Model output, should be tuple/list of 8 tensors
+            targets: Target labels, can be:
+                - Single tensor: only polarity labels
+                - Tuple/list: (polarity_targets, clarity_targets)
+            **kwargs: Extra parameters (for receiving inputs keyword argument)
         """
         if not isinstance(outputs, (tuple, list)) or len(outputs) != 8:
             raise ValueError(f"DitingMotionLoss expects 8 outputs, got {len(outputs) if isinstance(outputs, (tuple, list)) else 1}")
         
-        # 处理目标标签
+        # Process target labels
         if isinstance(targets, (tuple, list)) and len(targets) == 2:
             polarity_targets, clarity_targets = targets
             has_clarity = True
@@ -726,22 +711,18 @@ class DitingMotionLoss(nn.Module):
         
         total_loss = 0.0
         
-        # 计算polarity损失（前4个输出）
+        # Compute polarity loss (first 4 outputs)
         for i in range(4):
             loss = self.focal_loss(outputs[i], polarity_targets)
             total_loss += self.polarity_weights[i] * loss
         
-        # 计算clarity损失（后4个输出），如果有clarity标签
+        # Compute clarity loss (last 4 outputs), if clarity labels exist
         if self.has_clarity_labels and has_clarity and clarity_targets is not None:
             for i in range(4):
                 loss = self.focal_loss(outputs[i+4], clarity_targets)
                 total_loss += self.clarity_weights[i] * loss
         
         return total_loss
-
-# ==============================================================================
-# Utility Augmentations (实用增强工具)
-# ==============================================================================
 
 class OneOf:
     """Randomly apply one of the given augmentations."""

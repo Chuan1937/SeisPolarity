@@ -22,9 +22,9 @@ class TrainingConfig:
     epochs: int = 10
     learning_rate: float = 1e-3
     num_workers: int = 0
-    train_val_split: float = 0.8  # 训练集比例（相对于总数据集）
-    val_split: float = 0.1  # 验证集比例（相对于总数据集）
-    test_split: float = 0.1  # 测试集比例（相对于总数据集）
+    train_val_split: float = 0.8  # Training set ratio (relative to total dataset)
+    val_split: float = 0.1  # Validation set ratio (relative to total dataset)
+    test_split: float = 0.1  # Test set ratio (relative to total dataset)
     limit: Optional[int] = None
     label_key: str = "label"
     device: Optional[str] = None
@@ -88,25 +88,25 @@ class MetadataToLabel:
             return np.array([self.label_map.get("X", 2)], dtype=np.int64)
 
     def __call__(self, state_dict):
-        # 处理state_dict["X"]可能不是元组的情况
+        # Handle case where state_dict["X"] might not be a tuple
         x_value = state_dict.get("X", None)
         if isinstance(x_value, tuple) and len(x_value) == 2:
             _, metadata = x_value
         else:
-            # 如果state_dict["X"]不是元组，尝试从其他地方获取metadata
+            # If state_dict["X"] is not a tuple, try to get metadata from elsewhere
             metadata = state_dict.get("metadata", {})
         
         raw_label = metadata.get(self.metadata_key, None)
         numeric_label = self._to_numeric_label(raw_label) if raw_label is not None else np.array([-1], dtype=np.int64)
-        # 只返回标签数据，而不是元组，以避免DataLoader的collate问题
+        # Only return label data, not tuple, to avoid DataLoader collate issues
         state_dict[self.key] = numeric_label
 
 
 class MultiLabelExtractor:
     """
-    提取多个标签的增强类，适用于DitingMotion等多任务模型。
+    Augmentation class for extracting multiple labels, suitable for multi-task models like DitingMotion.
     
-    可以同时提取polarity标签和clarity标签。
+    Can extract polarity labels and clarity labels simultaneously.
     """
     def __init__(self, polarity_key="label", clarity_key="clarity", 
                  polarity_label_map=None, clarity_label_map=None):
@@ -150,22 +150,22 @@ class MultiLabelExtractor:
             return np.array([label_map.get("X", 2)], dtype=np.int64)
     
     def __call__(self, state_dict):
-        # 处理state_dict["X"]可能不是元组的情况
+        # Handle case where state_dict["X"] might not be a tuple
         if isinstance(state_dict["X"], tuple) and len(state_dict["X"]) == 2:
             _, metadata = state_dict["X"]
         else:
-            # 如果state_dict["X"]不是元组，尝试从其他地方获取metadata
+            # If state_dict["X"] is not a tuple, try to get metadata from elsewhere
             metadata = state_dict.get("metadata", {})
         
-        # 提取polarity标签
+        # Extract polarity label
         raw_polarity = metadata.get(self.polarity_key, None)
         polarity_label = self._to_numeric_label(raw_polarity, self.polarity_label_map)
         
-        # 提取clarity标签
+        # Extract clarity label
         raw_clarity = metadata.get(self.clarity_key, None)
         clarity_label = self._to_numeric_label(raw_clarity, self.clarity_label_map)
         
-        # 将两个标签存储为元组（但不包含None），以避免DataLoader的collate问题
+        # Store both labels as tuple (excluding None) to avoid DataLoader collate issues
         state_dict["y"] = (polarity_label, clarity_label)
 
 
@@ -253,15 +253,15 @@ class Trainer:
             if test_size < 0:
                 raise ValueError("train_val_split + val_split must be <= 1")
             
-            # 设置随机种子以确保可复现性
+            # Set random seed for reproducibility
             if cfg.random_seed is not None:
                 generator = torch.Generator().manual_seed(cfg.random_seed)
             else:
                 generator = None
             
-            # 处理test_size为0的情况
+            # Handle case when test_size is 0
             if test_size == 0:
-                # 只划分训练集和验证集
+                # Only split training and validation sets
                 train_dataset, val_dataset = random_split(
                     self.dataset, [train_size, val_size], generator=generator
                 )
@@ -275,56 +275,56 @@ class Trainer:
         train_gen = GenericGenerator(train_dataset)
         val_gen = GenericGenerator(val_dataset)
         
-        # 处理test_dataset为None的情况
+        # Handle case when test_dataset is None
         if test_dataset is not None:
             test_gen = GenericGenerator(test_dataset)
         else:
             test_gen = None
 
-        # 根据模型类型选择标签提取器
-        # 检查是否是DitingMotion模型（有8个输出）
+        # Select label extractor based on model type
+        # Check if it's DitingMotion model (has 8 outputs)
         model_class_name = self.model.__class__.__name__
         is_diting_motion = model_class_name == "DitingMotion"
         
         if is_diting_motion:
-            # 对于DitingMotion模型，使用MultiLabelExtractor提取polarity和clarity标签
+            # For DitingMotion model, use MultiLabelExtractor to extract polarity and clarity labels
             base_augmentation = MultiLabelExtractor(
                 polarity_key=cfg.label_key,
                 clarity_key="clarity"
             )
         else:
-            # 对于其他模型，使用MetadataToLabel提取单个标签
+            # For other models, use MetadataToLabel to extract single label
             base_augmentation = MetadataToLabel(metadata_key=cfg.label_key)
         
-        # 检查数据集是否已经有数据增强
-        # 如果数据集已经有数据增强，我们只添加MetadataToLabel
-        # 否则添加所有增强（包括用户传入的）
+        # Check if dataset already has data augmentation
+        # If dataset already has augmentation, we only add MetadataToLabel
+        # Otherwise add all augmentations (including user-provided ones)
         
-        # 训练集增强
+        # Training set augmentation
         if hasattr(train_dataset, 'augmentations') and train_dataset.augmentations:
-            # 数据集已经有增强，只添加MetadataToLabel
+            # Dataset already has augmentation, only add MetadataToLabel
             train_gen.add_augmentations([base_augmentation])
         else:
-            # 数据集没有增强，添加所有增强
+            # Dataset has no augmentation, add all augmentations
             train_augmentations = [base_augmentation] + self.train_augmentations
             train_gen.add_augmentations(train_augmentations)
         
-        # 验证集增强
+        # Validation set augmentation
         if hasattr(val_dataset, 'augmentations') and val_dataset.augmentations:
-            # 数据集已经有增强，只添加MetadataToLabel
+            # Dataset already has augmentation, only add MetadataToLabel
             val_gen.add_augmentations([base_augmentation])
         else:
-            # 数据集没有增强，添加所有增强
+            # Dataset has no augmentation, add all augmentations
             val_augmentations = [base_augmentation] + self.val_augmentations
             val_gen.add_augmentations(val_augmentations)
         
-        # 测试集增强（如果存在测试集）
+        # Test set augmentation (if test set exists)
         if test_gen is not None:
             if hasattr(test_dataset, 'augmentations') and test_dataset.augmentations:
-                # 数据集已经有增强，只添加MetadataToLabel
+                # Dataset already has augmentation, only add MetadataToLabel
                 test_gen.add_augmentations([base_augmentation])
             else:
-                # 数据集没有增强，添加所有增强
+                # Dataset has no augmentation, add all augmentations
                 test_augmentations = [base_augmentation] + self.test_augmentations
                 test_gen.add_augmentations(test_augmentations)
 
@@ -342,7 +342,7 @@ class Trainer:
             num_workers=cfg.num_workers,
             collate_fn=self._collate_fn,
         )
-        # 创建测试集DataLoader（如果存在测试集）
+        # Create test set DataLoader (if test set exists)
         if test_gen is not None:
             test_loader = DataLoader(
                 test_gen,
@@ -352,9 +352,9 @@ class Trainer:
                 collate_fn=self._collate_fn,
             )
         else:
-            # 创建一个空的测试集DataLoader
+            # Create an empty test set DataLoader
             test_loader = DataLoader(
-                [],  # 空数据集
+                [],  # Empty dataset
                 batch_size=cfg.batch_size,
                 shuffle=False,
                 num_workers=cfg.num_workers,
@@ -365,53 +365,53 @@ class Trainer:
     @staticmethod
     def _collate_fn(batch):
         """
-        自定义 collate 函数来处理生成器的输出。
-        生成器返回的字典包含：
-        - "X": (波形数据, 元数据字典) 或 波形数据
-        - "y": 标签数据 或 (polarity_label, clarity_label)
+        Custom collate function to handle generator outputs.
+        The dictionary returned by generator contains:
+        - "X": (waveform data, metadata dictionary) or waveform data
+        - "y": label data or (polarity_label, clarity_label)
         """
-        # 提取 X 和 y
+        # Extract X and y
         X_list = []
         y_list = []
         
         for sample in batch:
-            # 提取 X（波形数据）
+            # Extract X (waveform data)
             if "X" in sample:
                 x_val = sample["X"]
                 if isinstance(x_val, tuple) and len(x_val) == 2:
-                    X_list.append(x_val[0])  # 波形数据
+                    X_list.append(x_val[0])  # waveform data
                 else:
                     X_list.append(x_val)
             
-            # 提取 y（标签）
+            # Extract y (labels)
             if "y" in sample:
                 y_list.append(sample["y"])
         
-        # 转换为张量
+        # Convert to tensors
         if X_list:
-            # 检查是否所有 X 都是 numpy 数组
+            # Check if all X are numpy arrays
             if all(isinstance(x, np.ndarray) for x in X_list):
                 X_batch = torch.tensor(np.stack(X_list))
             else:
-                # 如果已经是张量，直接 stack
+                # If already tensors, directly stack
                 X_batch = torch.stack(X_list) if isinstance(X_list[0], torch.Tensor) else torch.tensor(X_list)
         else:
             X_batch = torch.tensor([])
         
         if y_list:
-            # 检查 y 是否是元组（多标签情况）
+            # Check if y is a tuple (multi-label case)
             if all(isinstance(y, tuple) for y in y_list):
-                # 多标签情况：y 是 (polarity_label, clarity_label)
+                # Multi-label case: y is (polarity_label, clarity_label)
                 polarity_labels = [y[0] for y in y_list]
                 clarity_labels = [y[1] for y in y_list]
                 
-                # 转换为张量
+                # Convert to tensors
                 polarity_batch = torch.tensor(np.stack(polarity_labels)) if isinstance(polarity_labels[0], np.ndarray) else torch.stack(polarity_labels)
                 clarity_batch = torch.tensor(np.stack(clarity_labels)) if isinstance(clarity_labels[0], np.ndarray) else torch.stack(clarity_labels)
                 
                 y_batch = (polarity_batch, clarity_batch)
             else:
-                # 单标签情况
+                # Single label case
                 y_batch = torch.tensor(np.stack(y_list)) if isinstance(y_list[0], np.ndarray) else torch.stack(y_list)
         else:
             y_batch = torch.tensor([])
@@ -459,26 +459,26 @@ class Trainer:
                 inputs = batch["X"].to(device)
                 batch_labels = batch["y"]
                 
-                # 处理多标签情况：batch["y"]可能是元组(polarity_labels, clarity_labels)
+                # Handle multi-label case: batch["y"] might be tuple (polarity_labels, clarity_labels)
                 if isinstance(batch_labels, (tuple, list)) and len(batch_labels) == 2:
-                    # 分别移动两个标签到设备
+                    # Move both labels to device separately
                     polarity_labels = batch_labels[0].to(device)
                     clarity_labels = batch_labels[1].to(device)
                     labels = (polarity_labels, clarity_labels)
                 else:
-                    # 单标签情况
+                    # Single label case
                     labels = batch_labels.to(device)
 
                 optimizer.zero_grad()
                 outputs = self.model(inputs)
                 
-                # 提取正确的输出用于损失计算
+                # Extract correct output for loss calculation
                 if isinstance(outputs, (tuple, list)):
                     loss_output = outputs[cfg.output_index] if cfg.output_index is not None else outputs
                 else:
                     loss_output = outputs
                 
-                # 稳健性处理：如果输出是 (batch, 1) 而标签是 (batch,)，自动处理
+                # Robust handling: if output is (batch, 1) and label is (batch,), handle automatically
                 curr_labels = labels
                 if not isinstance(loss_output, (tuple, list)):
                     if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
@@ -488,11 +488,11 @@ class Trainer:
                         if curr_labels.ndim == 1:
                             curr_labels = curr_labels.unsqueeze(1)
                     elif isinstance(criterion, nn.CrossEntropyLoss):
-                        # CrossEntropyLoss 期望标签是 (batch,)，如果是 (batch, 1) 需要压缩
+                        # CrossEntropyLoss expects labels to be (batch,), if (batch, 1) need to squeeze
                         if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
                             curr_labels = curr_labels.squeeze(1).long()
                 
-                # 计算损失，考虑是否需要传递原始输入
+                # Compute loss, considering whether to pass original input
                 if self._loss_takes_inputs:
                     loss = criterion(loss_output, curr_labels, inputs=inputs)
                 else:
@@ -503,7 +503,7 @@ class Trainer:
 
                 running_loss += loss.item()
 
-                # 计算准确率
+                # Compute accuracy
                 if isinstance(outputs, (tuple, list)):
                     metric_out = outputs[cfg.metric_index]
                 else:
@@ -513,12 +513,12 @@ class Trainer:
                 else:
                     current_labels = labels
 
-                # 稳健的准确率计算：处理 2 分类 (batch, 1) 和多分类 (batch, C)
+                # Robust accuracy calculation: handle 2-class (batch, 1) and multi-class (batch, C)
                 if metric_out.ndim == 2 and metric_out.shape[1] == 1:
-                    # 二分类 (batch, 1)，使用 0.5 阈值
+                    # Binary classification (batch, 1), use 0.5 threshold
                     predicted = (torch.sigmoid(metric_out) > 0.5).long().view(-1)
                 else:
-                    # 多分类 (batch, C)
+                    # Multi-class classification (batch, C)
                     _, predicted = torch.max(metric_out.data, 1)
                 
                 total += current_labels.size(0)
@@ -539,25 +539,25 @@ class Trainer:
                     inputs = batch["X"].to(device)
                     batch_labels = batch["y"]
                     
-                    # 处理多标签情况
+                    # Handle multi-label case
                     if isinstance(batch_labels, (tuple, list)) and len(batch_labels) == 2:
-                        # 分别移动两个标签到设备
+                        # Move both labels to device separately
                         polarity_labels = batch_labels[0].to(device)
                         clarity_labels = batch_labels[1].to(device)
                         labels = (polarity_labels, clarity_labels)
                     else:
-                        # 单标签情况
+                        # Single label case
                         labels = batch_labels.to(device)
                     
                     outputs = self.model(inputs)
                     
-                    # 提取正确的输出用于损失计算
+                    # Extract correct output for loss calculation
                     if isinstance(outputs, (tuple, list)):
                         loss_output = outputs[cfg.output_index] if cfg.output_index is not None else outputs
                     else:
                         loss_output = outputs
                     
-                    # 稳健性处理
+                    # Robust handling
                     curr_labels = labels
                     if not isinstance(loss_output, (tuple, list)):
                         if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
@@ -567,18 +567,18 @@ class Trainer:
                             if curr_labels.ndim == 1:
                                 curr_labels = curr_labels.unsqueeze(1)
                         elif isinstance(criterion, nn.CrossEntropyLoss):
-                            # CrossEntropyLoss 期望标签是 (batch,)，如果是 (batch, 1) 需要压缩
+                            # CrossEntropyLoss expects labels to be (batch,), if (batch, 1) need to squeeze
                             if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
                                 curr_labels = curr_labels.squeeze(1).long()
                     
-                    # 计算损失
+                    # 
                     if self._loss_takes_inputs:
                         loss = criterion(loss_output, curr_labels, inputs=inputs)
                     else:
                         loss = criterion(loss_output, curr_labels)
                     val_loss += loss.item()
                     
-                    # 计算准确率
+                    # Compute accuracy
                     if isinstance(outputs, (tuple, list)):
                         metric_out = outputs[cfg.metric_index]
                     else:
@@ -604,7 +604,7 @@ class Trainer:
             test_total = 0
             test_acc = 0.0
             
-            # 只有在有测试数据时才进行评估
+            # 
             if len(test_loader.dataset) > 0:
                 self.model.eval()
                 with torch.no_grad():
@@ -612,25 +612,25 @@ class Trainer:
                         inputs = batch["X"].to(device)
                         batch_labels = batch["y"]
                         
-                        # 处理多标签情况
+                        # Handle multi-label case
                         if isinstance(batch_labels, (tuple, list)) and len(batch_labels) == 2:
-                            # 分别移动两个标签到设备
+                            # Move both labels to device separately
                             polarity_labels = batch_labels[0].to(device)
                             clarity_labels = batch_labels[1].to(device)
                             labels = (polarity_labels, clarity_labels)
                         else:
-                            # 单标签情况
+                            # Single label case
                             labels = batch_labels.to(device)
                         
                         outputs = self.model(inputs)
                         
-                        # 提取正确的输出用于损失计算
+                        # Extract correct output for loss calculation
                         if isinstance(outputs, (tuple, list)):
                             loss_output = outputs[cfg.output_index] if cfg.output_index is not None else outputs
                         else:
                             loss_output = outputs
                         
-                        # 稳健性处理
+                        # Robust handling
                         curr_labels = labels
                         if not isinstance(loss_output, (tuple, list)):
                             if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
@@ -640,18 +640,18 @@ class Trainer:
                                 if curr_labels.ndim == 1:
                                     curr_labels = curr_labels.unsqueeze(1)
                             elif isinstance(criterion, nn.CrossEntropyLoss):
-                                # CrossEntropyLoss 期望标签是 (batch,)，如果是 (batch, 1) 需要压缩
+                                # CrossEntropyLoss expects labels to be (batch,), if (batch, 1) need to squeeze
                                 if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
                                     curr_labels = curr_labels.squeeze(1).long()
                         
-                        # 计算损失
+                        # 
                         if self._loss_takes_inputs:
                             loss = criterion(loss_output, curr_labels, inputs=inputs)
                         else:
                             loss = criterion(loss_output, curr_labels)
                         test_loss += loss.item()
                         
-                        # 计算准确率
+                        # Compute accuracy
                         if isinstance(outputs, (tuple, list)):
                             metric_out = outputs[cfg.metric_index]
                         else:
@@ -671,7 +671,7 @@ class Trainer:
                 test_loss /= len(test_loader)
                 test_acc = 100 * test_correct / test_total if test_total else 0.0
             
-            # 打印训练进度
+            # 
             if len(test_loader.dataset) > 0:
                 print(
                     f"Epoch {epoch+1}: Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, "
@@ -727,7 +727,7 @@ class Trainer:
         if device is None:
             device = self.device
         
-        # 检查DataLoader是否为空
+        # DataLoader
         if len(data_loader.dataset) == 0:
             return 0.0, 0.0
         
@@ -741,25 +741,25 @@ class Trainer:
                 inputs = batch["X"].to(device)
                 batch_labels = batch["y"]
                 
-                # 处理多标签情况
+                # 
                 if isinstance(batch_labels, (tuple, list)) and len(batch_labels) == 2:
-                    # 分别移动两个标签到设备
+                    # Move both labels to device separately
                     polarity_labels = batch_labels[0].to(device)
                     clarity_labels = batch_labels[1].to(device)
                     labels = (polarity_labels, clarity_labels)
                 else:
-                    # 单标签情况
+                    # Single label case
                     labels = batch_labels.to(device)
                 
                 outputs = self.model(inputs)
                 
-                # 提取正确的输出用于损失计算
+                # Extract correct output for loss calculation
                 if isinstance(outputs, (tuple, list)):
                     loss_output = outputs[self.config.output_index] if self.config.output_index is not None else outputs
                 else:
                     loss_output = outputs
                 
-                # 稳健性处理
+                # 
                 curr_labels = labels
                 if not isinstance(loss_output, (tuple, list)):
                     if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
@@ -769,18 +769,18 @@ class Trainer:
                         if curr_labels.ndim == 1:
                             curr_labels = curr_labels.unsqueeze(1)
                     elif isinstance(criterion, nn.CrossEntropyLoss):
-                        # CrossEntropyLoss 期望标签是 (batch,)，如果是 (batch, 1) 需要压缩
+                        # CrossEntropyLoss expects labels to be (batch,), if (batch, 1) need to squeeze
                         if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
                             curr_labels = curr_labels.squeeze(1).long()
                 
-                # 计算损失
+                # 
                 if self._loss_takes_inputs:
                     loss = criterion(loss_output, curr_labels, inputs=inputs)
                 else:
                     loss = criterion(loss_output, curr_labels)
                 total_loss += loss.item()
                 
-                # 计算准确率
+                # Compute accuracy
                 if isinstance(outputs, (tuple, list)):
                     metric_out = outputs[self.config.metric_index]
                 else:

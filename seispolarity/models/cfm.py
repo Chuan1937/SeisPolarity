@@ -13,6 +13,14 @@ class CFM(BasePolarityModel, nn.Module):
     Model architecture (as per user-provided TensorFlow summary):
     1. conv1d (Conv1D): (None, 160, 32), params=192 (kernel_size=5, same padding, 1 in_channel)
     2. dropout (Dropout): (None, 160, 32)
+    
+    Reference:
+        Messuti, G. et al. CFM: a convolutional neural network for first-motion polarity classification of seismic records 
+        in volcanic and tectonic areas. Frontiers in Earth Science 11, 1223686 (2023).
+    
+    Author:
+        Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), https://github.com/Chuan1937
+    
     3. conv1d_1 (Conv1D): (None, 157, 64), params=8,256 (kernel_size=4, valid padding)
     4. max_pooling1d (MaxPooling1D): (None, 78, 64)
     5. conv1d_2 (Conv1D): (None, 76, 128), params=24,704 (kernel_size=3, valid padding)

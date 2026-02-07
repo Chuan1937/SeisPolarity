@@ -6,8 +6,8 @@ from seispolarity.annotations import PickList
 
 class MLP(nn.Module):
     """
-    PyTorch版本的前馈神经网络 (MLP Block)。
-    对应 Keras 的 mlp 函数。
+    PyTorch version of feedforward neural network (MLP Block).
+    Corresponds to the mlp function in Keras.
     """
 
     def __init__(self, in_features, hidden_units, dropout_rate):
@@ -15,7 +15,7 @@ class MLP(nn.Module):
         layers = []
         for units in hidden_units:
             layers.append(nn.Linear(in_features, units))
-            layers.append(nn.GELU())  # Keras中使用的是gelu
+            layers.append(nn.GELU())  # Keras uses gelu
             layers.append(nn.Dropout(dropout_rate))
             in_features = units
         self.mlp = nn.Sequential(*layers)
@@ -26,8 +26,8 @@ class MLP(nn.Module):
 
 class StochasticDepth(nn.Module):
     """
-    PyTorch版本的随机深度层。
-    对应 Keras 的 StochasticDepth 类。
+    PyTorch version of stochastic depth layer.
+    Corresponds to the StochasticDepth class in Keras.
     """
 
     def __init__(self, drop_prob):
@@ -41,15 +41,15 @@ class StochasticDepth(nn.Module):
         keep_prob = 1 - self.drop_prob
         shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # (B, 1, 1, ...)
         random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype, device=x.device)
-        random_tensor.floor_()  # 二值化
+        random_tensor.floor_()  # Binarization
 
         return x.div(keep_prob) * random_tensor
 
 
 class CCTTokenizer(nn.Module):
     """
-    PyTorch版本的卷积令牌化器。
-    对应 Keras 的 CCTTokenizer1 类。
+    PyTorch version of convolutional tokenizer.
+    Corresponds to the CCTTokenizer1 class in Keras.
     """
 
     def __init__(self, kernel_size=4, stride=1, padding=1, pooling_kernel_size=3, num_conv_layers=2,
@@ -60,7 +60,7 @@ class CCTTokenizer(nn.Module):
             num_output_channels = [projection_dim] * num_conv_layers
 
         layers = []
-        in_channels = 1  # 初始通道数为1
+        in_channels = 1  # Initial number of channels is 1
         for i in range(num_conv_layers):
             layers.append(
                 nn.Conv1d(
@@ -78,20 +78,20 @@ class CCTTokenizer(nn.Module):
         self.conv_model = nn.Sequential(*layers)
 
     def forward(self, x):
-        # 输入 x 的 shape: (batch, channels=1, length)
-        # 已经是 PyTorch Conv1d 需要的 shape: (batch, channels, length)
+        # Input x shape: (batch, channels=1, length)
+        # Already in the shape required by PyTorch Conv1d: (batch, channels, length)
         
-        # 通过卷积模型
+        # Pass through convolutional model
         x = self.conv_model(x)
 
-        # 转换回 Transformer 需要的 shape: (batch, new_length, features)
+        # Convert back to shape required by Transformer: (batch, new_length, features)
         x = x.permute(0, 2, 1)
         return x
 
 
 class TransformerBlock(nn.Module):
     """
-    PyTorch版本的单个Transformer编码器模块。
+    PyTorch version of single Transformer encoder module.
     """
 
     def __init__(self, projection_dim, num_heads, mlp_hidden_units, dropout_rate, stochastic_depth_rate):
@@ -102,7 +102,7 @@ class TransformerBlock(nn.Module):
             embed_dim=projection_dim,
             num_heads=num_heads,
             dropout=dropout_rate,
-            batch_first=True  # 让输入输出都是 (batch, seq, feature)
+            batch_first=True  # Let input and output be (batch, seq, feature)
         )
         self.stochastic_depth1 = StochasticDepth(stochastic_depth_rate)
 
@@ -115,22 +115,29 @@ class TransformerBlock(nn.Module):
         self.stochastic_depth2 = StochasticDepth(stochastic_depth_rate)
 
     def forward(self, x):
-        # 注意力块
+        # Attention block
         x_norm1 = self.layer_norm1(x)
         attn_output, _ = self.attention(x_norm1, x_norm1, x_norm1)
-        x = x + self.stochastic_depth1(attn_output)  # 残差连接
+        x = x + self.stochastic_depth1(attn_output)  # Residual connection
 
-        # MLP块
+        # MLP block
         x_norm2 = self.layer_norm2(x)
         mlp_output = self.mlp(x_norm2)
-        x = x + self.stochastic_depth2(mlp_output)  # 残差连接
+        x = x + self.stochastic_depth2(mlp_output)  # Residual connection
 
         return x
 
 
 class EQPolarityCCT(BasePolarityModel, nn.Module):
     """
-    完整的、对应 construct_model 的 PyTorch CCT 模型。
+    Complete PyTorch CCT model corresponding to construct_model.
+    
+    Reference:
+        Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion.
+        IEEE Transactions on Geoscience and Remote Sensing (2024).
+    
+    Author:
+        Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), https://github.com/Chuan1937
     """
 
     def __init__(self,
@@ -148,28 +155,28 @@ class EQPolarityCCT(BasePolarityModel, nn.Module):
         if mlp_hidden_units is None:
             mlp_hidden_units = [projection_dim, projection_dim]
 
-        # 1. 卷积令牌化器
+        # 1. Convolutional tokenizer
         self.tokenizer = CCTTokenizer(projection_dim=projection_dim)
 
-        # 2. Transformer编码器堆叠
+        # 2. Transformer encoder stack
         dpr = [x.item() for x in torch.linspace(0, stochastic_depth_rate, transformer_layers)]
         self.transformer_blocks = nn.ModuleList([
             TransformerBlock(projection_dim, num_heads, mlp_hidden_units, dropout_rate, dpr[i])
             for i in range(transformer_layers)
         ])
 
-        # 3. 输出层
+        # 3. Output layer
         self.layer_norm_final = nn.LayerNorm(projection_dim)
         self.flatten = nn.Flatten()
         self.dropout = nn.Dropout(dropout_rate)
 
-        # 动态计算最终展平后的维度
-        # 假设输入长度经过两次stride=2的pooling，长度变为 input_length / 4
+        # Dynamically calculate final flattened dimension
+        # Assuming input length goes through two stride=2 pooling, length becomes input_length / 4
         final_flatten_dim = (input_length // 4) * projection_dim
         self.output_layer = nn.Linear(final_flatten_dim, 1)
 
     def forward(self, x):
-        # 输入 shape: (batch, 1, length)
+        # Input shape: (batch, 1, length)
         x = self.tokenizer(x)
 
         for block in self.transformer_blocks:
@@ -180,8 +187,8 @@ class EQPolarityCCT(BasePolarityModel, nn.Module):
         x = self.dropout(x)
         x = self.output_layer(x)
 
-        # 在PyTorch中, 推荐使用 nn.BCEWithLogitsLoss, 它内置了sigmoid，更稳定。
-        # 因此模型本身不包含最后的sigmoid激活。
+        # In PyTorch, it is recommended to use nn.BCEWithLogitsLoss, which includes sigmoid and is more stable.
+        # Therefore, the model itself does not include the final sigmoid activation.
         return x
 
     def forward_tensor(self, tensor: torch.Tensor, **kwargs):

@@ -11,7 +11,7 @@ def download_http(
 ):
     """
     Downloads file from http/https source. Raises a ValueError for non-200 status codes.
-    从 http/https 源下载文件。如果状态码不是 200，则引发 ValueError。
+    Download file from http/https source. Raise ValueError if status code is not 200.
     """
     logger.info(f"Downloading file from {url} to {target}")
 
@@ -49,7 +49,7 @@ def download_http(
 def precheck_url(url, timeout):
     """
     Checks whether the url is reachable and give a 200 or 300 HTTP response code.
-    检查 URL 是否可达并返回 200 或 300 HTTP 响应代码。
+    Check if URL is reachable and returns 200 or 300 HTTP response code.
     """
     if timeout <= 0:
         return
@@ -86,7 +86,7 @@ def download_ftp(
 ):
     """
     Downloads file from ftp source.
-    从 ftp 源下载文件。
+    Download file from ftp source.
     """
     with ftplib.FTP(host, user, passwd) as ftp:
         ftp.voidcmd("TYPE I")
@@ -111,7 +111,7 @@ def download_ftp(
 def callback_if_uncached(files, callback, force=False, wait_for_file=False):
     """
     Checks if files exist. If not, calls callback.
-    检查文件是否存在。如果不存在，则调用回调函数。
+    Check if file exists. If not, call the callback function.
     """
     if not isinstance(files, list):
         files = [files]

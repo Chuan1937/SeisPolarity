@@ -13,11 +13,11 @@ from seispolarity.config import settings
 
 _CHUNK_SIZE = 1024 * 1024  # 1MB
 
-# 数据集源配置
+# Dataset source configuration
 HF_REPO = "HeXingChen/Seismic-AI-Data"
-# ModelScope 仓库 ID（用于数据集下载）
+# ModelScope repository ID (for dataset download)
 MODELSCOPE_DATASET_REPO = "chuanjun/Seismic-AI-Data"
-# ModelScope 模型仓库 ID（用于模型下载）
+# ModelScope model repository ID (for model download)
 MODELSCOPE_MODEL_REPO = "chuanjun/HeXingChen"
 
 
@@ -30,20 +30,20 @@ def _sha256(path: Path) -> str:
 
 
 def _verify_hdf5_integrity(path: Path) -> bool:
-    """检查 HDF5 文件是否完整且可读。
+    """Check if HDF5 file is complete and readable.
 
-    参数
+    Parameters
     ----------
-    path：HDF5 文件的路径。
+    path: Path to the HDF5 file.
 
-    返回
+    Returns
     -------
-    bool：如果文件完整且可读则返回 True，否则返回 False。
+    bool: True if file is complete and readable, False otherwise.
     """
     try:
-        # 尝试以只读模式打开文件
+        # Try to open the file in read-only mode
         with h5py.File(path, 'r') as f:
-            # 尝试访问根组，如果文件损坏这里会抛出异常
+            # Try to access root group, this will raise an exception if file is corrupted
             _ = f.keys()
         return True
     except (OSError, KeyError) as e:
@@ -65,10 +65,10 @@ def download_file(
     - If file exists and matches checksum (when provided), it is reused unless overwrite=True.
     """
 
-    """下载文件到数据集缓存。
-    - 如果 filename 为 None，则从 URL 派生文件名。
-    - 如果 dest_dir 为 None，则使用 settings.cache_datasets。
-    - 如果文件存在且与校验和匹配（当提供时），则重用它，除非 overwrite=True。
+    """Download file to dataset cache.
+    - If filename is None, derive it from URL.
+    - If dest_dir is None, use settings.cache_datasets.
+    - If file exists and matches checksum (when provided), reuse it unless overwrite=True.
     """
 
     dest_dir = Path(dest_dir) if dest_dir else settings.cache_datasets
@@ -80,12 +80,12 @@ def download_file(
         if expected_sha256 is None or _sha256(target) == expected_sha256:
             return target
 
-    # 获取文件总大小用于显示进度条
+    # Get total file size for progress bar
     with requests.get(url, stream=True, timeout=60) as r:
         r.raise_for_status()
         total_size = int(r.headers.get('content-length', 0))
 
-        # 如果有文件大小，显示进度条
+        # If file size is available, show progress bar
         if total_size > 0:
             from tqdm import tqdm
             progress_bar = tqdm(total=total_size, unit='B', unit_scale=True, desc=f"Downloading {fname}")
@@ -96,7 +96,7 @@ def download_file(
                         progress_bar.update(len(chunk))
             progress_bar.close()
         else:
-            # 没有文件大小信息，直接下载
+            # No file size information, download directly
             with target.open("wb") as f:
                 for chunk in r.iter_content(chunk_size=_CHUNK_SIZE):
                     if chunk:
@@ -115,8 +115,8 @@ def maybe_extract(archive_path: Path, target_dir: Path | str | None = None, over
     Returns the extraction directory path.
     """
 
-    """将常见的归档格式提取到以归档主干命名的目录中。
-    返回提取目录路径。
+    """Extract common archive formats into a directory named after the archive stem.
+    Returns the extraction directory path.
     """
 
     target_dir = Path(target_dir) if target_dir else archive_path.parent / archive_path.stem
@@ -138,7 +138,6 @@ def fetch_and_extract(
     overwrite: bool = False,
 ) -> Path:
     """Convenience: download an archive to cache/datasets/{name} and extract it."""
-    """方便：将归档下载到 cache/datasets/{name} 并提取它。"""
     archive = download_file(url, filename=None, dest_dir=settings.cache_datasets, expected_sha256=expected_sha256, overwrite=overwrite)
     return maybe_extract(archive, target_dir=settings.cache_datasets / name, overwrite=overwrite)
 
@@ -164,18 +163,6 @@ def fetch_hf_dataset(
     local_name: optional folder name under cache_datasets; defaults to repo_id with slashes replaced by "__".
     use_symlinks: whether to let huggingface_hub create symlinks to its cache (saves space). Set False to copy files.
     repo_type: "dataset" (default), "model", or "space".
-    """
-
-    """将 Hugging Face 数据集存储库快照下载到数据集缓存中。
-    参数
-    ----------
-    repo_id：Hugging Face 上的所有者/名称，例如 "chuanjun1978/Seismic-AI-Data"。
-    revision：分支/标签/提交；默认 None 表示 main。
-    allow_patterns / ignore_patterns：用于过滤要下载的文件的全局模式。
-    token：用于私有存储库的可选 HF 令牌。
-    local_name：cache_datasets 下的可选文件夹名称；默认为用 "__" 替换斜杠的 repo_id。
-    use_symlinks：是否允许 huggingface_hub 创建其缓存的符号链接（节省空间）。设置为 False 以复制文件。
-    repo_type：“dataset”（默认）、“model”或“space”。
     """
 
     try:
@@ -220,18 +207,6 @@ def fetch_hf_file(
     local_name: optional folder name under cache_datasets; default repo_id with slashes replaced.
     use_symlinks: whether to keep HF cache symlinks.
     repo_type: "dataset" (default), "model", or "space".
-    """
-
-    """将 Hugging Face 数据集存储库中的单个文件下载到 cache_datasets 中。
-    参数
-    ----------
-    repo_id：所有者/名称，例如 "chuanjun1978/Seismic-AI-Data"。
-    repo_path：存储库内文件的路径，例如 "SCSN/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5"。
-    revision：分支/标签/提交；默认 main。
-    token：用于私有存储库的可选令牌。
-    local_name：cache_datasets 下的可选文件夹名称；默认替换斜杠的 repo_id。
-    use_symlinks：是否保留 HF 缓存符号链接。
-    repo_type：“dataset”（默认）、“model”或“space”。
     """
 
     try:
@@ -292,23 +267,6 @@ def fetch_modelscope_dataset(
     Path to the downloaded dataset directory.
     """
 
-    """使用 MsDataset.load API 从 ModelScope 下载数据集。
-
-    这是从 ModelScope 下载数据集的首选方法。
-    它使用 MsDataset.load，该方法处理数据集下载的方式与模型下载不同。
-
-    参数
-    ----------
-    repo_id：ModelScope 上的所有者/名称，例如 "chuanjun/Seismic-AI-Data"。
-    subset_name：数据集子集名称，默认 'default'。
-    split：数据集分割，例如 "train"、"test"。默认为 "train"。
-    cache_dir：缓存下载的数据集的目录。如果为 None，则使用 settings.cache_datasets。
-
-    返回
-    -------
-    下载数据集目录的路径。
-    """
-
     try:
         from modelscope.msdatasets import MsDataset
     except ImportError as exc:
@@ -365,20 +323,6 @@ def fetch_modelscope_file(
     local_name: optional folder name under cache_datasets; default repo_id with slashes replaced.
     subset_name: dataset subset name, default None means 'default'. (Not used in model_file_download)
     split: dataset split, e.g. "train", "test". Default is "train". (Not used in model_file_download)
-    """
-
-    """将 ModelScope 数据集存储库中的单个文件下载到 cache_datasets 中，使用 model_file_download API。
-    注意：对于数据集，优先使用 fetch_modelscope_dataset。
-    此函数保留用于向后兼容和下载单个文件。
-
-    参数
-    ----------
-    repo_id：ModelScope 上的所有者/名称，例如 "chuanjun/Seismic-AI-Data"。
-    repo_path：存储库内文件的路径，例如 "SCSN/scsn_p_2000_2017_6sec_0.5r_fm_combined.hdf5"。
-    revision：分支/标签/提交；默认 None 表示 master。
-    local_name：cache_datasets 下的可选文件夹名称；默认替换斜杠的 repo_id。
-    subset_name：数据集子集名称，默认 None 表示 'default'。（在 model_file_download 中未使用）
-    split：数据集分割，例如 "train"、"test"。默认为 "train"。（在 model_file_download 中未使用）
     """
 
     try:
@@ -499,35 +443,6 @@ def fetch_dataset_from_remote(
     ...     repo_path="SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5"
     ... )
     >>> # Use in WaveformDataset
-    >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
-    """
-
-    """从 ModelScope 或 Hugging Face 下载数据集文件。
-
-    优先级：ModelScope（默认）> Hugging Face（当 use_hf=True 时）。
-
-    参数
-    ----------
-    dataset_name：数据集名称（例如 "SCSN"、"TXED"、"PNW"）。
-    repo_path：存储库内文件的路径（例如 "SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5"）。
-    hf_repo_id：Hugging Face 存储库 ID（默认：HeXingChen/Seismic-AI-Data）。
-    modelscope_repo_id：ModelScope 存储库 ID（默认：chuanjun/Seismic-AI-Data）。
-    cache_dir：缓存下载文件的目录。如果为 None，则使用 settings.cache_datasets。
-    force_download：如果为 True，则即使文件存在也强制重新下载。
-    use_hf：如果为 True，则使用 Hugging Face 而不是 ModelScope。
-
-    返回
-    -------
-    下载文件的路径。
-
-    示例
-    --------
-    >>> # 从 ModelScope 下载 SCSN 训练数据（默认）
-    >>> path = fetch_dataset_from_remote(
-    ...     dataset_name="SCSN",
-    ...     repo_path="SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5"
-    ... )
-    >>> # 在 WaveformDataset 中使用
     >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
     """
 
@@ -679,22 +594,6 @@ def fetch_dataset_folder(
     Returns
     -------
     Path to the downloaded dataset folder.
-    """
-    """从 ModelScope 或 Hugging Face 下载数据集文件夹。
-
-    参数
-    ----------
-    dataset_name：数据集名称（例如 "SCSN"、"TXED"、"PNW"）。
-    folder_path：存储库内文件夹的路径（例如 "SCSN/", "TXED/"）。
-    hf_repo_id：Hugging Face 存储库 ID（默认：HeXingChen/Seismic-AI-Data）。
-    modelscope_repo_id：ModelScope 存储库 ID（默认：chuanjun/Seismic-AI-Data）。
-    cache_dir：缓存下载文件的目录。如果为 None，则使用 settings.cache_datasets。
-    force_download：如果为 True，则即使文件存在也强制重新下载。
-    use_hf：如果为 True，则使用 Hugging Face 而不是 ModelScope。
-
-    返回
-    -------
-    下载数据集文件夹的路径。
     """
     # Setup cache directory
     if cache_dir is None:
@@ -871,6 +770,7 @@ def fetch_dataset_folder(
 # Dataset configuration registry for easy access
 DATASET_REGISTRY = {
     "SCSN": {
+        "reference": "Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. JGR Solid Earth 123, 5120-5129 (2018).",
         "train": {
             "repo_path": "SCSN/SCSN_P_2000_2017_6SEC_0.5R_FM_TRAIN.hdf5",
         },
@@ -882,6 +782,7 @@ DATASET_REGISTRY = {
         },
     },
     "TXED": {
+        "reference": "Chen, Y. et al. TXED: The Texas Earthquake Dataset for AI. Seismological Research Letters 95, 2013-2022 (2024).",
         "hdf5": {
             "repo_path": "TXED/TXED.hdf5",
         },
@@ -893,6 +794,7 @@ DATASET_REGISTRY = {
         },
     },
     "PNW": {
+        "reference": "Ni, Y. et al. Curated Pacific Northwest AI-ready seismic dataset. https://eartharxiv.org/repository/view/5049/ (2023).",
         "hdf5": {
             "repo_path": "PNW/PNW.hdf5",
         },
@@ -941,36 +843,6 @@ def get_dataset_path(
     >>> path = get_dataset_path("SCSN", subset="train", use_hf=True)
     >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
     >>> # Get TXED HDF5 dataset path
-    >>> path = get_dataset_path("TXED", subset="hdf5")
-    """
-
-    """获取数据集文件的路径，必要时下载它。
-
-    这是 fetch_dataset_from_remote 的便捷包装器，使用预定义的 DATASET_REGISTRY 查找数据集路径。
-
-    参数
-    ----------
-    dataset_name：数据集名称（例如 "SCSN"、"TXED"、"PNW"）。
-    subset：要下载的子集。对于SCSN："train"或"test"。
-            对于TXED/PNW："hdf5"、"csv"或"default"。
-            默认：SCSN为"train"，其他为"default"。
-    cache_dir：缓存下载文件的目录。如果为 None，则使用 settings.cache_datasets。
-    force_download：如果为 True，则即使文件存在也强制重新下载。
-    use_hf：如果为 True，则使用 Hugging Face 而不是 ModelScope。
-
-    返回
-    -------
-    数据集文件的路径。
-
-    示例
-    --------
-    >>> # 从 ModelScope 获取 SCSN 训练数据集路径（默认）
-    >>> path = get_dataset_path("SCSN", subset="train")
-    >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
-    >>> # 从 Hugging Face 获取 SCSN 训练数据集路径
-    >>> path = get_dataset_path("SCSN", subset="train", use_hf=True)
-    >>> dataset = WaveformDataset(path=path, name="SCSN_Train", ...)
-    >>> # 获取 TXED HDF5 数据集路径
     >>> path = get_dataset_path("TXED", subset="hdf5")
     """
 

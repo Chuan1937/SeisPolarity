@@ -6,7 +6,7 @@ logger = logging.getLogger("seispolarity")
 def trace_has_spikes(data, factor=25, quantile=0.975):
     """
     Checks for bit flip errors in the data using a simple quantile rule
-    使用简单的分位数规则检查数据中的位翻转错误
+    Check for bit-flip errors in data using simple quantile rule
     """
     q = np.quantile(np.abs(data), quantile, axis=1, keepdims=True)
     return np.any(data > q * factor)
@@ -15,7 +15,7 @@ def trace_has_spikes(data, factor=25, quantile=0.975):
 def stream_to_array(stream, component_order):
     """
     Converts stream of single station waveforms into a numpy array according to a given component order.
-    根据给定的分量顺序将单台波形流转换为 numpy 数组。
+    Convert single-station waveform stream to numpy array according to given component order.
     """
     starttime = min(trace.stats.starttime for trace in stream)
     endtime = max(trace.stats.endtime for trace in stream)
@@ -54,7 +54,7 @@ def stream_to_array(stream, component_order):
 def rotate_stream_to_zne(stream, inventory):
     """
     Tries to rotate the stream to ZNE inplace.
-    尝试将流就地旋转到 ZNE。
+    Try to rotate stream to ZNE in-place.
     """
     try:
         stream.rotate("->ZNE", inventory=inventory)

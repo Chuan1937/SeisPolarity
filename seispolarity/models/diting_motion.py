@@ -5,8 +5,8 @@ from .base import BasePolarityModel
 
 class CombConvLayer(nn.Module):
     """
-    对应论文中的 'CombConv Layer' 及 Keras Summary 中的并行卷积结构。
-    结构：4个并行分支 (2x kernel=3, 2x kernel=5)
+    Corresponds to 'CombConv Layer' in the paper and parallel convolution structure in Keras Summary.
+    Structure: 4 parallel branches (2x kernel=3, 2x kernel=5)
     """
     def __init__(self, in_channels, out_filters=8):
         super().__init__()
@@ -22,14 +22,14 @@ class CombConvLayer(nn.Module):
         b2 = F.relu(self.branch2(x))
         b3 = F.relu(self.branch3(x))
         b4 = F.relu(self.branch4(x))
-        # 拼接所有分支 + 原始输入 (ResNet style sort of, but strict concat)
-        # Keras summary 显示 concatenate 层连接了 input 和 4个分支
+        # Concatenate all branches + original input (ResNet style sort of, but strict concat)
+        # Keras summary shows concatenate layer connects input and 4 branches
         out = torch.cat([b1, b2, b3, b4, x], dim=1) 
         return out
 
 class DiTingBlock(nn.Module):
     """
-    对应 Keras Summary 中的 Block 2, 3, 4, 5 的重复结构。
+    Corresponds to the repeated structure of Block 2, 3, 4, 5 in Keras Summary.
     Trace logic based on Keras summary:
     1. Input -> CombConv (Parallel) -> Concat -> Dropout
     2. Conv1d (Fusion/Bottleneck)
@@ -86,6 +86,16 @@ class DiTingBlock(nn.Module):
         return final
 
 class DitingMotion(BasePolarityModel, nn.Module):
+    """
+    DiTingMotion model for first-motion polarity classification.
+    
+    Reference:
+        Zhao, M. et al. DiTingMotion: A deep-learning first-motion-polarity classifier and its application to focal mechanism inversion.
+        Frontiers in Earth Science 11, 1103914 (2023).
+    
+    Author:
+        Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), https://github.com/Chuan1937
+    """
     def __init__(self, input_channels=2, dropout_rate=0.15, **kwargs):
         BasePolarityModel.__init__(self, name="DitingMotion", **kwargs)
         nn.Module.__init__(self)
@@ -252,26 +262,26 @@ class DitingMotion(BasePolarityModel, nn.Module):
     def build_picks(self, raw_output, **kwargs):
         """Convert raw model output to picks with polarity labels.
         
-        DitingMotion 模型有8个输出，我们需要使用融合输出（索引3）作为主要预测。
+        DitingMotion model has 8 outputs, we need to use the fused output (index 3) as the main prediction.
         """
         from seispolarity.annotations import Pick, PickList, PolarityLabel
         
-        # raw_output 是一个包含8个张量的元组
-        # 我们使用融合输出（索引3）作为主要预测
+        # raw_output is a tuple containing 8 tensors
+        # We use the fused output (index 3) as the main prediction
         if isinstance(raw_output, (tuple, list)) and len(raw_output) >= 4:
-            # 获取融合输出（索引3）
+            # Get the fused output (index 3)
             fuse_output = raw_output[3]
-            # 应用softmax获取概率
+            # Apply softmax to get probabilities
             probs = torch.softmax(fuse_output, dim=1)
             preds = torch.argmax(probs, dim=1)
             
             picks = PickList()
-            # 为每个样本创建一个pick
+            # Create a pick for each sample
             for i in range(preds.shape[0]):
                 pred = preds[i].item()
                 prob = probs[i, pred].item()
                 
-                # 映射预测到极性标签
+                # Map prediction to polarity label
                 if pred == 0:
                     polarity = PolarityLabel.UP
                 elif pred == 1:
@@ -279,10 +289,10 @@ class DitingMotion(BasePolarityModel, nn.Module):
                 else:
                     polarity = PolarityLabel.UNKNOWN
                 
-                # 创建pick（这里需要更多上下文信息，暂时使用占位符）
+                # Create pick (needs more context information, using placeholder for now)
                 pick = Pick(
                     trace_id="unknown",
-                    time=None,  # 需要从输入数据中获取时间信息
+                    time=None,  # Need to get time information from input data
                     confidence=prob,
                     polarity=polarity
                 )
@@ -290,5 +300,5 @@ class DitingMotion(BasePolarityModel, nn.Module):
             
             return picks
         else:
-            # 如果输出格式不符合预期，返回空列表
+            # If output format does not match expected, return empty list
             return PickList()

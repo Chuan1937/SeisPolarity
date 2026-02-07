@@ -34,7 +34,7 @@ __all__ = [
     "PolarityOutput",
 ]
 
-# 延迟导入以避免循环依赖
+# Delayed import to avoid circular dependency
 def __getattr__(name):
     if name == "WaveformDataset":
         from .data.base import WaveformDataset
