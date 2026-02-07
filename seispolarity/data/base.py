@@ -1,19 +1,14 @@
 from __future__ import annotations
-import copy
+
 import logging
 import warnings
-from abc import ABC, abstractmethod
 from collections import defaultdict
-from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Optional, List, Union, Tuple, Literal, Dict, Callable
-from urllib.parse import urljoin
-import os
+from typing import Callable, List, Optional
 
 import h5py
 import numpy as np
 import pandas as pd
-import scipy.signal
 from tqdm import tqdm
 
 try:
@@ -24,9 +19,6 @@ except ImportError:
     DataLoader = None
     Dataset = object
 
-import seispolarity.util as util
-from seispolarity.util import pad_packed_sequence
-from seispolarity.config import settings
 
 # Configure logging
 logger = logging.getLogger("seispolarity.data")
@@ -208,12 +200,14 @@ class WaveformDataset(Dataset):
         """
         Load metadata from CSV files corresponding to chunks.
         """
-        if not self._path: return pd.DataFrame()
-        
+        if not self._path:
+            return pd.DataFrame()
+
         metadatas = []
         chunks, metadata_paths, _ = self._chunks_with_paths()
-        
-        if not metadata_paths: return pd.DataFrame()
+
+        if not metadata_paths:
+            return pd.DataFrame()
 
         for chunk, metadata_path in zip(chunks, metadata_paths):
             if metadata_path and metadata_path.is_file() and metadata_path.stat().st_size > 0:
@@ -237,7 +231,8 @@ class WaveformDataset(Dataset):
         Populate metadata from HDF5 if no CSV exists (SCSN Style).
         """
         fpath = Path(self._path)
-        if not fpath.is_file(): return
+        if not fpath.is_file():
+            return
 
         with h5py.File(fpath, 'r') as f:
             if self.data_key in f:
@@ -267,7 +262,8 @@ class WaveformDataset(Dataset):
 
     def _chunks_with_paths(self):
         if self._chunks_with_paths_cache is None:
-            if not self._path: return [], [], []
+            if not self._path:
+                return [], [], []
             
             p = Path(self._path)
             chunks = self._chunks
@@ -286,9 +282,11 @@ class WaveformDataset(Dataset):
 
     def available_chunks(self, path):
         path = Path(path)
-        if path.is_file(): return [""]
+        if path.is_file():
+            return [""]
         # Simplified directory scan
-        if (path / "waveforms.hdf5").exists(): return [""]
+        if (path / "waveforms.hdf5").exists():
+            return [""]
         return []
 
     def __str__(self):
@@ -398,9 +396,12 @@ class WaveformDataset(Dataset):
             
             if self.data_key in f:
                 waveform = f[self.data_key][physical_idx]
-                if self.label_key and self.label_key in f:     metadata['label'] = f[self.label_key][physical_idx]
-                if self.clarity_key and self.clarity_key in f:   metadata['clarity'] = f[self.clarity_key][physical_idx]
-                if self.pick_key and self.pick_key in f:      metadata['p_pick'] = f[self.pick_key][physical_idx]
+                if self.label_key and self.label_key in f:
+                    metadata['label'] = f[self.label_key][physical_idx]
+                if self.clarity_key and self.clarity_key in f:
+                    metadata['clarity'] = f[self.clarity_key][physical_idx]
+                if self.pick_key and self.pick_key in f:
+                    metadata['p_pick'] = f[self.pick_key][physical_idx]
                 
                 # Add other metadata fields
                 for k in self.metadata_keys:
@@ -525,17 +526,14 @@ class WaveformDataset(Dataset):
         # Handle persistent file handle for streaming performance
         # (This is a simplified version of scsn logic)
         f = None
-        close_file = True
         
         if self._h5_handle and self._h5_handle.filename == str(path):
             f = self._h5_handle
-            close_file = False
         else:
             # Optimistic caching of handle
             if self._h5_handle is None:
                 self._h5_handle = h5py.File(path, 'r')
                 f = self._h5_handle
-                close_file = False
         
         try:
             if self.data_key in f:
@@ -621,23 +619,33 @@ class WaveformDataset(Dataset):
     def _collate_fn(self, batch):
         waves = [b[0] for b in batch]
         metas = [b[1] for b in batch]
-        
+
         X = np.stack(waves)
-        
+
         # Extract labels if present
         Y = []
         for m in metas:
-            if 'label' in m: Y.append(m['label'])
-            elif self.label_key in m: Y.append(m[self.label_key])
-            else: Y.append(-1)
-            
+            if 'label' in m:
+                Y.append(m['label'])
+            elif self.label_key in m:
+                Y.append(m[self.label_key])
+            else:
+                Y.append(-1)
+
         return torch.tensor(X), torch.tensor(Y)
 
     # Stubs for compatibility
-    def _read_data_format(self): return {}
-    def _unify_sampling_rate(self): pass
-    def _unify_component_order(self): pass
-    def _build_trace_name_to_idx_dict(self): pass
+    def _read_data_format(self):
+        return {}
+
+    def _unify_sampling_rate(self):
+        pass
+
+    def _unify_component_order(self):
+        pass
+
+    def _build_trace_name_to_idx_dict(self):
+        pass
     def filter(self, mask):
         self._metadata = self._metadata[mask]
         self._metadata.reset_index(drop=True, inplace=True)
@@ -841,9 +849,9 @@ class WaveformDataset(Dataset):
         """Compatibility wrapper to load processed data into arrays."""
         loader = self.get_dataloader(batch_size=batch_size, shuffle=False, **kwargs)
         all_w, all_l = [], []
-        for w, l in tqdm(loader, desc="Loading Data", unit="chunk"):
+        for w, label in tqdm(loader, desc="Loading Data", unit="chunk"):
             all_w.append(w)
-            all_l.append(l)
+            all_l.append(label)
         return (np.concatenate(all_w), np.concatenate(all_l)) if all_w else (np.array([]), np.array([]))
     
     def convert_labels(self, labels):
@@ -951,10 +959,9 @@ class WaveformDataset(Dataset):
             # ，
             return np.array(clarities, dtype=np.int64)
         else:
-            # ，
             try:
                 return np.array(clarities, dtype=np.int64)
-            except:
+            except (ValueError, TypeError):
                 logger.warning(f": {type(sample)}")
                 return clarities
     
@@ -1023,13 +1030,11 @@ class WaveformDataset(Dataset):
                 raise ValueError(f"clarity: {label_value}， 'I', 'E',  'K'")
             column_name = 'clarity'
             config_key = 'clarity_key'
-            default_config_value = 'Z'
         else:  # polarity
             if label_value not in ['U', 'D', 'X']:
                 raise ValueError(f"polarity: {label_value}， 'U', 'D',  'X'")
             column_name = 'label'
             config_key = 'label_key'
-            default_config_value = 'Y'
         
         # 
         num_samples = len(self._metadata)
@@ -1077,8 +1082,7 @@ class WaveformDataset(Dataset):
                                         char_val = current_val.decode()
                                     if polarity_map.get(char_val, 2) == 2:
                                         update_indices.append(idx)
-                            except:
-                                # ，
+                            except (ValueError, TypeError, AttributeError):
                                 pass
                 
                 if not update_indices:
@@ -1192,7 +1196,7 @@ class WaveformDataset(Dataset):
                 # Pandas
                 mask = self._metadata.eval(selector)
                 if not isinstance(mask, (pd.Series, np.ndarray)):
-                    raise ValueError(f"")
+                    raise ValueError("")
                 
                 if len(mask) != num_samples:
                     raise ValueError(f"({len(mask)})({num_samples})")
@@ -1210,7 +1214,7 @@ class WaveformDataset(Dataset):
                     raise ValueError(f" '{column}' ")
                 
                 # 
-                col_dtype = self._metadata[column].dtype
+                self._metadata[column].dtype
                 col_values = self._metadata[column]
                 
                 # 
@@ -1287,37 +1291,8 @@ class WaveformDataset(Dataset):
             selector=selector, 
             overwrite=overwrite
         )
-    
 
-    
-    def add_polarity_labels(self, polarity_value='X', selector=None, overwrite=False):
-        """
-        polarity。
 
-        Args:
-            polarity_value: polarity，'X'（）
-                - 'U': Up（）
-                - 'D': Down（）
-                - 'X': Unknown（）
-            selector: ，：
-                - None:
-                - list[int]: ， [0, 1, 2]
-                - np.ndarray (bool):
-                - callable:
-                - str:
-                - dict:
-            overwrite: ，False
-
-        Returns:
-            self: ，
-        """
-        return self.add_labels(
-            label_type='polarity', 
-            label_value=polarity_value, 
-            selector=selector, 
-            overwrite=overwrite
-        )
-    
     def __add__(self, other):
         """
         ，MultiWaveformDataset。

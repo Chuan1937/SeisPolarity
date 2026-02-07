@@ -1,5 +1,16 @@
-from .file import download_http, download_ftp, callback_if_uncached
-from .trace_ops import trace_has_spikes, stream_to_array, rotate_stream_to_zne
+from .file import callback_if_uncached, download_ftp, download_http
+from .trace_ops import rotate_stream_to_zne, stream_to_array, trace_has_spikes
+
+__all__ = [
+    "callback_if_uncached",
+    "download_ftp",
+    "download_http",
+    "rotate_stream_to_zne",
+    "stream_to_array",
+    "trace_has_spikes",
+    "pad_packed_sequence",
+]
+
 
 def pad_packed_sequence(seq, axis=0):
     import numpy as np

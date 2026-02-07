@@ -80,7 +80,7 @@ class SCSNData:
             2: 'Unknown'
         }
         
-        logger.info(f"SCSN Downloader initialized:")
+        logger.info("SCSN Downloader initialized:")
         logger.info(f"  Output dir: {self.output_dir}")
         logger.info(f"  Dataset name: {self.dataset_name}")
         logger.info(f"  Repo path: {self.repo_path}")
@@ -178,7 +178,7 @@ if __name__ == "__main__":
     force = "--force" in sys.argv
     output_dir = sys.argv[1] if len(sys.argv) > 1 else default_output
     
-    logger.info(f"Starting SCSN download...")
+    logger.info("Starting SCSN download...")
     logger.info(f"  Output directory: {output_dir}")
     logger.info(f"  Use Hugging Face: {use_hf}")
     logger.info(f"  Force download: {force}")

@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
+
+from seispolarity.annotations import PickList
+
 from .base import BasePolarityModel
-from seispolarity.annotations import PickList, PolarityLabel, Pick
+
 
 class SharedBackbone(nn.Module):
     """Define the shared backbone network (input 400 points)."""
@@ -43,7 +46,8 @@ class SCSN(BasePolarityModel, nn.Module):
     Build a single-task polarity classification model.
     
     Reference:
-        Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking and First-Motion Polarity Determination With Deep Learning. 
+        Ross, Z. E., Meier, M. & Hauksson, E. P Wave Arrival Picking
+        and First-Motion Polarity Determination With Deep Learning.
         JGR Solid Earth 123, 5120-5129 (2018).
     
     Author:
@@ -56,13 +60,15 @@ class SCSN(BasePolarityModel, nn.Module):
         self.fm_head = nn.Linear(512, num_fm_classes)
         
     def forward(self, x):
-        # PyTorch Conv1d requires (N, C, L) format
-        # BasePolarityModel.preprocess already provides (N, C, L)
-        # Input x shape should be (N, 1, 400)
-        
-        f1 = self.shared_backbone(x)
+        """Forward pass through SCSN model.
 
-        # Only keep the polarity classification output
+        Args:
+            x: Input tensor, shape (batch, 1, 400)
+
+        Returns:
+            Polarity classification logits, shape (batch, num_fm_classes)
+        """
+        f1 = self.shared_backbone(x)
         fm_output = self.fm_head(f1)
         return fm_output
 
@@ -76,9 +82,4 @@ class SCSN(BasePolarityModel, nn.Module):
         # Usually: 0: U, 1: D, 2: N? Or U, D, N?
         # For now, I'll assume argmax maps to PolarityLabel.
 
-        probs = torch.softmax(raw_output, dim=1)
-        preds = torch.argmax(probs, dim=1)
-        
-        picks = []
-        
         return [] 

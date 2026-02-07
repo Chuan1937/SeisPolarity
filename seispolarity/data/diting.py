@@ -20,15 +20,16 @@ Key Features:
 Author: SeisPolarity
 """
 
-import os
 import logging
+import os
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from pathlib import Path
+from typing import Tuple
+
 import h5py
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from typing import Optional, Literal, Tuple
 from scipy import signal
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 
 from .download import fetch_dataset_folder
@@ -138,7 +139,7 @@ class DiTing:
         # Find HDF5 base path
         self.hdf5_base = self._find_hdf5_base()
         
-        logger.info(f"DiTing Processor initialized:")
+        logger.info("DiTing Processor initialized:")
         logger.info(f"  Data directory: {self.data_dir}")
         logger.info(f"  CSV file: {self.csv_path}")
         logger.info(f"  HDF5 base: {self.hdf5_base}")
@@ -165,15 +166,15 @@ class DiTing:
             hdf5_found = any(self.data_dir.glob('*.hdf5'))
             
             if csv_found and hdf5_found:
-                logger.info(f"Data directory exists with CSV and HDF5 files, skipping download")
+                logger.info("Data directory exists with CSV and HDF5 files, skipping download")
                 return
         
         if self.force_download:
-            logger.info(f"Force download enabled, proceeding with download")
+            logger.info("Force download enabled, proceeding with download")
         elif not data_dir_exists:
             logger.warning(f"Data directory not found: {self.data_dir}")
         else:
-            logger.warning(f"Data directory exists but missing required files")
+            logger.warning("Data directory exists but missing required files")
         
         try:
             logger.info(f"Downloading DiTing dataset to: {self.data_dir}")
@@ -452,7 +453,7 @@ class DiTing:
                     try:
                         k_float = float(key_raw)
                         hdf5_key = f"{int(k_float):06d}.{str(k_float).split('.')[1].ljust(4,'0')[:4]}"
-                    except:
+                    except (ValueError, TypeError, AttributeError):
                         hdf5_key = str(key_raw)
                     
                     if hdf5_key not in eq_group:
@@ -633,7 +634,6 @@ class DiTing:
         
         # Log clarity distribution
         unique_clarity, counts_clarity = np.unique(Z, return_counts=True)
-        clarity_names = ['I', 'E', 'K']
         logger.info("Final clarity distribution:")
         for u, c in zip(unique_clarity, counts_clarity):
             clarity_name = chr(Z[u]) if u < len(Z) else str(Z[u])
@@ -665,7 +665,7 @@ class DiTing:
             f.attrs['label_map'] = str(self._label_map)
             f.attrs['clarity_map'] = str(self._clarity_map)
         
-        logger.info(f"Processed data saved successfully!")
+        logger.info("Processed data saved successfully!")
         logger.info(f"  CSV: {self.output_csv}")
         logger.info(f"  HDF5: {self.output_hdf5}")
         logger.info("You can now use this file with WaveformDataset:")

@@ -1,12 +1,19 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
+from torch.nn import functional as F
+
 
 def norm(X):
-    # X shape: (batch, seq_len)
+    """Normalize waveforms by their peak amplitude.
+
+    Args:
+        X: Input waveforms, shape (batch, seq_len)
+
+    Returns:
+        Normalized waveforms, same shape as input
+    """
     maxi = np.max(np.abs(X), axis=1, keepdims=True)
-    # Prevent division by zero
     maxi[maxi == 0] = 1.0
     return X / maxi
 
@@ -15,11 +22,13 @@ class PolarCAP(nn.Module):
     PolarCAP model for first-motion polarity classification.
     
     Reference:
-        Chakraborty, M. et al. PolarCAP-A deep learning approach for first motion polarity classification of earthquake waveforms.
-        Artificial Intelligence in Geosciences 3, 46-52 (2022).
+        Chakraborty, M. et al. PolarCAP-A deep learning approach for first motion
+        polarity classification of earthquake waveforms. Artificial Intelligence in
+        Geosciences 3, 46-52 (2022).
     
     Author:
-        Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), https://github.com/Chuan1937
+        Model weights converted and maintained by He XingChen (Chinese, Han ethnicity),
+        https://github.com/Chuan1937
     """
     def __init__(self, drop_rate=0.3):
         super(PolarCAP, self).__init__()
@@ -77,6 +86,15 @@ class PolarCAP(nn.Module):
         return dec, p
 
     def predict(self, X_np):
+        """Predict polarity labels for input waveforms.
+
+        Args:
+            X_np: Input waveforms, shape (batch, seq_len)
+
+        Returns:
+            List of (polarity_label, probability) tuples, where polarity_label is
+            either 'Negative' or 'Positive'
+        """
         self.eval()
         with torch.no_grad():
             # Preprocessing
@@ -115,14 +133,18 @@ class PolarCAPLoss(nn.Module):
             inputs: Original input waveforms (batch, 1, 64), used for reconstruction loss
         """
         if inputs is None:
-            raise ValueError("PolarCAPLoss requires 'inputs' (original waveforms) for reconstruction loss.")
+            raise ValueError(
+                "PolarCAPLoss requires 'inputs' (original waveforms) for "
+                "reconstruction loss."
+            )
         
         dec_pred, p_pred = outputs
         
         # Reconstruction loss: MSE
         mse_loss = F.mse_loss(dec_pred, inputs)
-        
-        # Classification loss: Huber (Keras implementation uses Huber for One-hot labels, p_pred is (batch, 2))
+
+        # Classification loss: Huber (Keras implementation uses Huber for One-hot
+        # labels, p_pred is (batch, 2))
         # First convert targets to one-hot to match p_pred (batch, 2)
         targets_one_hot = F.one_hot(targets, num_classes=2).float()
         huber_loss = self.huber_criterion(p_pred, targets_one_hot)
@@ -131,6 +153,17 @@ class PolarCAPLoss(nn.Module):
 
 # --- Loss function definition (kept for backward compatibility) ---
 def get_polarcap_loss(dec_pred, dec_true, p_pred, p_true):
+    """Compute PolarCAP loss for backward compatibility.
+
+    Args:
+        dec_pred: Predicted reconstruction output
+        dec_true: True input waveforms for reconstruction
+        p_pred: Predicted polarity probabilities
+        p_true: True polarity labels (one-hot encoded)
+
+    Returns:
+        Total loss (MSE reconstruction loss + 10 * Huber classification loss)
+    """
     mse_loss = F.mse_loss(dec_pred, dec_true)
     # Huber loss in PyTorch defaults to delta=1.0, set to 0.5 based on Keras code
     huber_criterion = nn.HuberLoss(delta=0.5)

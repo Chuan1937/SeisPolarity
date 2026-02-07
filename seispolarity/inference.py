@@ -4,19 +4,17 @@ Unified Inference Interface for SeisPolarity models.
 
 import os
 import sys
-import torch
+from pathlib import Path
+from typing import List, Optional, Union
+
 import numpy as np
-import warnings
-import httpx
-import requests
-from typing import Union, List, Optional
+import torch
 from huggingface_hub import hf_hub_download
 from tqdm import tqdm
-from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parent.parent)) # Add project root to sys.path
 
-from seispolarity.models import SCSN, EQPolarityCCT, DitingMotion, PPNet, PolarCAP, CFM, RPNet
+from seispolarity.models import CFM, SCSN, DitingMotion, EQPolarityCCT, PolarCAP, PPNet, RPNet
 
 # Constants
 HF_REPO = "HeXingChen/SeisPolarity-Model"
@@ -464,7 +462,7 @@ class Predictor:
                     if hasattr(self.model, 'output_layer'):
                         # Get output layer shape from checkpoint
                         checkpoint_output_weight = new_state_dict.get('output_layer.weight')
-                        checkpoint_output_bias = new_state_dict.get('output_layer.bias')
+                        new_state_dict.get('output_layer.bias')
                         
                         if checkpoint_output_weight is not None:
                             # Get number of output classes
@@ -506,7 +504,7 @@ class Predictor:
             # Try last resort conversion
             try:
                 waveforms = np.array(waveforms)
-            except:
+            except (ValueError, TypeError):
                 raise TypeError(f"Expected list or numpy array, got {type(waveforms)}")
             
         # Ensure float32

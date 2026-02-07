@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
-import numpy as np
-from .base import BasePolarityModel
+
 from seispolarity.annotations import PickList
+
+from .base import BasePolarityModel
+
 
 class MLP(nn.Module):
     """
@@ -21,6 +23,14 @@ class MLP(nn.Module):
         self.mlp = nn.Sequential(*layers)
 
     def forward(self, x):
+        """Forward pass through MLP block.
+
+        Args:
+            x: Input tensor
+
+        Returns:
+            Output tensor after MLP processing
+        """
         return self.mlp(x)
 
 
@@ -35,13 +45,21 @@ class StochasticDepth(nn.Module):
         self.drop_prob = drop_prob
 
     def forward(self, x):
+        """Forward pass with stochastic depth dropout.
+
+        Args:
+            x: Input tensor
+
+        Returns:
+            Output tensor with stochastic depth applied
+        """
         if not self.training or self.drop_prob == 0.0:
             return x
 
         keep_prob = 1 - self.drop_prob
-        shape = (x.shape[0],) + (1,) * (x.ndim - 1)  # (B, 1, 1, ...)
+        shape = (x.shape[0],) + (1,) * (x.ndim - 1)
         random_tensor = keep_prob + torch.rand(shape, dtype=x.dtype, device=x.device)
-        random_tensor.floor_()  # Binarization
+        random_tensor.floor_()
 
         return x.div(keep_prob) * random_tensor
 
@@ -78,13 +96,15 @@ class CCTTokenizer(nn.Module):
         self.conv_model = nn.Sequential(*layers)
 
     def forward(self, x):
-        # Input x shape: (batch, channels=1, length)
-        # Already in the shape required by PyTorch Conv1d: (batch, channels, length)
-        
-        # Pass through convolutional model
-        x = self.conv_model(x)
+        """Forward pass through convolutional tokenizer.
 
-        # Convert back to shape required by Transformer: (batch, new_length, features)
+        Args:
+            x: Input tensor, shape (batch, 1, length)
+
+        Returns:
+            Tokenized output, shape (batch, new_length, projection_dim)
+        """
+        x = self.conv_model(x)
         x = x.permute(0, 2, 1)
         return x
 
@@ -94,7 +114,14 @@ class TransformerBlock(nn.Module):
     PyTorch version of single Transformer encoder module.
     """
 
-    def __init__(self, projection_dim, num_heads, mlp_hidden_units, dropout_rate, stochastic_depth_rate):
+    def __init__(
+        self,
+        projection_dim,
+        num_heads,
+        mlp_hidden_units,
+        dropout_rate,
+        stochastic_depth_rate,
+    ):
         super().__init__()
 
         self.layer_norm1 = nn.LayerNorm(projection_dim)
@@ -115,15 +142,22 @@ class TransformerBlock(nn.Module):
         self.stochastic_depth2 = StochasticDepth(stochastic_depth_rate)
 
     def forward(self, x):
-        # Attention block
+        """Forward pass through transformer encoder block.
+
+        Args:
+            x: Input tensor, shape (batch, seq_len, projection_dim)
+
+        Returns:
+            Output tensor after attention and MLP blocks with residual
+            connections and stochastic depth
+        """
         x_norm1 = self.layer_norm1(x)
         attn_output, _ = self.attention(x_norm1, x_norm1, x_norm1)
-        x = x + self.stochastic_depth1(attn_output)  # Residual connection
+        x = x + self.stochastic_depth1(attn_output)
 
-        # MLP block
         x_norm2 = self.layer_norm2(x)
         mlp_output = self.mlp(x_norm2)
-        x = x + self.stochastic_depth2(mlp_output)  # Residual connection
+        x = x + self.stochastic_depth2(mlp_output)
 
         return x
 
@@ -131,11 +165,12 @@ class TransformerBlock(nn.Module):
 class EQPolarityCCT(BasePolarityModel, nn.Module):
     """
     Complete PyTorch CCT model corresponding to construct_model.
-    
+
     Reference:
-        Chen, Y. et al. Deep learning for P-wave first-motion polarity determination and its application to focal mechanism inversion.
+        Chen, Y. et al. Deep learning for P-wave first-motion polarity
+        determination and its application to focal mechanism inversion.
         IEEE Transactions on Geoscience and Remote Sensing (2024).
-    
+
     Author:
         Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), https://github.com/Chuan1937
     """
@@ -176,7 +211,14 @@ class EQPolarityCCT(BasePolarityModel, nn.Module):
         self.output_layer = nn.Linear(final_flatten_dim, 1)
 
     def forward(self, x):
-        # Input shape: (batch, 1, length)
+        """Forward pass through EQPolarityCCT model.
+
+        Args:
+            x: Input tensor, shape (batch, 1, length)
+
+        Returns:
+            Output polarity score, shape (batch, 1)
+        """
         x = self.tokenizer(x)
 
         for block in self.transformer_blocks:
@@ -187,8 +229,9 @@ class EQPolarityCCT(BasePolarityModel, nn.Module):
         x = self.dropout(x)
         x = self.output_layer(x)
 
-        # In PyTorch, it is recommended to use nn.BCEWithLogitsLoss, which includes sigmoid and is more stable.
-        # Therefore, the model itself does not include the final sigmoid activation.
+        # In PyTorch, it is recommended to use nn.BCEWithLogitsLoss,
+        # which includes sigmoid and is more stable.
+        # Therefore, the model itself does not include the final sigmoid.
         return x
 
     def forward_tensor(self, tensor: torch.Tensor, **kwargs):

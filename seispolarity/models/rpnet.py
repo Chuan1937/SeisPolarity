@@ -1,8 +1,11 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from torch.nn import functional as F
+
+from seispolarity.annotations import Pick, PickList, PolarityLabel
+
 from .base import BasePolarityModel
-from seispolarity.annotations import PickList, PolarityLabel, Pick
+
 
 class InceptionModule(nn.Module):
     """
@@ -33,11 +36,19 @@ class InceptionModule(nn.Module):
         )
 
     def forward(self, x):
+        """Forward pass through Inception module.
+
+        Args:
+            x: Input tensor, shape (batch, in_channels, seq_len)
+
+        Returns:
+            Concatenated output from all branches, shape (batch, total_channels,
+            seq_len)
+        """
         f1 = self.branch1(x)
         f2 = self.branch2(x)
         f3 = self.branch3(x)
         f4 = self.branch4(x)
-        # Concatenate along channel dimension [cite: 103]
         return torch.cat([f1, f2, f3, f4], dim=1)
 
 class RPNet(BasePolarityModel, nn.Module):
@@ -46,14 +57,19 @@ class RPNet(BasePolarityModel, nn.Module):
     Input shape: (batch_size, 1, 400) [cite: 78].
     
     Reference:
-        Han, J., Kim, S. & Sheen, D.-H. RPNet: Robust P-Wave First-motion polarity determination using deep learning.
+        Han, J., Kim, S. & Sheen, D.-H. RPNet: Robust P-Wave First-motion
+        polarity determination using deep learning.
         Seismological Research Letters (2025).
-    
+
     Author:
-        Model weights converted and maintained by He XingChen (Chinese, Han ethnicity), https://github.com/Chuan1937
+        Model weights converted and maintained by He XingChen
+        (Chinese, Han ethnicity), https://github.com/Chuan1937
     """
+
     def __init__(self, sample_rate=100.0, **kwargs):
-        BasePolarityModel.__init__(self, name="RPNet", sample_rate=sample_rate, n_components=1, **kwargs)
+        BasePolarityModel.__init__(
+            self, name="RPNet", sample_rate=sample_rate, n_components=1, **kwargs
+        )
         nn.Module.__init__(self)
         
         # 1. Feature extraction stage [cite: 98, 455]
@@ -64,8 +80,12 @@ class RPNet(BasePolarityModel, nn.Module):
         )
         
         # Two Inception modules [cite: 82, 83]
-        self.inception1 = InceptionModule(64, 64, 64, 96, 16, 32, 32) # Output channels: 64+96+32+32=224
-        self.inception2 = InceptionModule(224, 128, 128, 192, 32, 96, 64) # Output channels: 480
+        self.inception1 = InceptionModule(
+            64, 64, 64, 96, 16, 32, 32
+        )  # Output channels: 64+96+32+32=224
+        self.inception2 = InceptionModule(
+            224, 128, 128, 192, 32, 96, 64
+        )  # Output channels: 480
         
         # 2. P-wave focusing stage [cite: 99, 457]
         self.maxpool = nn.MaxPool1d(kernel_size=2)
@@ -80,7 +100,14 @@ class RPNet(BasePolarityModel, nn.Module):
         self.fc2 = nn.Linear(128, 2) # Output UP and DOWN classes [cite: 119, 503]
 
     def forward(self, x):
-        # x shape: (batch, 1, 400)
+        """Forward pass through RPNet.
+
+        Args:
+            x: Input tensor, shape (batch, 1, 400)
+
+        Returns:
+            Output logits for UP/DOWN classification, shape (batch, 2)
+        """
         x = self.initial_conv(x)
         
         x = self.inception1(x)

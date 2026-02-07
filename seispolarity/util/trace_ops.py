@@ -1,5 +1,6 @@
-import numpy as np
 import logging
+
+import numpy as np
 
 logger = logging.getLogger("seispolarity")
 
@@ -14,8 +15,8 @@ def trace_has_spikes(data, factor=25, quantile=0.975):
 
 def stream_to_array(stream, component_order):
     """
-    Converts stream of single station waveforms into a numpy array according to a given component order.
-    Convert single-station waveform stream to numpy array according to given component order.
+    Convert single-station waveform stream to numpy array according to
+    given component order.
     """
     starttime = min(trace.stats.starttime for trace in stream)
     endtime = max(trace.stats.endtime for trace in stream)
@@ -29,8 +30,9 @@ def stream_to_array(stream, component_order):
         c_stream = stream.select(channel=f"??{c}")
         if len(c_stream) > 1:
             logger.warning(
-                f"Found multiple traces for {c_stream[0].id} starting at {stream[0].stats.starttime}. "
-                f"Completeness will be wrong in case of overlapping traces."
+                f"Found multiple traces for {c_stream[0].id} starting at "
+                f"{stream[0].stats.starttime}. Completeness will be wrong in case "
+                f"of overlapping traces."
             )
             c_stream = sorted(c_stream, key=lambda x: x.stats.npts)
 

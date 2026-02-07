@@ -1,8 +1,9 @@
 import ftplib
-import requests
-from pathlib import Path
-from tqdm import tqdm
 import logging
+from pathlib import Path
+
+import requests
+from tqdm import tqdm
 
 logger = logging.getLogger("seispolarity")
 

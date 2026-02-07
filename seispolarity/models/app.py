@@ -1,7 +1,10 @@
 import torch
 import torch.nn as nn
-from .base import BasePolarityModel
+
 from seispolarity.annotations import PickList
+
+from .base import BasePolarityModel
+
 
 class PPNet(BasePolarityModel, nn.Module):
     """

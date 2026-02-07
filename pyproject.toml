@@ -63,6 +63,6 @@ include = ["seispolarity*"]
 exclude = ["datasets*", "seisbench-main*", "pretrained_model*", "checkpoints_download*", "Model_Tensorflow_Hdf5*", "Polarity-model*", "Pre-model*", "docs*", "examples*"]
 
 [tool.ruff]
-target-version = ["py310"]
+target-version = "py310"
 line-length = 100
 select = ["E", "F", "I"]

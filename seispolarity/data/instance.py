@@ -25,11 +25,12 @@ Author: SeisPolarity
 """
 
 import logging
+from pathlib import Path
+from typing import Optional, Tuple
+
 import h5py
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from typing import Optional, Tuple, Literal
 from tqdm import tqdm
 
 from .download import fetch_dataset_folder
@@ -122,7 +123,7 @@ class Instance:
             'undecidable': 2  # Keep as 2
         }
         
-        logger.info(f"Instance Processor initialized:")
+        logger.info("Instance Processor initialized:")
         logger.info(f"  CSV: {self.csv_path}")
         logger.info(f"  HDF5: {self.hdf5_path}")
         logger.info(f"  Output CSV: {self.output_csv}")
@@ -144,17 +145,17 @@ class Instance:
         hdf5_exists = self.hdf5_path.exists()
         
         if not self.force_download and csv_exists and hdf5_exists:
-            logger.info(f"Both CSV and HDF5 files exist, skipping download")
+            logger.info("Both CSV and HDF5 files exist, skipping download")
             return
         
         if self.force_download:
-            logger.info(f"Force download enabled, proceeding with download")
+            logger.info("Force download enabled, proceeding with download")
         elif not csv_exists:
             logger.warning(f"CSV file not found: {self.csv_path}")
         elif not hdf5_exists:
             logger.warning(f"HDF5 file not found: {self.hdf5_path}")
         else:
-            logger.warning(f"Files missing from data directory")
+            logger.warning("Files missing from data directory")
         
         try:
             logger.info(f"Downloading Instance dataset to: {self.output_dir}")
@@ -295,7 +296,7 @@ class Instance:
         # After polarity inversion, each of positive and negative will have this count
         total_polarized = pos_count + neg_count
         
-        logger.info(f"Balance strategy (with polarity inversion):")
+        logger.info("Balance strategy (with polarity inversion):")
         logger.info(f"  Positive: {pos_count}")
         logger.info(f"  Negative: {neg_count}")
         logger.info(f"  After inversion - positive: {total_polarized}, negative: {total_polarized}")
@@ -350,7 +351,7 @@ class Instance:
                     logger.warning(f"Group {group_name} not found in HDF5 data group")
                     return None
             else:
-                logger.warning(f"'data' group not found in HDF5 file")
+                logger.warning("'data' group not found in HDF5 file")
                 return None
         except Exception as e:
             logger.warning(f"Failed to extract waveform for {trace_name}: {e}")
@@ -472,7 +473,7 @@ class Instance:
             f.attrs['sampling_strategy'] = 'polarity_inversion_1to1to1'
             f.attrs['label_map'] = str(self._label_map)
         
-        logger.info(f"Processed data saved successfully!")
+        logger.info("Processed data saved successfully!")
         logger.info(f"  CSV: {self.output_csv}")
         logger.info(f"  HDF5: {self.output_hdf5}")
         logger.info("You can now use this file with WaveformDataset:")

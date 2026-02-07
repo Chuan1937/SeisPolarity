@@ -14,8 +14,7 @@ from .augmentation import (
     PolarityInversion,
     RandomTimeShift,
 )
-from .generator import GenericGenerator, GroupGenerator, SteeredGenerator, BalancedPolarityGenerator
-
+from .generator import BalancedPolarityGenerator, GenericGenerator, GroupGenerator, SteeredGenerator
 
 __all__ = [
     "BandpassFilter",

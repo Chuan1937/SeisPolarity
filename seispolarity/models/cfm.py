@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from torch.nn import functional as F
+
+from seispolarity.annotations import Pick, PickList, PolarityLabel
+
 from .base import BasePolarityModel
-from seispolarity.annotations import PickList, PolarityLabel, Pick
 
 
 class CFM(BasePolarityModel, nn.Module):

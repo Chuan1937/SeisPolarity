@@ -25,11 +25,12 @@ Author: SeisPolarity
 """
 
 import logging
+from pathlib import Path
+from typing import Optional, Tuple
+
 import h5py
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from typing import Optional, Tuple, Literal
 from tqdm import tqdm
 
 from .download import fetch_dataset_folder
@@ -113,7 +114,7 @@ class TXED:
             'unknown': 2  # Unknown
         }
         
-        logger.info(f"TXED Processor initialized:")
+        logger.info("TXED Processor initialized:")
         logger.info(f"  CSV: {self.csv_path}")
         logger.info(f"  HDF5: {self.hdf5_path}")
         logger.info(f"  Output dir: {self.output_dir}")
@@ -136,11 +137,11 @@ class TXED:
         hdf5_exists = self.hdf5_path.exists()
         
         if not self.force_download and csv_exists and hdf5_exists:
-            logger.info(f"Both CSV and HDF5 files exist, skipping download")
+            logger.info("Both CSV and HDF5 files exist, skipping download")
             return
         
         if self.force_download:
-            logger.info(f"Force download enabled, proceeding with download")
+            logger.info("Force download enabled, proceeding with download")
         elif not csv_exists:
             logger.warning(f"CSV file not found: {self.csv_path}")
         elif not hdf5_exists:
@@ -165,11 +166,11 @@ class TXED:
             if expected_csv.exists() and expected_hdf5.exists():
                 self.csv_path = expected_csv
                 self.hdf5_path = expected_hdf5
-                logger.info(f"Updated paths:")
+                logger.info("Updated paths:")
                 logger.info(f"  CSV: {self.csv_path}")
                 logger.info(f"  HDF5: {self.hdf5_path}")
             else:
-                logger.warning(f"Expected files not found in downloaded directory")
+                logger.warning("Expected files not found in downloaded directory")
                 logger.warning(f"Expected CSV: {expected_csv}")
                 logger.warning(f"Expected HDF5: {expected_hdf5}")
                 
@@ -291,7 +292,7 @@ class TXED:
         total_ud = u_count + d_count
         target_unknown = 2 * total_ud
         
-        logger.info(f"Notebook strategy: select all U and D, unknown = 2 * (U + D)")
+        logger.info("Notebook strategy: select all U and D, unknown = 2 * (U + D)")
         logger.info(f"  Target unknown count: {target_unknown}")
         
         # Select all U and D samples
@@ -449,7 +450,7 @@ class TXED:
             f.attrs['sampling_strategy'] = 'notebook_unknown_2x_UD'
             f.attrs['label_map'] = str(self._label_map)
         
-        logger.info(f"Processed data saved successfully!")
+        logger.info("Processed data saved successfully!")
         logger.info(f"  CSV: {self.output_csv}")
         logger.info(f"  HDF5: {self.output_hdf5}")
         logger.info("You can now use this file with WaveformDataset:")

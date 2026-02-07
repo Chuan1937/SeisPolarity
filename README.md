@@ -136,7 +136,7 @@ loader = generator.get_dataloader(batch_size=256)
 | SCSN | Southern California Seismic Network | 100k+ | Yes |
 | Txed | Texas Earthquake Data | 50k+ | Yes |
 | DiTing | Chinese seismic network | 80k+ | Yes |
-| Instance | Instance-based dataset | 30k+ | Yes |
+| Instance | Instance-based dataset | 30k+ | No(must apply) |
 | PNW | Pacific Northwest | 20k+ | Yes |
 
 ## Supported Models
@@ -220,8 +220,10 @@ Pre-trained models are automatically downloaded from:
 ## Examples
 
 See the `examples/` directory for complete notebooks:
-- [Dataset API Usage](examples/datasets_api.ipynb) - PNW dataset example
-- More examples coming soon...
+- [Dataset API Usage](examples/datasets_api.ipynb) - Dataset loading and usage examples
+- [Predict API Usage](examples/predict_api.ipynb) - Model inference examples
+- [Model API Usage](examples/model_api.ipynb) - Model architecture and initialization
+- [Train API Usage](examples/train_api.ipynb) - Training pipeline examples
 
 ## Contributing
 

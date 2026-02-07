@@ -1,7 +1,9 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from torch.nn import functional as F
+
 from .base import BasePolarityModel
+
 
 class CombConvLayer(nn.Module):
     """
@@ -18,13 +20,20 @@ class CombConvLayer(nn.Module):
         self.branch4 = nn.Conv1d(in_channels, out_filters, kernel_size=5, padding=2)
         
     def forward(self, x):
+        """Forward pass through combined convolutional layer.
+
+        Args:
+            x: Input tensor, shape (batch, in_channels, seq_len)
+
+        Returns:
+            Concatenated output from all branches plus input, shape (batch,
+            in_channels + 4*out_filters, seq_len)
+        """
         b1 = F.relu(self.branch1(x))
         b2 = F.relu(self.branch2(x))
         b3 = F.relu(self.branch3(x))
         b4 = F.relu(self.branch4(x))
-        # Concatenate all branches + original input (ResNet style sort of, but strict concat)
-        # Keras summary shows concatenate layer connects input and 4 branches
-        out = torch.cat([b1, b2, b3, b4, x], dim=1) 
+        out = torch.cat([b1, b2, b3, b4, x], dim=1)
         return out
 
 class DiTingBlock(nn.Module):
@@ -66,23 +75,29 @@ class DiTingBlock(nn.Module):
             self.pool = nn.MaxPool1d(kernel_size=2)
             
     def forward(self, x):
-        # Stage 1
+        """Forward pass through DiTing block.
+
+        Args:
+            x: Input tensor, shape (batch, in_channels, seq_len)
+
+        Returns:
+            Output tensor with residual connection and optional pooling,
+            shape (batch, in_channels + filters, seq_len / 2) if pooling else
+            (batch, in_channels + filters, seq_len)
+        """
         out = self.comb1(x)
         out = self.drop1(out)
         out = F.relu(self.fusion1(out))
-        
-        # Stage 2
+
         out = self.comb2(out)
         out = self.drop2(out)
         out = F.relu(self.fusion2(out))
-        
-        # Final Block Residual Connection: Concat [Input, Fusion2_Output]
-        # e.g., Block 2: Input(10) + Fusion2(8) = 18 channels output
+
         final = torch.cat([x, out], dim=1)
-        
+
         if self.pooling:
             final = self.pool(final)
-            
+
         return final
 
 class DitingMotion(BasePolarityModel, nn.Module):
@@ -151,9 +166,15 @@ class DitingMotion(BasePolarityModel, nn.Module):
         
         # Implementation of Side Heads based on Keras "conv1d_69" (Block3), "conv1d_74" (Block4), "conv1d_79" (Block5)
         # These reduce channels to 2.
-        self.side3_conv = nn.Conv1d(26, 2, kernel_size=3, padding=1) # Block 3 out channels 26
-        self.side4_conv = nn.Conv1d(34, 2, kernel_size=3, padding=1) # Block 4 out channels 34
-        self.side5_conv = nn.Conv1d(42, 2, kernel_size=3, padding=1) # Block 5 out channels 42 (No pool)
+        self.side3_conv = nn.Conv1d(
+            26, 2, kernel_size=3, padding=1
+        )  # Block 3 out channels 26
+        self.side4_conv = nn.Conv1d(
+            34, 2, kernel_size=3, padding=1
+        )  # Block 4 out channels 34
+        self.side5_conv = nn.Conv1d(
+            42, 2, kernel_size=3, padding=1
+        )  # Block 5 out channels 42 (No pool)
         
         # Dense Layers for Polarity (Output 3 classes: U, D, X)
         # Block 3: Length 16. 2 channels * 16 = 32 features.
@@ -261,8 +282,9 @@ class DitingMotion(BasePolarityModel, nn.Module):
     
     def build_picks(self, raw_output, **kwargs):
         """Convert raw model output to picks with polarity labels.
-        
-        DitingMotion model has 8 outputs, we need to use the fused output (index 3) as the main prediction.
+
+        DitingMotion model has 8 outputs, we need to use the fused
+        output (index 3) as the main prediction.
         """
         from seispolarity.annotations import Pick, PickList, PolarityLabel
         

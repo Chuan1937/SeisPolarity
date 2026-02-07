@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import Callable, List, Optional
 import time
-import json
+from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Callable, List, Optional
 
 import numpy as np
 import torch
@@ -32,10 +31,12 @@ class TrainingConfig:
     save_best_only: bool = True
     patience: int = -1 # Early stopping patience. -1 means disabled.
     resume_checkpoint: Optional[str] = None
-    loss_fn: Optional[Callable] = None # Custom loss function, defaults to nn.CrossEntropyLoss()
-    output_index: Optional[int] = 0 # Index of output to use for loss if model returns tuple. Set to None to pass all outputs.
+    loss_fn: Optional[Callable] = None  # Custom loss, defaults to nn.CrossEntropyLoss
+    output_index: Optional[int] = (
+        0  # Index of output for loss if model returns tuple. None for all.
+    )
     metric_index: int = 0 # Index of output to use for metrics if model returns tuple.
-    random_seed: Optional[int] = 42 # Random seed for dataset splitting and reproducibility
+    random_seed: Optional[int] = 36 # Random seed for dataset splitting and reproducibility
 
 
 def default_device(config: TrainingConfig) -> torch.device:
@@ -97,15 +98,20 @@ class MetadataToLabel:
             metadata = state_dict.get("metadata", {})
         
         raw_label = metadata.get(self.metadata_key, None)
-        numeric_label = self._to_numeric_label(raw_label) if raw_label is not None else np.array([-1], dtype=np.int64)
+        numeric_label = (
+            self._to_numeric_label(raw_label)
+            if raw_label is not None
+            else np.array([-1], dtype=np.int64)
+        )
         # Only return label data, not tuple, to avoid DataLoader collate issues
         state_dict[self.key] = numeric_label
 
 
 class MultiLabelExtractor:
     """
-    Augmentation class for extracting multiple labels, suitable for multi-task models like DitingMotion.
-    
+    Augmentation class for extracting multiple labels, suitable for multi-task
+    models like DitingMotion.
+
     Can extract polarity labels and clarity labels simultaneously.
     """
     def __init__(self, polarity_key="label", clarity_key="clarity", 
@@ -195,9 +201,13 @@ class Trainer:
         self._loss_takes_inputs = False
         if self.config.loss_fn is not None:
             import inspect
+
             try:
-                # Use forward method signature if it's an nn.Module, else the callable itself
-                fn = self.config.loss_fn.forward if hasattr(self.config.loss_fn, 'forward') else self.config.loss_fn
+                fn = (
+                    self.config.loss_fn.forward
+                    if hasattr(self.config.loss_fn, "forward")
+                    else self.config.loss_fn
+                )
                 sig = inspect.signature(fn)
                 if 'inputs' in sig.parameters:
                     self._loss_takes_inputs = True
@@ -220,17 +230,29 @@ class Trainer:
             cfg_dict = asdict(self.config)
             for k, v in cfg_dict.items():
                 f.write(f"{k}: {v}\n")
-            f.write("\n" + "="*50 + "\n")
-            f.write(f"{'Epoch':<6} | {'Train Loss':<12} | {'Train Acc':<10} | {'Val Loss':<12} | {'Val Acc':<10} | {'Time':<20}\n")
+            f.write("\n" + "=" * 50 + "\n")
+            f.write(
+                f"{'Epoch':<6} | {'Train Loss':<12} | {'Train Acc':<10} | "
+                f"{'Val Loss':<12} | {'Val Acc':<10} | {'Time':<20}\n"
+            )
             f.write("-" * 80 + "\n")
 
-    def _log_epoch(self, epoch, train_loss, train_acc, val_loss, val_acc, test_loss=None, test_acc=None):
+    def _log_epoch(
+        self, epoch, train_loss, train_acc, val_loss, val_acc, test_loss=None, test_acc=None
+    ):
         """Log epoch stats to file."""
-        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
         if test_loss is not None and test_acc is not None:
-            log_str = f"{epoch:<6} | {train_loss:<12.4f} | {train_acc:<10.2f} | {val_loss:<12.4f} | {val_acc:<10.2f} | {test_loss:<12.4f} | {test_acc:<10.2f} | {timestamp:<20}\n"
+            log_str = (
+                f"{epoch:<6} | {train_loss:<12.4f} | {train_acc:<10.2f} | "
+                f"{val_loss:<12.4f} | {val_acc:<10.2f} | {test_loss:<12.4f} | "
+                f"{test_acc:<10.2f} | {timestamp:<20}\n"
+            )
         else:
-            log_str = f"{epoch:<6} | {train_loss:<12.4f} | {train_acc:<10.2f} | {val_loss:<12.4f} | {val_acc:<10.2f} | {timestamp:<20}\n"
+            log_str = (
+                f"{epoch:<6} | {train_loss:<12.4f} | {train_acc:<10.2f} | "
+                f"{val_loss:<12.4f} | {val_acc:<10.2f} | {timestamp:<20}\n"
+            )
         with open(self.log_path, "a") as f:
             f.write(log_str)
 
@@ -394,7 +416,11 @@ class Trainer:
                 X_batch = torch.tensor(np.stack(X_list))
             else:
                 # If already tensors, directly stack
-                X_batch = torch.stack(X_list) if isinstance(X_list[0], torch.Tensor) else torch.tensor(X_list)
+                X_batch = (
+                    torch.stack(X_list)
+                    if isinstance(X_list[0], torch.Tensor)
+                    else torch.tensor(X_list)
+                )
         else:
             X_batch = torch.tensor([])
         
@@ -406,13 +432,24 @@ class Trainer:
                 clarity_labels = [y[1] for y in y_list]
                 
                 # Convert to tensors
-                polarity_batch = torch.tensor(np.stack(polarity_labels)) if isinstance(polarity_labels[0], np.ndarray) else torch.stack(polarity_labels)
-                clarity_batch = torch.tensor(np.stack(clarity_labels)) if isinstance(clarity_labels[0], np.ndarray) else torch.stack(clarity_labels)
+                polarity_batch = (
+                    torch.tensor(np.stack(polarity_labels))
+                    if isinstance(polarity_labels[0], np.ndarray)
+                    else torch.stack(polarity_labels)
+                )
+                clarity_batch = (
+                    torch.tensor(np.stack(clarity_labels))
+                    if isinstance(clarity_labels[0], np.ndarray)
+                    else torch.stack(clarity_labels)
+                )
                 
                 y_batch = (polarity_batch, clarity_batch)
             else:
-                # Single label case
-                y_batch = torch.tensor(np.stack(y_list)) if isinstance(y_list[0], np.ndarray) else torch.stack(y_list)
+                y_batch = (
+                    torch.tensor(np.stack(y_list))
+                    if isinstance(y_list[0], np.ndarray)
+                    else torch.stack(y_list)
+                )
         else:
             y_batch = torch.tensor([])
         
@@ -424,7 +461,10 @@ class Trainer:
         print(f"Using device: {device}")
 
         train_loader, val_loader, test_loader = self._build_loaders()
-        print(f"Dataset sizes - Train: {len(train_loader.dataset)}, Val: {len(val_loader.dataset)}, Test: {len(test_loader.dataset)}")
+        print(
+            f"Dataset sizes - Train: {len(train_loader.dataset)}, "
+            f"Val: {len(val_loader.dataset)}, Test: {len(test_loader.dataset)}"
+        )
 
         self.model.to(device)
 
@@ -458,9 +498,10 @@ class Trainer:
             for batch in pbar:
                 inputs = batch["X"].to(device)
                 batch_labels = batch["y"]
-                
-                # Handle multi-label case: batch["y"] might be tuple (polarity_labels, clarity_labels)
+
                 if isinstance(batch_labels, (tuple, list)) and len(batch_labels) == 2:
+                    # Handle multi-label case: batch["y"] is tuple
+                    # (polarity_labels, clarity_labels)
                     # Move both labels to device separately
                     polarity_labels = batch_labels[0].to(device)
                     clarity_labels = batch_labels[1].to(device)
@@ -471,24 +512,29 @@ class Trainer:
 
                 optimizer.zero_grad()
                 outputs = self.model(inputs)
-                
-                # Extract correct output for loss calculation
+
                 if isinstance(outputs, (tuple, list)):
-                    loss_output = outputs[cfg.output_index] if cfg.output_index is not None else outputs
+                    loss_output = (
+                        outputs[cfg.output_index]
+                        if cfg.output_index is not None
+                        else outputs
+                    )
                 else:
                     loss_output = outputs
-                
-                # Robust handling: if output is (batch, 1) and label is (batch,), handle automatically
+
                 curr_labels = labels
                 if not isinstance(loss_output, (tuple, list)):
-                    if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
+                    if (
+                        loss_output.ndim == 2
+                        and loss_output.shape[1] == 1
+                        and curr_labels.ndim == 1
+                    ):
                         curr_labels = curr_labels.unsqueeze(1).float()
                     elif isinstance(criterion, (nn.BCEWithLogitsLoss, nn.BCELoss)):
                         curr_labels = curr_labels.float()
                         if curr_labels.ndim == 1:
                             curr_labels = curr_labels.unsqueeze(1)
                     elif isinstance(criterion, nn.CrossEntropyLoss):
-                        # CrossEntropyLoss expects labels to be (batch,), if (batch, 1) need to squeeze
                         if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
                             curr_labels = curr_labels.squeeze(1).long()
                 
@@ -523,8 +569,13 @@ class Trainer:
                 
                 total += current_labels.size(0)
                 correct += (predicted == current_labels.view(-1)).sum().item()
-                
-                pbar.set_postfix({"loss": running_loss / (pbar.n + 1), "acc": 100 * correct / total})
+
+                pbar.set_postfix(
+                    {
+                        "loss": running_loss / (pbar.n + 1),
+                        "acc": 100 * correct / total,
+                    }
+                )
 
             train_loss = running_loss / len(train_loader)
             train_acc = 100 * correct / total if total else 0.0
@@ -550,28 +601,33 @@ class Trainer:
                         labels = batch_labels.to(device)
                     
                     outputs = self.model(inputs)
-                    
-                    # Extract correct output for loss calculation
+
                     if isinstance(outputs, (tuple, list)):
-                        loss_output = outputs[cfg.output_index] if cfg.output_index is not None else outputs
+                        loss_output = (
+                            outputs[cfg.output_index]
+                            if cfg.output_index is not None
+                            else outputs
+                        )
                     else:
                         loss_output = outputs
                     
                     # Robust handling
                     curr_labels = labels
                     if not isinstance(loss_output, (tuple, list)):
-                        if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
+                        if (
+                            loss_output.ndim == 2
+                            and loss_output.shape[1] == 1
+                            and curr_labels.ndim == 1
+                        ):
                             curr_labels = curr_labels.unsqueeze(1).float()
                         elif isinstance(criterion, (nn.BCEWithLogitsLoss, nn.BCELoss)):
                             curr_labels = curr_labels.float()
                             if curr_labels.ndim == 1:
                                 curr_labels = curr_labels.unsqueeze(1)
                         elif isinstance(criterion, nn.CrossEntropyLoss):
-                            # CrossEntropyLoss expects labels to be (batch,), if (batch, 1) need to squeeze
                             if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
                                 curr_labels = curr_labels.squeeze(1).long()
-                    
-                    # 
+
                     if self._loss_takes_inputs:
                         loss = criterion(loss_output, curr_labels, inputs=inputs)
                     else:
@@ -603,8 +659,7 @@ class Trainer:
             test_correct = 0
             test_total = 0
             test_acc = 0.0
-            
-            # 
+
             if len(test_loader.dataset) > 0:
                 self.model.eval()
                 with torch.no_grad():
@@ -623,28 +678,32 @@ class Trainer:
                             labels = batch_labels.to(device)
                         
                         outputs = self.model(inputs)
-                        
-                        # Extract correct output for loss calculation
+
                         if isinstance(outputs, (tuple, list)):
-                            loss_output = outputs[cfg.output_index] if cfg.output_index is not None else outputs
+                            loss_output = (
+                                outputs[cfg.output_index]
+                                if cfg.output_index is not None
+                                else outputs
+                            )
                         else:
                             loss_output = outputs
-                        
-                        # Robust handling
+
                         curr_labels = labels
                         if not isinstance(loss_output, (tuple, list)):
-                            if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
+                            if (
+                                loss_output.ndim == 2
+                                and loss_output.shape[1] == 1
+                                and curr_labels.ndim == 1
+                            ):
                                 curr_labels = curr_labels.unsqueeze(1).float()
                             elif isinstance(criterion, (nn.BCEWithLogitsLoss, nn.BCELoss)):
                                 curr_labels = curr_labels.float()
                                 if curr_labels.ndim == 1:
                                     curr_labels = curr_labels.unsqueeze(1)
                             elif isinstance(criterion, nn.CrossEntropyLoss):
-                                # CrossEntropyLoss expects labels to be (batch,), if (batch, 1) need to squeeze
                                 if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
                                     curr_labels = curr_labels.squeeze(1).long()
-                        
-                        # 
+
                         if self._loss_takes_inputs:
                             loss = criterion(loss_output, curr_labels, inputs=inputs)
                         else:
@@ -670,8 +729,7 @@ class Trainer:
                         test_correct += (predicted == current_labels.view(-1)).sum().item()
                 test_loss /= len(test_loader)
                 test_acc = 100 * test_correct / test_total if test_total else 0.0
-            
-            # 
+
             if len(test_loader.dataset) > 0:
                 print(
                     f"Epoch {epoch+1}: Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.2f}%, "
@@ -698,7 +756,8 @@ class Trainer:
             else:
                 self._save_checkpoint(epoch + 1, best=False)
                 # Note: if not save_best_only, logic for "patience" is ambiguous.
-                # Assuming patience is based on valid accuracy improvement regardless of saving strategy.
+                # Assuming patience is based on valid accuracy improvement regardless of
+                # saving strategy.
                 if val_acc > best_val_acc:
                     best_val_acc = val_acc
                     patience_counter = 0
@@ -716,7 +775,10 @@ class Trainer:
         
         if len(test_loader.dataset) > 0:
             final_test_loss, final_test_acc = self.evaluate(test_loader, criterion, device)
-            print(f"Final Test Performance - Loss: {final_test_loss:.4f}, Acc: {final_test_acc:.2f}%")
+            print(
+                f"Final Test Performance - Loss: {final_test_loss:.4f}, "
+                f"Acc: {final_test_acc:.2f}%"
+            )
         else:
             print("No test data available for final evaluation.")
         
@@ -741,7 +803,6 @@ class Trainer:
                 inputs = batch["X"].to(device)
                 batch_labels = batch["y"]
                 
-                # 
                 if isinstance(batch_labels, (tuple, list)) and len(batch_labels) == 2:
                     # Move both labels to device separately
                     polarity_labels = batch_labels[0].to(device)
@@ -752,28 +813,32 @@ class Trainer:
                     labels = batch_labels.to(device)
                 
                 outputs = self.model(inputs)
-                
-                # Extract correct output for loss calculation
+
                 if isinstance(outputs, (tuple, list)):
-                    loss_output = outputs[self.config.output_index] if self.config.output_index is not None else outputs
+                    loss_output = (
+                        outputs[self.config.output_index]
+                        if self.config.output_index is not None
+                        else outputs
+                    )
                 else:
                     loss_output = outputs
-                
-                # 
+
                 curr_labels = labels
                 if not isinstance(loss_output, (tuple, list)):
-                    if loss_output.ndim == 2 and loss_output.shape[1] == 1 and curr_labels.ndim == 1:
+                    if (
+                        loss_output.ndim == 2
+                        and loss_output.shape[1] == 1
+                        and curr_labels.ndim == 1
+                    ):
                         curr_labels = curr_labels.unsqueeze(1).float()
                     elif isinstance(criterion, (nn.BCEWithLogitsLoss, nn.BCELoss)):
                         curr_labels = curr_labels.float()
                         if curr_labels.ndim == 1:
                             curr_labels = curr_labels.unsqueeze(1)
                     elif isinstance(criterion, nn.CrossEntropyLoss):
-                        # CrossEntropyLoss expects labels to be (batch,), if (batch, 1) need to squeeze
                         if curr_labels.ndim == 2 and curr_labels.shape[1] == 1:
                             curr_labels = curr_labels.squeeze(1).long()
-                
-                # 
+
                 if self._loss_takes_inputs:
                     loss = criterion(loss_output, curr_labels, inputs=inputs)
                 else:

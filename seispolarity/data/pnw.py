@@ -28,11 +28,12 @@ Author: SeisPolarity
 """
 
 import logging
+from pathlib import Path
+from typing import Optional, Tuple
+
 import h5py
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from typing import Optional, Tuple, Literal
 from tqdm import tqdm
 
 from .download import fetch_dataset_folder
@@ -125,7 +126,7 @@ class PNW:
             'X': 2  # Legacy support
         }
         
-        logger.info(f"PNW Processor initialized:")
+        logger.info("PNW Processor initialized:")
         logger.info(f"  CSV: {self.csv_path}")
         logger.info(f"  HDF5: {self.hdf5_path}")
         logger.info(f"  Output dir: {self.output_dir}")
@@ -148,11 +149,11 @@ class PNW:
         hdf5_exists = self.hdf5_path.exists()
         
         if not self.force_download and csv_exists and hdf5_exists:
-            logger.info(f"Both CSV and HDF5 files exist, skipping download")
+            logger.info("Both CSV and HDF5 files exist, skipping download")
             return
         
         if self.force_download:
-            logger.info(f"Force download enabled, proceeding with download")
+            logger.info("Force download enabled, proceeding with download")
         elif not csv_exists:
             logger.warning(f"CSV file not found: {self.csv_path}")
         elif not hdf5_exists:
@@ -177,11 +178,11 @@ class PNW:
             if expected_csv.exists() and expected_hdf5.exists():
                 self.csv_path = expected_csv
                 self.hdf5_path = expected_hdf5
-                logger.info(f"Updated paths (raw data):")
+                logger.info("Updated paths (raw data):")
                 logger.info(f"  CSV: {self.csv_path}")
                 logger.info(f"  HDF5: {self.hdf5_path}")
             else:
-                logger.warning(f"Expected raw files not found in downloaded directory")
+                logger.warning("Expected raw files not found in downloaded directory")
                 logger.warning(f"Expected CSV: {expected_csv}")
                 logger.warning(f"Expected HDF5: {expected_hdf5}")
                 
@@ -388,7 +389,7 @@ class PNW:
                         logger.warning(f"Group {group_name} not found in HDF5 data group")
                         return None
                 else:
-                    logger.warning(f"Invalid trace_name or 'data' group not found")
+                    logger.warning("Invalid trace_name or 'data' group not found")
                     return None
             else:
                 logger.warning(f"Invalid trace_name format: {trace_name}")
@@ -500,7 +501,7 @@ class PNW:
             f.attrs['sampling_strategy'] = 'smart'
             f.attrs['label_map'] = str(self._label_map)
         
-        logger.info(f"Processed data saved successfully!")
+        logger.info("Processed data saved successfully!")
         logger.info(f"  CSV: {self.output_csv}")
         logger.info(f"  HDF5: {self.output_hdf5}")
         logger.info("You can now use this file with WaveformDataset:")

@@ -6,10 +6,10 @@ try:  # Best effort; falls back during editable development
 except PackageNotFoundError:  # pragma: no cover - during local dev without install
     __version__ = "0.0.0"
 
-from .config import configure_cache, settings, config  # noqa: E402,F401
-from .annotations import Pick, PickList, PolarityLabel, PolarityOutput  # noqa: E402,F401
-from urllib.parse import urljoin as _urljoin
 import logging as _logging
+
+from .annotations import Pick, PickList, PolarityLabel, PolarityOutput  # noqa: E402,F401
+from .config import config, configure_cache, settings  # noqa: E402,F401
 
 remote_root = "https://huggingface.co/datasets/chuanjun1978/Seismic-AI-Data/resolve/main/"
 remote_data_root = remote_root

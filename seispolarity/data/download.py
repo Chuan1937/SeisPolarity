@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import os
 import shutil
 import socket
 from pathlib import Path
@@ -9,6 +8,7 @@ from typing import Optional, Sequence
 
 import h5py
 import requests
+
 from seispolarity.config import settings
 
 _CHUNK_SIZE = 1024 * 1024  # 1MB
@@ -282,7 +282,7 @@ def fetch_modelscope_dataset(
     target_dir = cache_dir / f"{repo_id.replace('/', '__')}__{subset_name}__{split}"
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"Downloading dataset from ModelScope using MsDataset.load...")
+    print("Downloading dataset from ModelScope using MsDataset.load...")
     print(f"Repo ID: {repo_id}")
     print(f"Subset: {subset_name}")
     print(f"Split: {split}")
@@ -296,7 +296,7 @@ def fetch_modelscope_dataset(
         cache_dir=str(target_dir),
     )
 
-    print(f"Dataset downloaded successfully!")
+    print("Dataset downloaded successfully!")
     print(f"Dataset info: {ds}")
 
     return target_dir
@@ -353,7 +353,7 @@ def fetch_modelscope_file(
             # For non-HDF5 files, just return if exists
             return target_path
 
-    print(f"Downloading file from ModelScope using model_file_download...")
+    print("Downloading file from ModelScope using model_file_download...")
     print(f"Repo ID: {repo_id}")
     print(f"File path: {repo_path}")
 
@@ -672,7 +672,7 @@ def fetch_dataset_folder(
             from modelscope.hub.file_download import dataset_file_download
 
             print(f"Attempting download from ModelScope: {modelscope_repo_id}...")
-            print(f"Note: Downloading files one by one from the folder...", flush=True)
+            print("Note: Downloading files one by one from the folder...", flush=True)
             
             target_dir.mkdir(parents=True, exist_ok=True)
             
@@ -702,7 +702,7 @@ def fetch_dataset_folder(
             files_to_download = folder_files_map.get(folder_name, [])
             if not files_to_download:
                 print(f"Warning: No known files for folder '{folder_name}'", flush=True)
-                print(f"Trying to discover files in the folder...", flush=True)
+                print("Trying to discover files in the folder...", flush=True)
                 # For unknown folders, we'll need to use a different approach
                 # For now, just return the empty directory
                 return target_dir
@@ -718,7 +718,7 @@ def fetch_dataset_folder(
                     )
                     # ModelScope downloads to ._____temp/{dataset_id}/{file_path}
                     # We need to move the file to the target location
-                    local_path = Path(local_file)
+                    Path(local_file)
                     target_file = target_dir / Path(file_path).name
                     target_file.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy(local_file, target_file)
@@ -733,7 +733,7 @@ def fetch_dataset_folder(
                 print(f"\nDataset folder downloaded from ModelScope: {target_dir}", flush=True)
                 print(f"  Downloaded {len(downloaded_files)} files.", flush=True)
             else:
-                print(f"\nWarning: No files were downloaded!", flush=True)
+                print("\nWarning: No files were downloaded!", flush=True)
             
             return target_dir
         except ImportError as exc:
