@@ -190,7 +190,6 @@ myst_heading_anchors = 3
 myst_fence_as_directive = ["mermaid"]
 myst_enable_checkboxes = True
 myst_url_schemes = ("http", "https", "mailto", "ftp")
-
 myst_number_code_blocks = ["(python)", "python"]
 myst_highlight_language_blocks = ["default", "python", "bash"]
 
