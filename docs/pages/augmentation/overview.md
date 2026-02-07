@@ -1,10 +1,9 @@
-# 数据增强概述
+# Data Augmentation Overview
 
-SeisPolarity 提供了灵活的数据增强系统，包含多种技术以提高模型鲁棒性并处理不平衡数据集。
+SeisPolarity provides a flexible data augmentation system with multiple techniques to improve model robustness and handle imbalanced datasets.
 
-## 基本用法
-
-### 使用 GenericGenerator
+## Basic Usage
+### Using GenericGenerator
 
 ```python
 from seispolarity import WaveformDataset, GenericGenerator
@@ -25,9 +24,9 @@ generator.add_augmentations([
 loader = generator.get_dataloader(batch_size=256, num_workers=4)
 ```
 
-### 使用 BalancedPolarityGenerator
+### Using BalancedPolarityGenerator
 
-对于具有极性标签的不平衡数据集：
+For imbalanced datasets with polarity labels:
 
 ```python
 from seispolarity import BalancedPolarityGenerator
@@ -43,11 +42,11 @@ generator.add_augmentations([
 ])
 ```
 
-## 可用的增强方法
+## Available Augmentation Methods
 
 ### 1. Demean
 
-从波形中移除均值。
+Remove the mean from waveforms.
 
 ```python
 from seispolarity import Demean
@@ -59,27 +58,27 @@ augmentation = Demean()
 
 ### 2. Normalize
 
-按振幅归一化波形。
+Normalize waveforms by amplitude.
 
 ```python
 from seispolarity import Normalize
 
-# 按峰值振幅归一化
+# Normalize by peak amplitude
 augmentation = Normalize(amp_norm_type="peak")
 
-# 按 RMS 归一化
+# Normalize by RMS
 augmentation = Normalize(amp_norm_type="rms")
 
-# 按最大绝对值归一化
+# Normalize by maximum absolute value
 augmentation = Normalize(amp_norm_type="max")
 ```
 
-**参数**:
-- `amp_norm_type`: 归一化类型（"peak"、"rms"、"max"）
+**Parameters**:
+- `amp_norm_type`: Normalization type ("peak", "rms", "max")
 
 ### 3. RandomTimeShift
 
-随机在时间上平移波形。
+Randomly shift waveforms in time.
 
 ```python
 from seispolarity import RandomTimeShift
@@ -88,12 +87,12 @@ from seispolarity import RandomTimeShift
 augmentation = RandomTimeShift(max_shift=10)
 ```
 
-**参数**:
-- `max_shift`: 平移的最大样本数（默认：10）
+**Parameters**:
+- `max_shift`: Maximum number of samples to shift (default: 10)
 
 ### 4. RandomPPickShift
 
-随机平移 P 震相拾取位置。
+Randomly shift the P-phase pick position.
 
 ```python
 from seispolarity import RandomPPickShift
@@ -102,12 +101,12 @@ from seispolarity import RandomPPickShift
 augmentation = RandomPPickShift(max_shift=5)
 ```
 
-**参数**:
-- `max_shift`: 平移的最大样本数（默认：5）
+**Parameters**:
+- `max_shift`: Maximum number of samples to shift (default: 5)
 
 ### 5. BandpassFilter
 
-对波形应用带通滤波器。
+Apply a bandpass filter to waveforms.
 
 ```python
 from seispolarity import BandpassFilter
@@ -116,15 +115,15 @@ from seispolarity import BandpassFilter
 augmentation = BandpassFilter(freqmin=1.0, freqmax=20.0)
 ```
 
-**参数**:
-- `freqmin`: 最小频率（Hz）
-- `freqmax`: 最大频率（Hz）
-- `corners`: 滤波器角点（默认：4）
-- `zerophase`: 是否使用零相位滤波（默认：True）
+**Parameters**:
+- `freqmin`: Minimum frequency (Hz)
+- `freqmax`: Maximum frequency (Hz)
+- `corners`: Filter corners (default: 4)
+- `zerophase`: Whether to use zero-phase filtering (default: True)
 
 ### 6. Detrend
 
-从波形中移除线性趋势。
+Remove linear trend from waveforms.
 
 ```python
 from seispolarity import Detrend
@@ -132,12 +131,12 @@ from seispolarity import Detrend
 augmentation = Detrend()
 ```
 
-**参数**:
-- `type`: 去趋势类型（"linear" 或 "constant"）
+**Parameters**:
+- `type`: Detrend type ("linear" or "constant")
 
 ### 7. PolarityInversion
 
-随机反转波形的极性。
+Randomly invert the polarity of waveforms.
 
 ```python
 from seispolarity import PolarityInversion
@@ -146,12 +145,12 @@ from seispolarity import PolarityInversion
 augmentation = PolarityInversion(p=0.5)
 ```
 
-**参数**:
-- `p`: 反转极性的概率（默认：0.5）
+**Parameters**:
+- `p`: Probability of polarity inversion (default: 0.5)
 
 ### 8. DifferentialFeatures
 
-从波形计算微分特征。
+Compute differential features from waveforms.
 
 ```python
 from seispolarity import DifferentialFeatures

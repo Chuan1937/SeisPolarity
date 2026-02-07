@@ -1,11 +1,11 @@
-# 模型概述
+# Models Overview
 
-SeisPolarity 提供了一系列用于地震极性分类的深度学习模型。所有模型均使用 PyTorch 实现，并支持 GPU 加速。
+SeisPolarity provides a series of deep learning models for seismic polarity classification. All models are implemented using PyTorch and support GPU acceleration.
 
-## 可用模型
+## Available Models
 
-| 模型 | 输入长度 | 类别 |
-|-------|---------|---------|
+| Model | Input Length | Classes |
+|-------|-------------|---------|
 | Ross (SCSN) | 400 | 3 (U/D/N) |
 | Eqpolarity | 600 | 2 (U/D) |
 | DiTingMotion | 128 | 3 (U/D/N) |
@@ -14,26 +14,26 @@ SeisPolarity 提供了一系列用于地震极性分类的深度学习模型。�
 | PolarCAP | 64 | 2 (U/D) |
 | APP | 400 | 3 (U/D/N) |
 
-## 加载模型
+## Loading Models
 
-### 预训练模型
+### Pre-trained Models
 
-从 Hugging Face 加载预训练模型：
+Load pre-trained models from Hugging Face:
 
 ```python
 from seispolarity.models import PPNet, RossNet, EqpolarityNet
 
-# Ross 模型
+# Ross model
 model = RossNet(num_fm_classes=3)
 
-# Eqpolarity 模型
+# Eqpolarity model
 model = EqpolarityNet()
 
-# 通用 PPNet（用于 SCSN）
+# Generic PPNet (for SCSN)
 model = PPNet(num_fm_classes=3)
 ```
 
-### 加载自定义权重
+### Loading Custom Weights
 
 ```python
 import torch
@@ -41,36 +41,36 @@ from seispolarity.models import PPNet
 
 model = PPNet(num_fm_classes=3)
 
-# 从检查点加载
+# Load from checkpoint
 checkpoint = torch.load("checkpoints/model.pth")
 model.load_state_dict(checkpoint["model_state_dict"])
 
-# 或直接加载
+# Or load directly
 model.load_state_dict(torch.load("model_weights.pth"))
 ```
 
-## 模型 API
+## Model API
 
-SeisPolarity 中的所有模型都暴露统一的 PyTorch 接口：
+All models in SeisPolarity expose a unified PyTorch interface:
 
 ```python
 import torch
 from seispolarity.models import PPNet
 
-# 创建模型
+# Create model
 model = PPNet(num_fm_classes=3)
 model.eval()
 
-# 准备输入
-waveforms = torch.randn(10, 1, 400)  # (批量, 通道, 长度)
+# Prepare input
+waveforms = torch.randn(10, 1, 400)  # (batch, channels, length)
 
-# 前向传播
+# Forward pass
 with torch.no_grad():
     logits = model(waveforms)
-    predictions = logits.argmax(dim=1)  # 获取预测类别
+    predictions = logits.argmax(dim=1)  # Get predicted classes
 ```
 
-## 模型架构
+## Model Architectures
 
 ### Ross (SCSN)
 
@@ -79,15 +79,15 @@ with torch.no_grad():
 :width: 80%
 ```
 
-Ross 模型是针对 SCSN 数据优化的基于 CNN 的架构。
+The Ross model is a CNN-based architecture optimized for SCSN data.
 
-**输入**：400 个采样点（100 Hz 采样率下 4 秒）
+**Input**: 400 samples (4 seconds at 100 Hz sampling rate)
 
-**架构**：
-- 带批归一化的卷积层
-- 最大池化
-- 全连接层
-- 用于正则化的 Dropout
+**Architecture**:
+- Convolutional layers with batch normalization
+- Max pooling
+- Fully connected layers
+- Dropout for regularization
 
 ```python
 from seispolarity.models import PPNet
@@ -102,9 +102,9 @@ model = PPNet(num_fm_classes=3)
 :width: 80%
 ```
 
-Eqpolarity 是用于极性分类的深度 CNN 模型。
+Eqpolarity is a deep CNN model for polarity classification.
 
-**输入**：600 个采样点（100 Hz 采样率下 6 秒）
+**Input**: 600 samples (6 seconds at 100 Hz sampling rate)
 
 ```python
 from seispolarity.models import EqpolarityNet
@@ -119,9 +119,9 @@ model = EqpolarityNet()
 :width: 60%
 ```
 
-基于运动的极性分类模型。
+Motion-based polarity classification model.
 
-**输入**：128 个采样点（100 Hz 采样率下 1.28 秒）
+**Input**: 128 samples (1.28 seconds at 100 Hz sampling rate)
 
 ```python
 from seispolarity.models import DiTingMotionNet
@@ -136,9 +136,9 @@ model = DiTingMotionNet()
 :width: 80%
 ```
 
-用于极性检测的自定义架构。
+Custom architecture for polarity detection.
 
-**输入**：160 个采样点
+**Input**: 160 samples
 
 ```python
 from seispolarity.models import CFM
@@ -153,9 +153,9 @@ model = CFM()
 :width: 80%
 ```
 
-残差极性网络。
+Residual Polarity Network.
 
-**输入**：400 个采样点（100 Hz 采样率下 4 秒）
+**Input**: 400 samples (4 seconds at 100 Hz sampling rate)
 
 ```python
 from seispolarity.models import RPNet
@@ -170,9 +170,9 @@ model = RPNet()
 :width: 80%
 ```
 
-用于极性分类的轻量级模型。
+Lightweight model for polarity classification.
 
-**输入**：64 个采样点（100 Hz 采样率下 0.64 秒）
+**Input**: 64 samples (0.64 seconds at 100 Hz sampling rate)
 
 ```python
 from seispolarity.models import PolarCAP, PolarCAPLoss
@@ -188,7 +188,7 @@ loss_fn = PolarCAPLoss()
 :width: 80%
 ```
 
-自适应极性预测器。
+Adaptive Polarity Predictor.
 
 ```python
 from seispolarity.models import APP
@@ -196,25 +196,25 @@ from seispolarity.models import APP
 model = APP()
 ```
 
-## 推理
+## Inference
 
-### 批量推理
+### Batch Inference
 
 ```python
 import torch
 from seispolarity.models import PPNet
 from seispolarity import WaveformDataset
 
-# 加载模型
+# Load model
 model = PPNet(num_fm_classes=3)
 model.eval()
 model.to("cuda")
 
-# 加载数据集
+# Load dataset
 dataset = WaveformDataset(path="data.hdf5", name="SCSN")
 loader = dataset.get_dataloader(batch_size=1024)
 
-# 推理
+# Inference
 all_predictions = []
 with torch.no_grad():
     for waveforms, _ in loader:
@@ -226,69 +226,69 @@ with torch.no_grad():
 predictions = torch.cat(all_predictions)
 ```
 
-### 单样本推理
+### Single Sample Inference
 
 ```python
 import numpy as np
 from seispolarity.models import PPNet
 import torch
 
-# 加载模型
+# Load model
 model = PPNet(num_fm_classes=3)
 model.eval()
 
-# 单样本
-waveform = np.random.randn(400)  # 单个波形
-waveform = torch.FloatTensor(waveform).unsqueeze(0).unsqueeze(0)  # 添加批量和通道维度
+# Single sample
+waveform = np.random.randn(400)  # Single waveform
+waveform = torch.FloatTensor(waveform).unsqueeze(0).unsqueeze(0)  # Add batch and channel dimensions
 
-# 推理
+# Inference
 with torch.no_grad():
     logits = model(waveform)
     prediction = logits.argmax(dim=1).item()
 
-# 解释结果
+# Interpret result
 label_map = {0: "Up", 1: "Down", 2: "Unknown"}
-print(f"预测极性: {label_map[prediction]}")
+print(f"Predicted polarity: {label_map[prediction]}")
 ```
 
-## 模型输出
+## Model Output
 
-模型输出每个类别的 logits：
+Models output logits for each class:
 
 ```python
-# 原始 logits
-logits = model(waveforms)  # 形状: (batch_size, num_classes)
+# Raw logits
+logits = model(waveforms)  # Shape: (batch_size, num_classes)
 
-# 概率（softmax）
+# Probabilities (softmax)
 import torch.nn.functional as F
 probabilities = F.softmax(logits, dim=1)
 
-# 预测类别
+# Predicted classes
 predictions = logits.argmax(dim=1)
 ```
 
-## 模型下载
+## Model Download
 
-预训练模型可在 Hugging Face 上获取：
+Pre-trained models are available on Hugging Face:
 
 ```python
 from huggingface_hub import hf_hub_download
 import torch
 
-# 下载模型权重
+# Download model weights
 model_path = hf_hub_download(
     repo_id="HeXingChen/SeisPolarity-Model",
     filename="ross_scsn.pth"
 )
 
-# 加载权重
+# Load weights
 state_dict = torch.load(model_path)
 model.load_state_dict(state_dict)
 ```
 
-## 自定义模型
+## Custom Models
 
-要创建自定义模型：
+To create a custom model:
 
 ```python
 import torch.nn as nn
@@ -297,16 +297,16 @@ from seispolarity.models.base import BasePolarityModel
 class CustomModel(BasePolarityModel):
     def __init__(self, num_fm_classes=3):
         super().__init__(num_fm_classes)
-        # 在此处定义您的架构
+        # Define your architecture here
         self.conv1 = nn.Conv1d(1, 32, kernel_size=5)
         self.fc = nn.Linear(32 * 396, num_fm_classes)
 
     def forward(self, x):
-        # 前向传播
+        # Forward pass
         x = self.conv1(x)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
         return x
 ```
 
-详细的 API 文档请参阅 [API 参考](../api/models.md)。
+For detailed API documentation, see the [API Reference](../api/models.md).

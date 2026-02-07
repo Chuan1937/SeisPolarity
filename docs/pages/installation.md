@@ -1,20 +1,20 @@
-# 安装与配置
+# Installation and Configuration
 
-## 通过 pip 安装
+## Installation via pip
 
-SeisPolarity 可以通过两种方式安装。在这两种情况下，您可能需要考虑在虚拟环境中安装 SeisPolarity，例如使用 conda。
+SeisPolarity can be installed through two methods. In either case, it is recommended to install SeisPolarity in a virtual environment, such as using conda.
 
-### 标准安装
+### Standard Installation
 
-SeisPolarity 可直接通过 pip 获取。要在本地安装，请运行：
+SeisPolarity is directly available via pip. To install locally, run:
 
 ```bash
 pip install seispolarity
 ```
 
-### 从源码安装
+### Installation from Source
 
-如果您想从源码安装最新版本，请克隆仓库并运行：
+To install the latest version from source, clone the repository and run:
 
 ```bash
 git clone https://github.com/Chuan1937/SeisPolarity.git
@@ -22,25 +22,25 @@ cd SeisPolarity
 pip install -e .
 ```
 
-## 安装文档依赖
+## Documentation Dependencies
 
-要构建文档，请安装文档依赖：
+To build the documentation, install the documentation dependencies:
 
 ```bash
 pip install seispolarity[docs]
 ```
 
-## 配置
+## Configuration
 
-### 缓存目录配置
+### Cache Directory Configuration
 
-SeisPolarity 会自动下载数据集和模型。默认情况下，所有缓存内容存储在 `~/.seispolarity/` 目录下：
+SeisPolarity automatically downloads datasets and models. By default, all cached content is stored in the `~/.seispolarity/` directory:
 
-- 数据集：`~/.seispolarity/datasets`
-- 模型：`~/.seispolarity/models`
-- 波形数据：`~/.seispolarity/waveforms`
+- Datasets: `~/.seispolarity/datasets`
+- Models: `~/.seispolarity/models`
+- Waveform data: `~/.seispolarity/waveforms`
 
-要配置自定义缓存目录：
+To configure a custom cache directory:
 
 ```python
 from seispolarity import configure_cache
@@ -48,39 +48,39 @@ from seispolarity import configure_cache
 configure_cache(cache_root="/path/to/cache")
 ```
 
-或者设置 `SEISPOLARITY_CACHE_ROOT` 环境变量：
+Or set the `SEISPOLARITY_CACHE_ROOT` environment variable:
 
 ```bash
 export SEISPOLARITY_CACHE_ROOT=/path/to/cache
 ```
 
-### 远程仓库
+### Remote Repositories
 
-SeisPolarity 使用远程仓库来提供数据集和模型权重。您可以配置远程仓库：
+SeisPolarity uses remote repositories to provide datasets and model weights. You can configure the remote repositories:
 
 ```python
 import seispolarity
 
-# 查看当前的远程根目录
-print(seispolarity.remote_root)      # 数据仓库
-print(seispolarity.remote_model_root)  # 模型仓库
+# View current remote root directories
+print(seispolarity.remote_root)      # Data repository
+print(seispolarity.remote_model_root)  # Model repository
 ```
 
-## GPU 支持
+## GPU Support
 
-SeisPolarity 基于 PyTorch 构建，PyTorch 支持 CUDA 进行 GPU 加速。
+SeisPolarity is built on PyTorch, which supports CUDA for GPU acceleration.
 
-### GPU 安装
+### GPU Installation
 
-要安装带 CUDA 支持的 PyTorch，请遵循[官方 PyTorch 安装指南](https://pytorch.org/)。
+To install PyTorch with CUDA support, follow the [official PyTorch installation guide](https://pytorch.org/).
 
-### ModelScope 访问（中国用户）
+### ModelScope Access (China Users)
 
-对于中国用户，SeisPolarity 支持 ModelScope 以实现更快的下载：
+For users in China, SeisPolarity supports ModelScope for faster downloads:
 
 ```python
 from seispolarity import get_dataset_path
 
-# 使用 ModelScope 而不是 Hugging Face
+# Use ModelScope instead of Hugging Face
 data_path = get_dataset_path("SCSN", use_hf=False)
 ```

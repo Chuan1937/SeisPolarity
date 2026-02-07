@@ -1,23 +1,23 @@
-# 训练概述
+# Training Overview
 
-SeisPolarity 提供统一的训练接口，支持检查点保存、早停机制和灵活配置。
+SeisPolarity provides a unified training interface with checkpoint saving, early stopping mechanisms, and flexible configuration.
 
-## 基本训练
+## Basic Training
 
-### 快速开始
+### Quick Start
 
 ```python
 from seispolarity.models import PPNet
 from seispolarity.training import Trainer, TrainingConfig
 from seispolarity import WaveformDataset
 
-# 加载数据集
+# Load dataset
 dataset = WaveformDataset(path="data.hdf5", name="SCSN", preload=True)
 
-# 创建模型
+# Create model
 model = PPNet(num_fm_classes=3)
 
-# 配置训练
+# Configure training
 config = TrainingConfig(
     batch_size=256,
     epochs=50,
@@ -25,67 +25,67 @@ config = TrainingConfig(
     device="cuda"
 )
 
-# 创建训练器
+# Create trainer
 trainer = Trainer(model=model, dataset=dataset, config=config)
 
-# 训练
+# Train
 trainer.train()
 ```
 
 ## TrainingConfig
 
-`TrainingConfig` 类提供所有训练参数：
+The `TrainingConfig` class provides all training parameters:
 
 ```python
 from seispolarity.training import TrainingConfig
 
 config = TrainingConfig(
-    # 数据参数
+    # Data parameters
     batch_size=256,
     num_workers=4,
     pin_memory=True,
 
-    # 优化参数
+    # Optimization parameters
     epochs=50,
     learning_rate=1e-4,
-    optimizer="adam",           # 或 "adamw", "sgd"
+    optimizer="adam",           # or "adamw", "sgd"
     weight_decay=1e-5,
 
-    # 学习率调度器
-    lr_scheduler=None,          # 或 "step", "cosine", "reduce_on_plateau"
+    # Learning rate scheduler
+    lr_scheduler=None,          # or "step", "cosine", "reduce_on_plateau"
     lr_scheduler_params=None,
 
-    # 训练行为
-    gradient_clip_value=None,   # 梯度裁剪
+    # Training behavior
+    gradient_clip_value=None,   # Gradient clipping
     early_stopping_patience=10,
     early_stopping_min_delta=1e-4,
 
-    # 检查点
+    # Checkpoints
     save_dir="./checkpoints",
-    save_every=5,               # 每 N 个 epoch 保存一次
+    save_every=5,               # Save every N epochs
     save_best_only=True,
 
-    # 验证
-    validation_split=0.1,       # 用于验证的数据比例
-    validation_every=1,         # 每 N 个 epoch 验证一次
+    # Validation
+    validation_split=0.1,       # Fraction of data for validation
+    validation_every=1,         # Validate every N epochs
 
-    # 设备
-    device="cuda",              # 或 "cpu", "mps"
+    # Device
+    device="cuda",              # or "cpu", "mps"
 
-    # 日志记录
-    log_every=100,              # 每 N 个批次记录一次
-    tensorboard_dir=None,       # TensorBoard 日志目录
+    # Logging
+    log_every=100,              # Log every N batches
+    tensorboard_dir=None,       # TensorBoard log directory
 )
 ```
 
-## 优化器
+## Optimizers
 
-SeisPolarity 支持多种优化器：
+SeisPolarity supports multiple optimizers:
 
 ```python
 from seispolarity.training import TrainingConfig
 
-# Adam（默认）
+# Adam (default)
 config = TrainingConfig(optimizer="adam", learning_rate=1e-4)
 
 # AdamW
@@ -100,7 +100,7 @@ config = TrainingConfig(
 )
 ```
 
-## 学习率调度器
+## Learning Rate Scheduler
 
 ### Step LR
 
@@ -138,9 +138,9 @@ config = TrainingConfig(
 )
 ```
 
-## 自定义训练循环
+## Custom Training Loop
 
-如需更多对训练过程的控制：
+For greater control over the training process:
 
 ```python
 from seispolarity.models import PPNet
@@ -151,7 +151,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-# 设置
+# Setup
 device = "cuda"
 model = PPNet(num_fm_classes=3).to(device)
 dataset = WaveformDataset(path="data.hdf5", name="SCSN")
@@ -160,7 +160,7 @@ loader = DataLoader(dataset, batch_size=256, shuffle=True)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
-# 训练循环
+# Training loop
 model.train()
 for epoch in range(50):
     total_loss = 0
@@ -170,11 +170,11 @@ for epoch in range(50):
         waveforms = waveforms.to(device)
         labels = labels.to(device)
 
-        # 前向传播
+        # Forward pass
         outputs = model(waveforms)
         loss = criterion(outputs, labels)
 
-        # 反向传播
+        # Backward pass
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -186,23 +186,23 @@ for epoch in range(50):
     print(f"Epoch {epoch+1}, Average Loss: {avg_loss:.4f}")
 ```
 
-## 验证
+## Validation
 
-### 手动验证
+### Manual Validation
 
 ```python
 from torch.utils.data import random_split
 
-# 分割数据集
+# Split dataset
 train_size = int(0.9 * len(dataset))
 val_size = len(dataset) - train_size
 train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-# 创建数据加载器
+# Create data loaders
 train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
 val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False)
 
-# 验证函数
+# Validation function
 def validate(model, val_loader, criterion, device):
     model.eval()
     total_loss = 0
@@ -228,9 +228,9 @@ def validate(model, val_loader, criterion, device):
     return avg_loss, accuracy
 ```
 
-## 检查点
+## Checkpoints
 
-### 保存检查点
+### Saving Checkpoints
 
 ```python
 torch.save({
@@ -242,7 +242,7 @@ torch.save({
 }, f'checkpoint_epoch_{epoch}.pth')
 ```
 
-### 加载检查点
+### Loading Checkpoints
 
 ```python
 checkpoint = torch.load('checkpoint_epoch_50.pth')
@@ -252,7 +252,7 @@ epoch = checkpoint['epoch']
 loss = checkpoint['loss']
 ```
 
-## 早停
+## Early Stopping
 
 ```python
 class EarlyStopping:
@@ -268,44 +268,44 @@ class EarlyStopping:
         elif val_loss > self.best_loss - self.min_delta:
             self.counter += 1
             if self.counter >= self.patience:
-                return True  # 停止训练
+                return True  # Stop training
         else:
             self.best_loss = val_loss
             self.counter = 0
         return False
 
-# 使用
+# Usage
 early_stopping = EarlyStopping(patience=10)
 
 for epoch in range(epochs):
-    # ... 训练代码 ...
+    # ... training code ...
 
     val_loss, _ = validate(model, val_loader, criterion, device)
     if early_stopping(val_loss):
-        print(f"在 epoch {epoch} 早停")
+        print(f"Early stopping at epoch {epoch}")
         break
 ```
 
-## TensorBoard 日志
+## TensorBoard Logging
 
 ```python
 from torch.utils.tensorboard import SummaryWriter
 
 writer = SummaryWriter("./logs")
 
-# 训练期间记录 loss
+# Log loss during training
 for batch_idx, (waveforms, labels) in enumerate(train_loader):
-    # ... 训练代码 ...
+    # ... training code ...
     writer.add_scalar('Loss/train', loss.item(), epoch * len(train_loader) + batch_idx)
 
-# 记录验证指标
+# Log validation metrics
 writer.add_scalar('Loss/val', val_loss, epoch)
 writer.add_scalar('Accuracy/val', accuracy, epoch)
 
 writer.close()
 ```
 
-## 多 GPU 训练
+## Multi-GPU Training
 
 ```python
 import torch.multiprocessing as mp
@@ -317,22 +317,22 @@ def train_worker(rank, world_size):
     model = model.to(rank)
     model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[rank])
 
-    # ... 训练代码 ...
+    # ... training code ...
 
 if __name__ == "__main__":
     world_size = torch.cuda.device_count()
     mp.spawn(train_worker, args=(world_size,), nprocs=world_size, join=True)
 ```
 
-## 训练技巧
+## Training Tips
 
-1. **数据加载**：使用 `num_workers > 0` 和 `pin_memory=True` 加快数据加载
-2. **批量大小**：从小批量（256-512）开始，如果内存允许则增加
-3. **学习率**：微调时使用较小的学习率（1e-4 到 1e-5）
-4. **验证**：始终使用验证集来监控过拟合
-5. **检查点**：定期保存检查点以避免丢失进度
+1. **Data Loading**: Use `num_workers > 0` and `pin_memory=True` to speed up data loading
+2. **Batch Size**: Start with small batches (256-512) and increase if memory allows
+3. **Learning Rate**: Use smaller learning rates (1e-4 to 1e-5) for fine-tuning
+4. **Validation**: Always use a validation set to monitor overfitting
+5. **Checkpoints**: Save checkpoints regularly to avoid losing progress
 
-## 示例：完整训练脚本
+## Example: Complete Training Script
 
 ```python
 import torch
@@ -343,26 +343,26 @@ from torch.utils.tensorboard import SummaryWriter
 from seispolarity.models import PPNet
 from seispolarity import WaveformDataset
 
-# 配置
+# Configuration
 DEVICE = "cuda"
 BATCH_SIZE = 256
 EPOCHS = 50
 LEARNING_RATE = 1e-4
 VALIDATION_SPLIT = 0.1
 
-# 加载数据集
+# Load dataset
 dataset = WaveformDataset(path="data.hdf5", name="SCSN", preload=True)
 
-# 分割训练/验证
+# Split train/validation
 train_size = int((1 - VALIDATION_SPLIT) * len(dataset))
 val_size = len(dataset) - train_size
 train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
 
-# 数据加载器
+# Data loaders
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
 val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-# 模型
+# Model
 model = PPNet(num_fm_classes=3).to(DEVICE)
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=1e-5)
@@ -373,7 +373,7 @@ writer = SummaryWriter("./logs")
 best_accuracy = 0
 
 for epoch in range(EPOCHS):
-    # 训练
+    # Training
     model.train()
     train_loss = 0
     for waveforms, labels in train_loader:
@@ -388,7 +388,7 @@ for epoch in range(EPOCHS):
 
         train_loss += loss.item()
 
-    # 验证
+    # Validation
     model.eval()
     val_loss = 0
     correct = 0
@@ -407,12 +407,12 @@ for epoch in range(EPOCHS):
             total += labels.size(0)
             correct += predicted.eq(labels).sum().item()
 
-    # 指标
+    # Metrics
     train_loss /= len(train_loader)
     val_loss /= len(val_loader)
     accuracy = 100. * correct / total
 
-    # 日志
+    # Logging
     print(f"Epoch {epoch+1}/{EPOCHS}")
     print(f"Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {accuracy:.2f}%")
 
@@ -420,7 +420,7 @@ for epoch in range(EPOCHS):
     writer.add_scalar('Loss/val', val_loss, epoch)
     writer.add_scalar('Accuracy/val', accuracy, epoch)
 
-    # 保存最佳模型
+    # Save best model
     if accuracy > best_accuracy:
         best_accuracy = accuracy
         torch.save(model.state_dict(), 'best_model.pth')
@@ -428,4 +428,4 @@ for epoch in range(EPOCHS):
 writer.close()
 ```
 
-详细的 API 文档请参阅 [API 参考](../api/training.md)。
+For detailed API documentation, please refer to [API Reference](../api/training.md).
