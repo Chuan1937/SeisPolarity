@@ -7,30 +7,26 @@ from .base import BasePolarityModel
 
 
 class SharedBackbone(nn.Module):
-    """Define the shared backbone network (input 400 points)."""
+    """定义共享的骨干网络 (输入400点)。"""
     def __init__(self):
         super(SharedBackbone, self).__init__()
         self.sequential = nn.Sequential(
-            # Input (N, 1, 400)
+            # 输入 (N, 1, 400)
             nn.Conv1d(1, 32, kernel_size=21, padding='same'),
             nn.BatchNorm1d(32), nn.ReLU(),
             nn.MaxPool1d(kernel_size=2), # -> (N, 32, 200)
             
-            nn.Conv1d(32, 64, kernel_size=21, padding='same'),
+            nn.Conv1d(32, 64, kernel_size=15, padding='same'),
             nn.BatchNorm1d(64), nn.ReLU(),
             nn.MaxPool1d(kernel_size=2), # -> (N, 64, 100)
 
-            nn.Conv1d(64, 128, kernel_size=21, padding='same'),
+            nn.Conv1d(64, 128, kernel_size=11, padding='same'),
             nn.BatchNorm1d(128), nn.ReLU(),
             nn.MaxPool1d(kernel_size=2), # -> (N, 128, 50)
             
-            nn.Conv1d(128, 256, kernel_size=21, padding='same'),
-            nn.BatchNorm1d(256), nn.ReLU(),
-            nn.MaxPool1d(kernel_size=2), # -> (N, 256, 25)
-            
             nn.Flatten(),
             
-            # Dimension after flattening is 256 * 25 = 6400
+            # Flatten后的维度是 128 * 50 = 6400
             nn.Linear(6400, 512),
             nn.BatchNorm1d(512), nn.ReLU(),
             
