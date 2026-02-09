@@ -522,6 +522,119 @@ class WaveformDataset(Dataset):
         """Compatibility wrapper for get_sample."""
         return self._get_single_item(idx)
 
+    @staticmethod
+    def from_seisbench_picks(stream, seisbench_outputs, crop_left=200, crop_right=200):
+        """
+        Integrate ObsPy waveforms and SeisBench P-wave picks into SeisPolarity format.
+
+        Args:
+            stream: ObsPy Stream object containing waveform data.
+            seisbench_outputs: SeisBench output object containing P-wave picks.
+                               Expected to have a 'picks' attribute.
+            crop_left: Number of samples to include before the P-wave pick.
+            crop_right: Number of samples to include after the P-wave pick.
+
+        Returns:
+            List[np.ndarray]: List of waveform segments around each P-wave pick.
+            List[dict]: List of metadata dictionaries for each waveform segment.
+
+        Example:
+            >>> from obspy import UTCDateTime
+            >>> from seisbench.models import PhaseNet
+            >>> from seispolarity.data import WaveformDataset
+            >>>
+            >>> # Load waveform data
+            >>> stream = obspy.read("data.mseed")
+            >>>
+            >>> # Run SeisBench P-wave picker
+            >>> pn_model = PhaseNet.from_pretrained("stead")
+            >>> outputs = pn_model.classify(stream)
+            >>>
+            >>> # Integrate for SeisPolarity
+            >>> waveforms, metadata_list = WaveformDataset.from_seisbench_picks(
+            ...     stream, outputs, crop_left=200, crop_right=200
+            ... )
+        """
+        waveforms = []
+        metadata_list = []
+
+        for i, pick in enumerate(seisbench_outputs.picks):
+            pick_time = pick.peak_time
+
+            # Find the trace that contains this pick
+            trace = None
+            for tr in stream:
+                if tr.stats.starttime <= pick_time <= tr.stats.endtime:
+                    trace = tr
+                    break
+
+            if trace is None:
+                logger.warning(f"No trace found for pick at {pick_time}")
+                continue
+
+            # Calculate sample indices
+            sample_rate = trace.stats.sampling_rate
+            pick_sample = int((pick_time - trace.stats.starttime) * sample_rate)
+            start_sample = pick_sample - crop_left
+            end_sample = pick_sample + crop_right
+
+            # Extract waveform segment
+            data = trace.data
+            waveform_len = len(data)
+            total_len = crop_left + crop_right
+
+            # Handle padding/truncation
+            if start_sample < 0 or end_sample > waveform_len:
+                padded_waveform = np.zeros(total_len, dtype=np.float32)
+
+                actual_start = max(0, start_sample)
+                actual_end = min(waveform_len, end_sample)
+
+                if actual_end > actual_start:
+                    pad_start = max(0, -start_sample)
+                    pad_len = actual_end - actual_start
+
+                    if pad_start + pad_len <= total_len:
+                        padded_waveform[pad_start:pad_start + pad_len] = data[actual_start:actual_end]
+
+                waveform = padded_waveform
+            else:
+                waveform = data[start_sample:end_sample].astype(np.float32)
+
+            # Ensure correct length
+            if len(waveform) != total_len:
+                if len(waveform) < total_len:
+                    padded = np.zeros(total_len, dtype=np.float32)
+                    padded[:len(waveform)] = waveform
+                    waveform = padded
+                else:
+                    waveform = waveform[:total_len]
+
+            # Reshape to (1, N) for single component
+            waveform = waveform.reshape(1, -1)
+
+            # Create metadata
+            metadata = {
+                'p_pick': crop_left,  # P-wave pick position in the cropped waveform
+                'sample_rate': sample_rate,
+                'pick_time': pick_time,  # Keep as UTCDateTime object for visualization
+                'pick_confidence': pick.peak_value if hasattr(pick, 'peak_value') else 1.0,
+                'network': trace.stats.network,
+                'station': trace.stats.station,
+                'channel': trace.stats.channel,
+                'location': trace.stats.location,
+                'start_time': trace.stats.starttime,  # Keep as UTCDateTime object
+                'original_sample': pick_sample,
+                'trace': trace  # Include original trace for visualization
+            }
+
+            waveforms.append(waveform)
+            metadata_list.append(metadata)
+
+            logger.debug(f"Extracted waveform {i}: pick at {pick_time}, shape {waveform.shape}")
+
+        return waveforms, metadata_list
+
     def _read_waveform(self, path, idx, meta):
         # Handle persistent file handle for streaming performance
         # (This is a simplified version of scsn logic)
