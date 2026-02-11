@@ -28,3 +28,5 @@ docs/_build/
 dist/
 build/
 .eggs/
+/tests/
+/Pre-model/

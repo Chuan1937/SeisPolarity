@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 import torch
 import torch.nn as nn
 from seispolarity.data.base import WaveformDataset
@@ -25,14 +25,13 @@ DEVICE = "cuda" if torch.cuda.is_available() else "mps" if torch.backends.mps.is
 # )
 
 # 当前使用本地文件路径
-train_data_path = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
-test_data_path = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_test.hdf5"
+DATA_PATH = r"/mnt/f/AI_Seismic_Data/scsn/scsn_p_2000_2017_6sec_0.5r_fm_train.hdf5"
 OUT_DIR = "./checkpoints_cfm_scsn"
 Path(OUT_DIR).mkdir(parents=True, exist_ok=True)
 
 # 数据集
-train_dataset = WaveformDataset(
-    path=train_data_path,
+dataset = WaveformDataset(
+    path=DATA_PATH,
     name="SCSN_Train",
     preload=True,
     allowed_labels=[0, 1],
@@ -42,20 +41,6 @@ train_dataset = WaveformDataset(
     crop_left=80,
     crop_right=80
 )
-
-test_dataset = WaveformDataset(
-    path=test_data_path,
-    name="SCSN_Test",
-    preload=True,
-    allowed_labels=[0, 1],
-    data_key="X",
-    label_key="Y",
-    p_pick_position=300,
-    crop_left=80,
-    crop_right=80
-)
-
-datasets = train_dataset + test_dataset
 
 # 训练配置
 config = TrainingConfig(
@@ -76,7 +61,7 @@ config = TrainingConfig(
 
 # 模型与训练
 model = cfm(sample_rate=100.0)
-trainer = Trainer(model=model, dataset=datasets, config=config)
+trainer = Trainer(model=model, dataset=dataset, config=config)
 
 print("\nStarting CFM training...")
 best_val_acc, final_test_acc = trainer.train()
@@ -86,7 +71,5 @@ final_model_path = Path(OUT_DIR) / "cfm_final.pth"
 torch.save({'model_state_dict': model.state_dict(), 'config': config}, final_model_path)
 print(f"CFM模型已保存到: {final_model_path}")
 
-if hasattr(train_dataset, 'dataset') and hasattr(train_dataset.dataset, 'close'):
-    train_dataset.dataset.close()
-if hasattr(test_dataset, 'dataset') and hasattr(test_dataset.dataset, 'close'):
-    test_dataset.dataset.close()
+if hasattr(dataset, 'dataset') and hasattr(dataset.dataset, 'close'):
+    dataset.dataset.close()
