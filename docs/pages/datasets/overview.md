@@ -45,6 +45,24 @@ The Texas Earthquake Dataset (TXED) is a regional seismic signal benchmark datas
 :align: center
 ```
 
+#### Balanced Strategy
+
+Recommended strategy: **Polarity Inversion (1:1:1)**
+
+This strategy creates a balanced dataset with equal proportions of Up, Down, and Unknown samples:
+- Each Up and Down sample generates two samples (original + polarity-inverted)
+- Unknown samples are added to match the total count of (Up + Down) samples
+- Final distribution: Up = 1/3, Down = 1/3, Unknown = 1/3
+
+```python
+from seispolarity import BalancedPolarityGenerator
+
+generator = BalancedPolarityGenerator(
+    dataset,
+    strategy="polarity_inversion"
+)
+```
+
 #### Warning
 
 Dataset size: waveforms.hdf5 ~70Gb, metadata.csv 120Mb
@@ -83,6 +101,24 @@ The INSTANCE dataset is an Italian seismic waveform dataset compiled by the Ital
 :align: center
 ```
 
+#### Balanced Strategy
+
+Recommended strategy: **Polarity Inversion (1:1:1)**
+
+This strategy creates a balanced dataset with equal proportions of Up, Down, and Unknown samples:
+- Each Up and Down sample generates two samples (original + polarity-inverted)
+- Unknown samples are added to match the total count of (Up + Down) samples
+- Final distribution: Up = 1/3, Down = 1/3, Unknown = 1/3
+
+```python
+from seispolarity import BalancedPolarityGenerator
+
+generator = BalancedPolarityGenerator(
+    dataset,
+    strategy="polarity_inversion"
+)
+```
+
 #### Warning
 
 Dataset size:
@@ -102,6 +138,25 @@ The Pacific Northwest (PNW) dataset is a machine learning-ready curated dataset 
 ```{image} ../datasets/PNW.png
 :alt: PNW
 :align: center
+```
+
+#### Balanced Strategy
+
+Recommended strategy: **Min-Based (1:1:1)**
+
+This strategy creates a balanced dataset by sampling equally from all classes up to the minimum class count:
+- Count samples in each polarity class (Up, Down, Unknown)
+- Determine the minimum count among all classes
+- Sample equally from each class up to the minimum count
+- Final distribution: Up = 1/3, Down = 1/3, Unknown = 1/3
+
+```python
+from seispolarity import BalancedPolarityGenerator
+
+generator = BalancedPolarityGenerator(
+    dataset,
+    strategy="min_based"
+)
 ```
 
 #### Citation

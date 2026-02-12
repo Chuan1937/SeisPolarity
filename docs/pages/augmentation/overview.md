@@ -202,7 +202,7 @@ loss_fn = DitingMotionLoss()
 
 ### Polarity Inversion Strategy
 
-This strategy creates a balanced dataset by inverting polarities of Up and Down samples.
+This strategy creates a balanced dataset with equal proportions of Up, Down, and Unknown samples.
 
 ```python
 from seispolarity import BalancedPolarityGenerator
@@ -214,9 +214,11 @@ generator = BalancedPolarityGenerator(
 ```
 
 **How it works**:
-1. For each Up sample, create a Down sample by inversion
-2. For each Down sample, create an Up sample by inversion
-3. Result: Equal number of Up, Down, and Unknown samples
+1. Each Up and Down sample generates two samples (original + polarity-inverted)
+2. Unknown samples are added to match the total count of (Up + Down) samples
+3. Result: Equal distribution - Up = 1/3, Down = 1/3, Unknown = 1/3
+
+This strategy is recommended for Instance and Txed datasets.
 
 ### Min-Based Strategy
 
