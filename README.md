@@ -109,8 +109,8 @@ This project is licensed under the BSD 3-Clause License - see the [LICENSE](LICE
 ## Links
 
 - **GitHub**: https://github.com/Chuan1937/SeisPolarity
-- **Hugging Face**: https://huggingface.co/chuanjun1978/SeisPolarity-Model
-- **ModelScope**: https://modelscope.cn/models/chuanjun1978/SeisPolarity-Model
+- **Hugging Face**: https://huggingface.co/HeXingChen/SeisPolarity-Model
+- **ModelScope**: https://modelscope.cn/models/chuanjun/HeXingChen
 - **Documentation**: https://seispolarity.readthedocs.io/
 
 ## Contact
