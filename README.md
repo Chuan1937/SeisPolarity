@@ -72,8 +72,8 @@ pip install -e .
 ### Model Zoo
 
 Pre-trained models are automatically downloaded from:
-- **Hugging Face**: https://huggingface.co/chuanjun1978/SeisPolarity-Model
-- **ModelScope**: https://modelscope.cn/models/chuanjun1978/SeisPolarity-Model
+- **Hugging Face**: https://huggingface.co/HeXingChen/SeisPolarity-Model
+- **ModelScope**: https://modelscope.cn/models/chuanjun/HeXingChen
 
 ## Examples
 

@@ -164,8 +164,8 @@ The paper will be published subsequently, please stay tuned.
 
 - GitHub: https://github.com/Chuan1937/SeisPolarity
 - Documentation: https://seispolarity.readthedocs.io/en/latest/index.html
-- Hugging Face: https://huggingface.co/chuanjun1978/SeisPolarity-Model
-- ModelScope: https://modelscope.cn/models/chuanjun1978/SeisPolarity-Model
+- Hugging Face: https://huggingface.co/HeXingChen/SeisPolarity-Model
+- ModelScope: https://modelscope.cn/models/chuanjun/HeXingChen
 
 ## Contact
 
