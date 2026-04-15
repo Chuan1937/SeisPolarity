@@ -31,3 +31,4 @@ build/
 /tests/
 /Pre-model/
 Methods Valid.ipynb
+.DS_Store
