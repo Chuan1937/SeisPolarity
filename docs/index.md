@@ -163,7 +163,7 @@ The paper will be published subsequently, please stay tuned.
 ## Related Links
 
 - GitHub: https://github.com/Chuan1937/SeisPolarity
-- Documentation: https://seispolarity.readthedocs.io/en/latest/index.html
+- Documentation: https://chuan1937.github.io/SeisPolarity/
 - Hugging Face: https://huggingface.co/HeXingChen/SeisPolarity-Model
 - ModelScope: https://modelscope.cn/models/chuanjun/HeXingChen
 

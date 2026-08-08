@@ -12,7 +12,7 @@ A comprehensive framework for seismic first-motion polarity picking with unified
 
 ## Documentation
 
-Full documentation is available at: https://seispolarity.readthedocs.io/
+Full documentation is available at: https://chuan1937.github.io/SeisPolarity/
 
 Build documentation locally:
 ```bash
@@ -111,7 +111,7 @@ This project is licensed under the BSD 3-Clause License - see the [LICENSE](LICE
 - **GitHub**: https://github.com/Chuan1937/SeisPolarity
 - **Hugging Face**: https://huggingface.co/HeXingChen/SeisPolarity-Model
 - **ModelScope**: https://modelscope.cn/models/chuanjun/HeXingChen
-- **Documentation**: https://seispolarity.readthedocs.io/
+- **Documentation**: https://chuan1937.github.io/SeisPolarity/
 
 ## Contact
 
