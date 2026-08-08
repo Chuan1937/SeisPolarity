@@ -24,6 +24,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # The per-page metadata reads the last Git commit for each source
+          # file, so the documentation job must have the complete history.
+          fetch-depth: 0
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -33,12 +40,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install sphinx sphinx-rtd-theme myst-parser sphinx-autodoc-typehints sphinxcontrib-mermaid linkify-it-py
+          pip install sphinx sphinx-rtd-theme myst-parser sphinx-autodoc-typehints sphinxcontrib-mermaid linkify-it-py zhdate
 
-      - name: Build docs
+      - name: Build docs (English)
         run: |
-          cd docs
-          sphinx-build -b html . _build/html
+          cd docs/en
+          sphinx-build -b html . ../_build/html
+
+      - name: Build docs (Chinese)
+        run: |
+          cd docs/zh_CN
+          sphinx-build -b html . ../_build/html/zh_CN
+
+      - name: Disable Jekyll
+        run: touch docs/_build/html/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

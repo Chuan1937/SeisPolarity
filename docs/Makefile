@@ -1,12 +1,21 @@
-SPHINXOPTS    ?=
 SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = .
+SPHINXOPTS    ?=
 BUILDDIR      = _build
 
+.PHONY: help clean html en zh_CN docs
+
 help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@echo "Targets: html (build en + zh_CN), en, zh_CN, clean"
 
-.PHONY: help Makefile
+docs: html
 
-%: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+html: en zh_CN
+
+en:
+	$(SPHINXBUILD) -b html en $(BUILDDIR)/html $(SPHINXOPTS) $(O)
+
+zh_CN:
+	$(SPHINXBUILD) -b html zh_CN $(BUILDDIR)/html/zh_CN $(SPHINXOPTS) $(O)
+
+clean:
+	rm -rf $(BUILDDIR)

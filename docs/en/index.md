@@ -1,6 +1,6 @@
 # Welcome to SeisPolarity
 
-:::{figure} _static/seispolarity_logo_title.svg
+:::{figure} ../_static/seispolarity_logo_title.svg
 :align: center
 :::
 
@@ -151,21 +151,24 @@ pages/api/overview.md
 ## Examples
 
 See complete examples in the `examples/` directory:
-- [Dataset API Usage](../examples/datasets_api.ipynb) - Dataset loading and usage examples
-- [Prediction API Usage](../examples/predict_api.ipynb) - Model inference examples
-- [Model API Usage](../examples/model_api.ipynb) - Model architecture and initialization
-- [Training API Usage](../examples/train_api.ipynb) - Training workflow examples
+- [Dataset API Usage](../../examples/datasets_api.ipynb) - Dataset loading and usage examples
+- [Prediction API Usage](../../examples/predict_api.ipynb) - Model inference examples
+- [Model API Usage](../../examples/model_api.ipynb) - Model architecture and initialization
+- [Training API Usage](../../examples/train_api.ipynb) - Training workflow examples
 
 ## Citation
 
 The paper will be published subsequently, please stay tuned.
 
-## Related Links
+```{toctree}
+:caption: Links
 
-- GitHub: https://github.com/Chuan1937/SeisPolarity
-- Documentation: https://chuan1937.github.io/SeisPolarity/
-- Hugging Face: https://huggingface.co/HeXingChen/SeisPolarity-Model
-- ModelScope: https://modelscope.cn/models/chuanjun/HeXingChen
+English documentation <https://chuan1937.github.io/SeisPolarity/>
+中文文档 <https://chuan1937.github.io/SeisPolarity/zh_CN/>
+GitHub <https://github.com/Chuan1937/SeisPolarity>
+Hugging Face <https://huggingface.co/HeXingChen/SeisPolarity-Model>
+ModelScope <https://modelscope.cn/models/chuanjun/HeXingChen>
+```
 
 ## Contact
 
